@@ -224,8 +224,11 @@ def test_failed_connection_test_records_structured_provider_error(connection_env
 def test_budget_block_creates_gate_but_no_invocation(connection_env) -> None:
     client, session, provider, store = connection_env
     configure_cloud(client, store)
+    # 用费用卡住，不是请求数：请求数与 Token 已不再是闸门。要验的是「预算不足时只记一条
+    # 拦截、不发任何调用」，与用哪一维卡住无关——而连接测试本身只花约 ¥0.00001，卡在
+    # 请求数上会让它连自我验证都做不了，那正是死锁的中间一环。
     budget = client.get("/api/v1/settings/cloud-budget").json()
-    budget["cloud_daily_request_limit"] = 1
+    budget["cloud_daily_estimated_cost_limit"] = 0.000001
     assert client.put("/api/v1/settings/cloud-budget", json=budget).status_code == 200
     session.add(
         AnalysisRun(

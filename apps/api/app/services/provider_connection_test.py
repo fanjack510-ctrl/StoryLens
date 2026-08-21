@@ -167,11 +167,9 @@ def connection_test_preflight(
         # Pricing file enabled but this model has no row — distinct from daily budget.
         blockers.append("MODEL_PRICING_NOT_FOUND")
     else:
-        # Only evaluate reservation dimensions when cost is known.
-        if usage["available_requests"] < 1:
-            blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
-        if usage["available_tokens"] < ESTIMATED_INPUT_TOKENS + max_output_tokens:
-            blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
+        # 只看钱。请求数与 Token 曾在这里各自成维，于是「验证连接」这一步也会因为 Token
+        # 日限用尽而被拒——而它本身只花约 ¥0.00001。更糟的是它卡在死锁的中间一环：分析要求
+        # health 不过期，刷新 health 要跑这个测试，测试却被另一道闸拦住。
         if usage["available_estimated_cost"] < float(estimated_cost):
             blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
 

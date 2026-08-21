@@ -23,6 +23,8 @@ export const providersApi = {
     api<any>(`/api/v1/model-providers/${name}/transport-diagnostic`, { method: "POST" }),
   connectionTestPreflight: (name: string) =>
     api<any>(`/api/v1/model-providers/${name}/test/preflight`, { method: "POST" }),
+  connect: (name: string) =>
+    api<any>(`/api/v1/model-providers/${name}/connect`, { method: "POST" }),
   testConnection: (name: string, maxOutputTokens = 32) =>
     api<any>(`/api/v1/model-providers/${name}/test`, {
       method: "POST",

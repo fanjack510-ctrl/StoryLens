@@ -1258,6 +1258,11 @@ export function StartAnalysisDialog({
                   setMessage("");
                   try {
                     if (provider) {
+                      // 先连上，再验证。连接测试要求 provider 处于已连接状态，而分析要求
+                      // health 不过期、刷新 health 又要跑这个测试——一旦连接掉了，三者就
+                      // 锁成一个圈，而弹窗里没有任何「连接」入口。connect 不发请求也不花钱，
+                      // 所以这里无条件先做一次。
+                      await providersApi.connect(provider).catch(() => undefined);
                       await providersApi.testConnection(provider, 32);
                     }
                   } catch (error) {
