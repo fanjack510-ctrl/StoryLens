@@ -352,6 +352,45 @@ describe("印刷版全书报告", () => {
     expect(html).toContain("另有 1 人登场");
   });
 
+  // PDF 那一侧和 HTML 一样不认识 story_breakdown：打印一份拆文报告，出来的是几页空的
+  // 评测章节，拆文内容一个字都不在文件里。而 PDF 正是人们会发给别人的那一份。
+  it("拆文报告打印出来要有拆文，且不带空的评测章节", () => {
+    const d = book(20) as never as Record<string, unknown>;
+    d.story_breakdown = {
+      version: "1.0",
+      availability: "available",
+      four_beats: [
+        { beat: "起", title: "开场", summary: "把气味写成距离", chapter_start: 1, chapter_end: 8, evidence: [] },
+      ],
+      standout_moments: [
+        { rank: 1, title: "他闻到了", quote: "空气忽然变甜", why_it_lands: "设定第一次用在情绪上", chapter: 12, evidence: [] },
+      ],
+      moment_count_rationale: "只有十处推动了关系。",
+      chapter_hooks: [{ chapter: 1, question: "他为什么不躲", evidence: [] }],
+      reusable_techniques: [
+        { name: "气味代替独白", what_it_is: "用嗅觉写心理", why_it_works: "省掉解释", transfers_to: "有身体感官的设定" },
+      ],
+      supporting_cast: [{ name: "室友", function: "把秘密说破", stays_in_lane: "是", evidence: [] }],
+      cast_note: "配角都只服务一条线。",
+    };
+    const html = buildPrintHtml(d as never);
+    expect(html).toContain("起承转合");
+    expect(html).toContain("他闻到了");
+    expect(html).toContain("气味代替独白");
+    expect(html).toContain("每章留下的问题");
+    expect(html).not.toContain("执行摘要");
+    expect(html).not.toContain("作品概况");
+  });
+
+  // 章号写死在每节里；拆文那份少了两节，不重排就会出现两个「三」。
+  it("章号按实际出现顺序重排，不重复", () => {
+    const html = buildPrintHtml(book(20));
+    const nums = [...html.matchAll(/<h2><span class="num">([^<]*)<\/span>/g)].map((m) => m[1]);
+    expect(nums.length).toBeGreaterThan(1);
+    expect(new Set(nums).size).toBe(nums.length);
+    expect(nums.slice(0, 3)).toEqual(["一", "二", "三"]);
+  });
+
   it("每一个分析章都落在一个判断上", () => {
     // This is the report's spine: a chapter that measures something must end by saying what the
     // measurement means, otherwise the reader is left holding data.

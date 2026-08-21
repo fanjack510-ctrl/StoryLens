@@ -726,33 +726,153 @@ function appendixMethod(d: WholeBookAnalysisV2): string {
 
 /** The whole document. The report proper is assembled first; 附录 A then takes the pages that
  *  are left, which is how the budget is enforced rather than hoped for. */
+/* ── 拆文 ───────────────────────────────────────────────────────────────────────────── */
+
+/** 拆文 pages.
+ *
+ *  This renderer knew nothing about `story_breakdown`, so printing a 拆文 report produced a
+ *  PDF with none of its content and several pages of empty 评测 sections — the same defect
+ *  the screen and the HTML export had, surviving in the file people hand to other people.
+ */
+function breakdownPages(d: WholeBookAnalysisV2): string {
+  const b = d.story_breakdown;
+  if (!b?.four_beats?.length) return "";
+  const moments = [...(b.standout_moments ?? [])].sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
+  const beats = b.four_beats
+    .map(
+      (x) =>
+        `<tr><th>${esc(x.beat)}</th><td class="where">${rng(x.chapter_start, x.chapter_end)}</td>
+         <td><b>${esc(val(x.title))}</b><br>${esc(val(x.summary))}</td></tr>`,
+    )
+    .join("");
+  const momentRows = moments
+    .map(
+      (m) => `<div class="mom">
+        <p class="qlabel">${m.rank}　${esc(val(m.title))}<span class="where">　第 ${m.chapter} 章</span></p>
+        ${val(m.quote) ? `<blockquote>${esc(clip(val(m.quote), 160))}</blockquote>` : ""}
+        <p>${esc(val(m.why_it_lands))}</p>
+      </div>`,
+    )
+    .join("");
+  const tech = (b.reusable_techniques ?? [])
+    .map(
+      (t, i) =>
+        `<tr><th>${i + 1}</th><td><b>${esc(val(t.name))}</b><br>${esc(val(t.what_it_is))}</td>
+         <td>${esc(val(t.why_it_works))}</td><td>${esc(val(t.transfers_to))}</td></tr>`,
+    )
+    .join("");
+  const cast = (b.supporting_cast ?? [])
+    .map(
+      (c) =>
+        `<tr><th>${esc(val(c.name))}</th><td>${esc(val(c.function))}</td>
+         <td class="where">${esc(val(c.stays_in_lane ?? ""))}</td></tr>`,
+    )
+    .join("");
+  const hooks = (b.chapter_hooks ?? [])
+    .map((h) => `<tr><th class="idx">${h.chapter}</th><td>${esc(val(h.question))}</td></tr>`)
+    .join("");
+  return `<section class="page">
+    <h2><span class="num">一</span>起承转合</h2>
+    <table class="dims">${beats}</table>
+    <h3>1.2　最打动人的瞬间（${moments.length}）</h3>
+    ${val(b.moment_count_rationale) ? `<p class="note">${esc(b.moment_count_rationale)}</p>` : ""}
+    ${momentRows}
+  </section>
+  ${
+    tech
+      ? `<section class="page">
+    <h2><span class="num">二</span>可复用的手法</h2>
+    <p class="note">每一条都写明是什么、为什么有效、能用到哪，便于直接挪用。</p>
+    <table class="top3">${tech}</table>
+    ${
+      cast
+        ? `<h3>2.2　配角功能（${(b.supporting_cast ?? []).length}）</h3>
+           ${val(b.cast_note) ? `<p class="note">${esc(b.cast_note)}</p>` : ""}
+           <table class="dims">${cast}</table>`
+        : ""
+    }
+  </section>`
+      : ""
+  }
+  ${
+    hooks
+      ? `<section class="page">
+    <h2><span class="num">三</span>每章留下的问题</h2>
+    <p class="note">共 ${(b.chapter_hooks ?? []).length} 章在结尾留下了一个待答的问题。</p>
+    <table class="chidx">${hooks}</table>
+  </section>`
+      : ""
+  }`;
+}
+
+const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+
+/** Renumber top-level sections by the order they actually appear.
+ *
+ *  Each page hardcodes its own numeral, which was correct while every report had the same
+ *  eight sections. A 拆文 report has a different set, so the fixed numerals collided — two
+ *  sections both called 三. This rewrites the numeral and the section-scoped h3 prefixes
+ *  (1.1, 1.2 …) to match the position the section ends up in.
+ */
+function renumberSections(body: string): string {
+  let n = 0;
+  return body.replace(/<section class="page">[\s\S]*?<\/section>/g, (page) => {
+    if (!/<h2><span class="num">/.test(page)) return page;
+    n += 1;
+    const numeral = NUMERALS[n - 1] ?? String(n);
+    return page
+      .replace(/<h2><span class="num">[^<]*<\/span>/, `<h2><span class="num">${numeral}</span>`)
+      .replace(/<h3>\d+\.(\d+)/g, (_m, sub) => `<h3>${n}.${sub}`);
+  });
+}
 export function buildPrintHtml(d: WholeBookAnalysisV2): string {
-  const body = [
-    summaryPage(d),
-    profilePage(d),
-    structurePages(d),
-    pacingPage(d),
-    charactersPage(d),
-    suspensePage(d),
-    findingsPages(d),
-    keepPage(d),
-  ].join("");
-  const declared = (body.match(/class="page"/g) ?? []).length;
+  // 拆文 and 评测 fill different sections; printing all of them regardless is how a 拆文
+  // report came out as several empty pages with its own content nowhere in the file.
+  const breakdown = breakdownPages(d);
+  const body = breakdown
+    ? [breakdown, structurePages(d), pacingPage(d), charactersPage(d), suspensePage(d)].join("")
+    : [
+        summaryPage(d),
+        profilePage(d),
+        structurePages(d),
+        pacingPage(d),
+        charactersPage(d),
+        suspensePage(d),
+        findingsPages(d),
+        keepPage(d),
+      ].join("");
+  // 章号写死在各节里，而拆文那份少了执行摘要和作品概况——不重排就会出现两个「三」。
+  // 按正文里 h2 出现的顺序重编，顺带把该节内部的 1.1 / 1.2 这类小节号对上。
+  const renumbered = renumberSections(body);
+
+  const declared = (renumbered.match(/class="page"/g) ?? []).length;
   // +1 cover, +1 附录 B. Take the larger of the declared count and the measured allowance, so a
   // book whose sections overflow shortens the appendix rather than the budget.
   const used = Math.max(declared + 2, FIXED_PAGES);
-  const toc = [
-    "一　执行摘要",
-    "二　作品概况",
-    "三　结构分析",
-    "四　节奏分析",
-    "五　人物分析",
-    "六　悬念分析",
-    "七　问题与修订建议",
-    "八　须予保留项",
-    "附录 A　逐章功能索引",
-    "附录 B　分析方法与数据口径",
-  ];
+  const toc = breakdown
+    ? [
+        "一　起承转合与最打动人的瞬间",
+        "二　可复用的手法与配角功能",
+        "三　每章留下的问题",
+        "四　结构分析",
+        "五　节奏分析",
+        "六　人物分析",
+        "七　悬念分析",
+        "附录 A　逐章功能索引",
+        "附录 B　分析方法与数据口径",
+      ]
+    : [
+        "一　执行摘要",
+        "二　作品概况",
+        "三　结构分析",
+        "四　节奏分析",
+        "五　人物分析",
+        "六　悬念分析",
+        "七　问题与修订建议",
+        "八　须予保留项",
+        "附录 A　逐章功能索引",
+        "附录 B　分析方法与数据口径",
+      ];
   const appendix = appendixChapters(d, PAGE_BUDGET - used - 1);
   // Declared, not sniffed. This file is written to disk and opened as `file:///` by a headless
   // Chromium; with no charset the system default is used, and on a Chinese Windows that is GBK,
@@ -941,5 +1061,5 @@ figcaption { font-size: 8.5pt; color: var(--mute); margin-top: 1.5mm; line-heigh
 .chapters td { padding: .7mm 0; vertical-align: top; }
 .chapters tbody tr + tr th, .chapters tbody tr + tr td { border-top: .3pt solid #f2f5f3; }
 </style>
-${coverPage(d, toc)}${body}${appendix}${appendixMethod(d)}`;
+${coverPage(d, toc)}${renumbered}${appendix}${appendixMethod(d)}`;
 }

@@ -539,6 +539,75 @@ function sectionAssessment(d: WholeBookAnalysisV2): string {
   <h3>建议保留</h3>${list(a.preserve_list)}`;
 }
 
+/** 拆文.
+ *
+ *  The exporter had no idea this section existed, so exporting a 拆文 report produced a file
+ *  with none of its content and two empty sections where 评测 would have been — the same
+ *  defect the screen had, surviving in the file people actually keep and send on.
+ */
+function sectionBreakdown(d: WholeBookAnalysisV2, index: number): string {
+  const b = d.story_breakdown;
+  if (!b?.four_beats?.length) return "";
+  const moments = [...(b.standout_moments ?? [])].sort((x, y) => (x.rank ?? 999) - (y.rank ?? 999));
+  return `
+  <h2 id="sb">${index}　拆文</h2>
+  <h3>四个部分</h3>
+  <table>
+    <tr><th>部分</th><th>章节</th><th>这一段在做什么</th></tr>
+    ${b.four_beats
+      .map(
+        (x) =>
+          `<tr><td>${esc(x.beat)}</td><td>${rng(x.chapter_start, x.chapter_end)}</td>           <td><b>${esc(x.title)}</b><br>${esc(x.summary)}</td></tr>`,
+      )
+      .join("")}
+  </table>
+  <h3>打动人的瞬间（${moments.length}）</h3>
+  ${b.moment_count_rationale ? `<p class="note">${esc(b.moment_count_rationale)}</p>` : ""}
+  ${moments
+    .map(
+      (m) => `
+    <div class="moment">
+      <p><b>${m.rank}. ${esc(m.title)}</b>　<span class="muted">第 ${m.chapter} 章</span></p>
+      ${m.quote ? `<blockquote>${esc(m.quote)}</blockquote>` : ""}
+      <p>${esc(m.why_it_lands)}</p>
+      ${evd(m.evidence)}
+    </div>`,
+    )
+    .join("")}
+  <h3>每章留下的问题（${(b.chapter_hooks ?? []).length}）</h3>
+  <table>
+    <tr><th>章</th><th>这一章结尾留给读者的问题</th></tr>
+    ${(b.chapter_hooks ?? [])
+      .map((h) => `<tr><td>第 ${h.chapter} 章</td><td>${esc(h.question)}</td></tr>`)
+      .join("")}
+  </table>
+  <h3>可复用的手法（${(b.reusable_techniques ?? []).length}）</h3>
+  ${(b.reusable_techniques ?? [])
+    .map(
+      (t, i) => `
+    <div class="moment">
+      <p><b>${i + 1}. ${esc(t.name)}</b></p>
+      <table>
+        ${row("是什么", t.what_it_is)}
+        ${row("为什么有效", t.why_it_works)}
+        ${row("能用到哪", t.transfers_to)}
+      </table>
+    </div>`,
+    )
+    .join("")}
+  <h3>配角功能（${(b.supporting_cast ?? []).length}）</h3>
+  ${b.cast_note ? `<p class="note">${esc(b.cast_note)}</p>` : ""}
+  <table>
+    <tr><th>人物</th><th>承担的功能</th><th>是否越界</th></tr>
+    ${(b.supporting_cast ?? [])
+      .map(
+        (c) =>
+          `<tr><td>${esc(c.name)}</td><td>${esc(c.function)}</td>           <td>${esc(c.stays_in_lane ?? "—")}</td></tr>`,
+      )
+      .join("")}
+  </table>`;
+}
+
 function sectionEvidence(d: WholeBookAnalysisV2): string {
   const entries = Object.values(d.evidence_index ?? {});
   if (!entries.length) return `<h2 id="appendix">附录A　证据索引</h2><p class="none">本文档没有携带证据索引。</p>`;
@@ -564,10 +633,30 @@ export function reportFileName(d: WholeBookAnalysisV2): string {
 export function buildReportHtml(d: WholeBookAnalysisV2, generatedAt: Date = new Date()): string {
   const meta = d.book_metadata;
   const am = d.analysis_metadata;
+  // 目录按这份文档实际有什么来排，和屏幕上同一条规则：拆文那份没有总览和综合诊断，
+  // 评测那份没有拆文。原先固定七节，于是拆文报告导出来是两节空的加一节缺失的。
+  const hasBreakdown = Boolean(d.story_breakdown?.four_beats?.length);
+  const hasOverview = Boolean(
+    (d.overview?.one_sentence_story || "").trim() || (d.overview?.full_summary || "").trim(),
+  );
+  const hasAssessment = Boolean(
+    (d.assessment?.overall_summary || "").trim() || d.assessment?.issues?.length,
+  );
+  // 编号本来就写在各节标题里，而两种读法各自的编号恰好都对：评测是总览 1…综合诊断 7，
+  // 拆文是拆文 1、故事 2…章节 6。所以这里只决定哪几节出现，不重新编号。
+  const bodySections: Array<[string, string, string]> = [];
+  if (hasOverview) bodySections.push(["s1", "1 全书总览", sectionOverview(d)]);
+  if (hasBreakdown) bodySections.push(["sb", "1 拆文", sectionBreakdown(d, 1)]);
+  bodySections.push(["s2", "2 故事", sectionStory(d)]);
+  bodySections.push(["s3", "3 人物", sectionCharacters(d)]);
+  bodySections.push(["s4", "4 悬念", sectionSuspense(d)]);
+  bodySections.push(["s5", "5 节奏", sectionPacing(d)]);
+  bodySections.push(["s6", "6 章节", sectionChapters(d)]);
+  if (hasAssessment) bodySections.push(["s7", "7 综合诊断", sectionAssessment(d)]);
   const toc = [
-    ["s1", "全书总览"], ["s2", "故事"], ["s3", "人物"], ["s4", "悬念"],
-    ["s5", "节奏"], ["s6", "章节"], ["s7", "综合诊断"], ["appendix", "附录A 证据索引"],
-  ] as const;
+    ...bodySections.map(([id, label]) => [id, label] as const),
+    ["appendix", "附录A 证据索引"] as const,
+  ];
   // JSON inside <script> must not be able to close the tag early.
   const raw = JSON.stringify(d).replace(/</g, "\\u003c");
   return `<!doctype html>
@@ -640,13 +729,7 @@ export function buildReportHtml(d: WholeBookAnalysisV2, generatedAt: Date = new 
     <p class="metae">本文件为自包含单文件报告：正文之外，完整原始数据以 JSON 形式内嵌在文件末尾的
       <code>&lt;script id="raw-data"&gt;</code> 块中，可直接提取做机器对账。打印本页即可得到 PDF 版。</p>
   </header>
-  ${sectionOverview(d)}
-  ${sectionStory(d)}
-  ${sectionCharacters(d)}
-  ${sectionSuspense(d)}
-  ${sectionPacing(d)}
-  ${sectionChapters(d)}
-  ${sectionAssessment(d)}
+  ${bodySections.map(([, , html]) => html).join("")}
   ${sectionEvidence(d)}
 </div>
 <script id="raw-data" type="application/json">${raw}</script>
