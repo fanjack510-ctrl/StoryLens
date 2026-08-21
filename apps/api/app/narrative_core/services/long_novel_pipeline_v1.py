@@ -639,9 +639,11 @@ def execute_long_novel_pipeline_v1(
                 prompt=build_standout_prompt(candidates, hook_vocabulary(axes)),
             )
         ) if breakdown else None,
+        # 两种读法共用：配角在书里担什么，对评测和拆文都成立，而且对配角来说这是唯一一个
+        # 他们答得上来的问题——目标、抉择、结局是主角才有的东西。每本书一次，不随人数增长。
         cast_reader=(
             lambda payload: provider.json_unit("cast", CAST_FUNCTION_INSTRUCTION, payload)
-        ) if breakdown else None,
+        ),
         technique_reader=(
             lambda payload: provider.json_unit("techniques", REUSABLE_INSTRUCTION, payload)
         ) if breakdown else None,

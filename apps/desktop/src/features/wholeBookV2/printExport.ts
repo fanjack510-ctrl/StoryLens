@@ -447,14 +447,17 @@ function charactersPage(d: WholeBookAnalysisV2): string {
   // A character we can say something about gets a row. One we cannot gets a name in a run at
   // the end — printing a table of "unknown" tells the reader nothing and costs a third of a page.
   const others = c.major_characters.filter((m) => m.role !== "protagonist" && val(m.name));
-  const described = others.filter((m) => val(m.relationship_to_protagonist) || val(m.character_arc));
+  // 「担什么」优先：对配角来说这是唯一一句真有内容的话，而关系和弧光多半是空的。
+  const described = others.filter(
+    (m) => val(m.function) || val(m.relationship_to_protagonist) || val(m.character_arc),
+  );
   const bare = others.filter((m) => !described.includes(m));
   const cast = described
     .slice(0, 14)
     .map(
       (m) =>
         `<tr><th>${esc(m.name)}</th>
-         <td>${esc(clip(val(m.relationship_to_protagonist) || val(m.character_arc), 72))}</td></tr>`,
+         <td>${esc(clip(val(m.function) || val(m.relationship_to_protagonist) || val(m.character_arc), 72))}</td></tr>`,
     )
     .join("");
 

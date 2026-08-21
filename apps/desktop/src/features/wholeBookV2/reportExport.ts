@@ -346,6 +346,7 @@ function sectionCharacters(d: WholeBookAnalysisV2): string {
       ${row("身份", c.identity)}
       ${row("全书变化", c.character_arc)}
       ${row("目标", c.initial_goal === c.final_goal ? c.final_goal : `${c.initial_goal ?? ""} → ${c.final_goal ?? ""}`)}
+      ${row("在书里担什么", c.function)}
       ${row("与主角的关系", c.relationship_to_protagonist)}
       ${row("关系变化", (c.relationship_changes ?? []).join(" → "))}
       ${row("重大选择", c.major_choice)}

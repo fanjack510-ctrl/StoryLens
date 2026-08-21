@@ -291,6 +291,7 @@ def build_characters_section(
     relationships: Sequence[Mapping[str, Any]] = (),
     tracks: Mapping[str, Any] | None = None,
     character_facts: Mapping[str, Mapping[str, Any]] | None = None,
+    cast_functions: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Canonical entities and their relationships.
 
@@ -338,16 +339,34 @@ def build_characters_section(
         # than one that is honestly empty. Fields this engine cannot yet derive from counted
         # facts are left blank rather than guessed.
         "major_characters": [
-            _major_character(e, index, top_centrality, (character_facts or {}).get(
-                str(e.get("display_surface_norm", "")), {}))
+            _major_character(
+                e, index, top_centrality,
+                (character_facts or {}).get(str(e.get("display_surface_norm", "")), {}),
+                _function_for(str(e.get("display_surface_norm", "")), cast_functions),
+            )
             for index, e in enumerate(ranked[:C_CHARACTERS_MAX])
         ],
         "relationships": list(relationships),
     }
 
 
+def _function_for(name: str, cast: Sequence[Mapping[str, Any]]) -> str:
+    """这个人在配角功能表里的那一句。名字对不上就空着，不硬凑。"""
+    if not name:
+        return ""
+    for row in cast:
+        other = str(row.get("name") or "")
+        if other and (other == name or other in name or name in other):
+            return str(row.get("function") or "")
+    return ""
+
+
 def _major_character(
-    entity: Mapping[str, Any], index: int, top_centrality: int, facts: Mapping[str, Any]
+    entity: Mapping[str, Any],
+    index: int,
+    top_centrality: int,
+    facts: Mapping[str, Any],
+    function: str = "",
 ) -> dict[str, Any]:
     """One row of the character page, filled from facts rather than left declared-and-empty.
 
@@ -407,6 +426,7 @@ def _major_character(
         "cost_paid": costs[:4],
         "gain_received": gains[:4],
         "ending": ending,
+        "function": function,
         "evidence": list(dict.fromkeys(facts.get("evidence", ())))[:5]
         or list(entity.get("evidence_ids", []))[:5],
     }

@@ -42,7 +42,12 @@ class ProtagonistArc(M):
     initial_identity:str; initial_goal:str; final_goal:str; final_identity:str; stages:list[ArcStage]; external_status_track:list[GrowthTrackPoint]; ability_track:list[GrowthTrackPoint]; internal_belief_track:list[GrowthTrackPoint]; relationship_track:list[GrowthTrackPoint]
     overall_cost:list[str]=Field(default_factory=list); overall_gain:list[str]=Field(default_factory=list); core_transformation:str=""; arc_summary:str=""
 class MajorCharacter(M):
-    character_id:str; name:str; aliases:list[str]; importance:float=Field(ge=0,le=1); identity:str; role:str; initial_goal:str; final_goal:str; character_arc:str; key_events:list[str]; relationship_to_protagonist:str; relationship_changes:list[str]; major_choice:str; cost_paid:list[str]; gain_received:list[str]; ending:str; evidence:list[str]
+    #: 这个人在书里担什么——「去掉他，这本书会缺什么」。
+    #:
+    #: 目标、抉择、结局是主角才有的东西：实测一次抽取给出 20 条目标，只落在 2 个人身上，
+    #: 不是配额不够，是书里没写。于是十几张配角卡片除名字与事件外整片空白。这一栏问的是
+    #: 一个配角答得上来的问题，两种读法都产出它。默认空串，旧文档照样通过校验。
+    character_id:str; name:str; aliases:list[str]; importance:float=Field(ge=0,le=1); identity:str; role:str; initial_goal:str; final_goal:str; character_arc:str; key_events:list[str]; relationship_to_protagonist:str; relationship_changes:list[str]; major_choice:str; cost_paid:list[str]; gain_received:list[str]; ending:str; evidence:list[str]; function:str=""
 class Relationship(Ranged):
     person_a:str; person_b:str; relationship_type:str; initial_state:str; evolution:list[str]; major_turning_points:list[str]; final_state:str
 class CharactersResult(M): version:str="2.0"; availability:Availability=Availability.AVAILABLE; protagonist:ProtagonistArc; major_characters:list[MajorCharacter]; relationships:list[Relationship]

@@ -517,6 +517,45 @@ class RunCoordinator:
         rows.sort(key=lambda r: r["chapter"])
         return rows
 
+    def cast_functions(
+        self,
+        entities: Sequence[Mapping[str, Any]],
+        character_facts: Mapping[str, Mapping[str, Any]],
+        report: RunReport,
+    ) -> tuple[list[dict[str, Any]], str]:
+        """每个配角在这本书里担什么。一次有界调用，与人数无关。
+
+        这一步原先只在拆文那条读法里跑，可它回答的问题对两种读法都成立——而且对配角来说，
+        它是唯一一个他们答得上来的问题。人物档案问的是目标、抉择、结局，那是主角才有的东西：
+        实测一次抽取给出 20 条目标，只落在 2 个人身上，不是配额不够，是书里没写。于是十几张
+        配角卡片除了名字和事件之外整片空白。
+
+        「去掉这个人，这本书会缺什么」——这个问题配角答得上来，而且答案就在他们做过的事里。
+        """
+        if self._read_cast is None or not entities or self._budget_exhausted(report):
+            return [], ""
+        lead = str(entities[0].get("display_surface_norm", ""))
+        answer = self._read_cast({
+            "lead": lead,
+            "cast": [
+                {
+                    "name": str(e.get("display_surface_norm", "")),
+                    "key_events": list(
+                        (character_facts.get(str(e.get("display_surface_norm", ""))) or {})
+                        .get("key_events", ())
+                    )[:6],
+                }
+                for e in entities[1 : C.CHARACTERS_MAX]
+            ],
+        }) or {}
+        cast = [
+            conform(CastFunction, row)
+            for row in (answer.get("supporting_cast") or [])
+            if isinstance(row, Mapping) and not _is_absent_from_the_book(row)
+        ]
+        report.provider_calls += 1
+        return cast, str(answer.get("cast_note", ""))
+
     def _story_breakdown(
         self,
         assets: dict[str, BlockAsset],
@@ -527,6 +566,7 @@ class RunCoordinator:
         character_facts: Mapping[str, Mapping[str, Any]],
         chronology: Sequence[Mapping[str, Any]],
         vocabulary: Mapping[str, str],
+        cast_functions: tuple[list[dict[str, Any]], str] | None = None,
     ) -> dict[str, Any]:
         """The 拆文 section: four beats, chosen moments, per-chapter hooks, techniques, cast.
 
@@ -584,30 +624,7 @@ class RunCoordinator:
             moments.sort(key=lambda m: m["rank"])
             report.provider_calls += 1
 
-        cast: list[dict[str, Any]] = []
-        cast_note = ""
-        if self._read_cast is not None and entities and not self._budget_exhausted(report):
-            lead = str(entities[0].get("display_surface_norm", "")) if entities else ""
-            answer = self._read_cast({
-                "lead": lead,
-                "cast": [
-                    {
-                        "name": str(e.get("display_surface_norm", "")),
-                        "key_events": list(
-                            (character_facts.get(str(e.get("display_surface_norm", ""))) or {})
-                            .get("key_events", ())
-                        )[:6],
-                    }
-                    for e in entities[1 : C.CHARACTERS_MAX]
-                ],
-            }) or {}
-            cast = [
-                conform(CastFunction, row)
-                for row in (answer.get("supporting_cast") or [])
-                if isinstance(row, Mapping) and not _is_absent_from_the_book(row)
-            ]
-            cast_note = str(answer.get("cast_note", ""))
-            report.provider_calls += 1
+        cast, cast_note = cast_functions if cast_functions is not None else ([], "")
 
         techniques: list[dict[str, Any]] = []
         if self._read_techniques is not None and not self._budget_exhausted(report):
@@ -2031,6 +2048,15 @@ class RunCoordinator:
             shape[key] = result.get(key, shape.get(key, []))
             return {"availability": "available", **shape}
 
+        # 人物事实与配角功能各算一次：人物页和拆文页要的是同一批东西，算两次既慢又可能
+        # 得出两份不一致的答案（配角功能还会因此多付一次模型调用）。
+        shared_facts = self._character_facts(
+            assets,
+            [str(e.get("display_surface_norm", "")) for e in entities[: C.CHARACTERS_MAX]],
+            lead,
+        )
+        shared_cast = self.cast_functions(entities, shared_facts, report)
+
         return to_whole_book_v2(
             book_id=book_id,
             snapshot_id=snapshot_id,
@@ -2071,13 +2097,12 @@ class RunCoordinator:
             },
             characters=build_characters_section(
                 entities,
+                # 每个配角担什么。一次有界调用，两种读法共用同一份结果——拆文那边不会再调
+                # 一次，所以这一栏对评测是新增一次调用，对拆文是零。
+                cast_functions=shared_cast[0],
                 relationships=relationships,
                 tracks=tracks,
-                character_facts=self._character_facts(
-                    assets,
-                    [str(e.get("display_surface_norm", "")) for e in entities[:C.CHARACTERS_MAX]],
-                    lead,
-                ),
+                character_facts=shared_facts,
             ),
             overview=build_overview_section(
                 overview,
@@ -2099,13 +2124,10 @@ class RunCoordinator:
                 # so what it needs is what happened in each act, not where the acts were cut.
                 stages=interpretations,
                 entities=entities,
-                character_facts=self._character_facts(
-                    assets,
-                    [str(e.get("display_surface_norm", "")) for e in entities[:C.CHARACTERS_MAX]],
-                    lead,
-                ),
+                character_facts=shared_facts,
                 chronology=self._chronology(assets),
                 vocabulary=hook_vocabulary(profile_axes or {}),
+                cast_functions=shared_cast,
             ),
             assessment=build_assessment_section(assessment, self._evidence),
             # The genre profile comes from the same synthesis call as the overview — it is a

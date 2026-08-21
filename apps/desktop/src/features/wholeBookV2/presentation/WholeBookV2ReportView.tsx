@@ -1052,6 +1052,9 @@ function CharacterProfile({
   // edge; the rest keep the neutral edge, so the grid ranks its own contents.
   const facts: Array<{ k: string; v: ReactNode; text: string; hl?: boolean }> = [
     { k: "身份", v: c.identity, text: c.identity ?? "" },
+    // 「担什么」放在身份之后、目标之前：对配角来说这是卡片上唯一有内容的一栏，
+    // 因为目标和抉择是主角才有的东西。
+    { k: "在书里担什么", v: c.function, text: c.function ?? "" },
     { k: "与主角的关系", v: c.relationship_to_protagonist, text: c.relationship_to_protagonist ?? "" },
     {
       k: goalMoved ? "目标演变" : "全书目标",
