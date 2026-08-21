@@ -235,6 +235,36 @@ def estimate_hierarchical_whole_book_analysis_v1(
         output_tokens = int(token_plan.estimated_output_tokens)
         total_calls = int(token_plan.estimated_total_calls)
 
+    # 同一本书、同一版本、同一读法、同一模型，预估就是同一个数——已经有那一行就别再写一行。
+    #
+    # 这个函数是「准备全书分析」页调的，而那个页面在有任务跑着时每 3 秒轮询一次。每调一次
+    # 插一行，于是一个纯粹用来看的页面成了写入方，跟正在跑的分析抢同一把写锁：日志里那 84 次
+    # `database is locked` 全是它；《我不是戏神》1299 章的估算又慢，撞得更狠，最后连它自己
+    # 都 500，页面显示「本地分析服务暂时不可用」。
+    #
+    # 有效性就地判：书的版本哈希要一致（这一支存的是 compute_book_revision_hash_v1，跟
+    # 旧路径那个不是同一个函数，不能借用它的校验器），且还没过期。model_name 也要比——
+    # 换模型价格就变，复用旧行等于给出另一个模型的报价。计划照旧现算（纯读，不占写锁），
+    # 因为 context_safe 不在表里，凭空复用等于猜。
+    existing = session.scalars(
+        select(WholeBookCostEstimate)
+        .where(
+            WholeBookCostEstimate.book_id == book_id,
+            WholeBookCostEstimate.mode == resolved_mode.value,
+            WholeBookCostEstimate.provider_config_id == provider_config_id,
+            WholeBookCostEstimate.model_name == model_name,
+            WholeBookCostEstimate.estimate_version == HIERARCHICAL_ESTIMATE_VERSION,
+        )
+        .order_by(WholeBookCostEstimate.id.desc())
+        .limit(1)
+    ).first()
+    if existing is not None and existing.book_revision_hash == revision_hash:
+        expires_at = existing.expires_at
+        if expires_at is not None and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at is not None and created <= expires_at:
+            return existing, plan
+
     row = WholeBookCostEstimate(
         book_id=book_id,
         book_revision_hash=revision_hash,
