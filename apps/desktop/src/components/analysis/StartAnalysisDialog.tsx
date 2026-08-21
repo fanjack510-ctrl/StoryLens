@@ -495,6 +495,7 @@ export function StartAnalysisDialog({
   const [provider, setProvider] = useState(developerMode ? "" : "");
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [profileGateBookId, setProfileGateBookId] = useState<number | null>(null);
   // null = unknown/unchecked, true = confirmed, false = gate closed
   const [profileConfirmed, setProfileConfirmed] = useState<boolean | null>(null);
@@ -1094,7 +1095,9 @@ export function StartAnalysisDialog({
       const messages: Record<string, string> = {
         NO_MANUAL_BOUNDARY_PROVIDER: "当前没有可用于人工边界审阅的AI服务。",
         PROVIDER_UNHEALTHY: "AI服务连接失败，请重新测试连接。",
-        PROVIDER_HEALTH_STALE: "AI服务健康状态已过期，请重新验证连接。",
+        // 「健康状态已过期」是内部说法。人看到的应该是：多久没验、点哪、要多少钱。
+        PROVIDER_HEALTH_STALE:
+          "距上次验证 AI 服务已超过 24 小时。点上方「验证连接」确认服务可用后即可开始（约 ¥0.00001）。",
         PROVIDER_HEALTH_NOT_VERIFIED: "AI服务尚未验证，请先在设置中完成验证。",
         PROVIDER_MODEL_NOT_VERIFIED: "当前分析模式将使用的模型尚未验证。",
         PROVIDER_CREDENTIAL_CHANGED: "API Key 已变化，请重新验证连接。",
@@ -1125,7 +1128,17 @@ export function StartAnalysisDialog({
       const primary = isNetwork
         ? "无法连接StoryLens后端，请确认服务正在运行。"
         : messages[error.code] || error.message || "任务提交失败。";
-      const hint = error.userActionHint || (error.code === "PROVIDER_STATE_CHANGED" ? "请刷新服务状态并重新确认后提交。" : "请展开诊断信息核对。");
+      // 「请展开诊断信息核对」原先加在每一条错误后面，包括那些我们自己已经写清楚了下一步的。
+      // 「距上次验证已超过 24 小时，点验证连接」后面再跟一句「请展开诊断信息核对」，只会让人
+      // 以为还有别的问题。有自己的文案就不再补这句通用兜底。
+      const ownCopy = Boolean(messages[error.code]);
+      const hint =
+        error.userActionHint ||
+        (error.code === "PROVIDER_STATE_CHANGED"
+          ? "请刷新服务状态并重新确认后提交。"
+          : ownCopy
+            ? ""
+            : "请展开诊断信息核对。");
       const raw = developerMode
         ? `\nHTTP ${error.status ?? "NETWORK"} · ${error.code || "NETWORK_ERROR"}${error.requestId ? ` · request_id ${error.requestId}` : ""}`
         : "";
@@ -1229,12 +1242,29 @@ export function StartAnalysisDialog({
           <section className="start-analysis-section">
             <div className="start-analysis-section-head">
               <span className="start-analysis-field-label">AI 服务</span>
+              {/* 「刷新状态」原先只重拉本地缓存，不去碰服务。它就在「AI服务健康状态已过期，
+                  请重新验证连接」那句话旁边，名字叫刷新，点了却什么都不解决——比没有这个
+                  按钮更糟：人会点它，然后以为应用坏了。
+
+                  健康结论有 24 小时 TTL，过期就硬拦，而清除它的唯一路径在另一个页面的另一个
+                  按钮上。现在这里直接做真验证：一次 32 token 的探测，代价写在按钮旁边。 */}
               <button
                 type="button"
                 className="ghost"
                 data-testid="start-analysis-refresh-status"
-                disabled={providers.isFetching}
+                disabled={providers.isFetching || verifying}
                 onClick={async () => {
+                  setVerifying(true);
+                  setMessage("");
+                  try {
+                    if (provider) {
+                      await providersApi.testConnection(provider, 32);
+                    }
+                  } catch (error) {
+                    setMessage(
+                      `验证连接失败：${error instanceof Error ? error.message : "请检查 API Key 与网络"}`,
+                    );
+                  }
                   await invalidateAiQueries(queryClient);
                   await Promise.all([
                     providers.refetch(),
@@ -1244,10 +1274,10 @@ export function StartAnalysisDialog({
                     cloudUsage.refetch(),
                     budgetSettings.refetch(),
                   ]);
-                  setMessage(developerMode ? "Provider 状态已刷新。" : "服务状态已刷新。");
+                  setVerifying(false);
                 }}
               >
-                {providers.isFetching ? "刷新中……" : "刷新状态"}
+                {verifying ? "验证中……" : providers.isFetching ? "刷新中……" : "验证连接"}
               </button>
             </div>
 

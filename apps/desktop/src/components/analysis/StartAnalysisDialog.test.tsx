@@ -10,7 +10,7 @@ import { ApiError } from "../../services/apiClient";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 vi.mock("../../services/providersApi", () => ({
-  providersApi: { list: vi.fn(), cloud: vi.fn(), configuration: vi.fn() },
+  providersApi: { list: vi.fn(), cloud: vi.fn(), configuration: vi.fn(), testConnection: vi.fn() },
 }));
 vi.mock("../../services/analysisApi", () => ({
   analysisApi: { start: vi.fn(), preflight: vi.fn(), executionPlan: vi.fn() },
@@ -683,13 +683,17 @@ describe("普通模式开始分析弹窗", () => {
     expect(screen.getByTestId("start-analysis-submit")).toBeDisabled();
   });
 
-  it("刷新状态会重新查询 ExecutionPlan", async () => {
+  // 这个按钮原先只重拉本地缓存，不去碰服务。它就在「健康状态已过期，请重新验证连接」旁边，
+  // 名字叫刷新，点了却什么都不解决——健康结论有 24 小时 TTL，不真发一次探测就永远是过期的。
+  it("验证连接会真的去探测服务，而不只是重拉缓存", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.testConnection).mockResolvedValue({ ok: true } as any);
     renderDialog();
     await screen.findByTestId("start-analysis-ai-connected");
-    expect(analysisApi.executionPlan).toHaveBeenCalled();
     vi.mocked(analysisApi.executionPlan).mockClear();
     fireEvent.click(screen.getByTestId("start-analysis-refresh-status"));
+    await waitFor(() => expect(providersApi.testConnection).toHaveBeenCalled());
+    // 探测之后仍然要重新拿一遍计划，否则屏幕上还是旧结论。
     await waitFor(() => expect(analysisApi.executionPlan).toHaveBeenCalled());
   });
 
