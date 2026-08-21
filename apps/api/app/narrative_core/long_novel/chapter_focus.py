@@ -31,6 +31,7 @@ __all__ = [
     "ChapterFocus",
     "GenreAxis",
     "MAX_GENRE_AXES",
+    "anchors_for",
     "selected_axes",
     "required_axis_keys",
     "CHAPTER_FOCI",
@@ -919,6 +920,24 @@ def chapter_foci_for(axes: Mapping[str, Any]) -> tuple[ChapterFocus, ...]:
 #: like a per-scene one — and on a 订阅制情感文 that is exactly what squeezed out 情绪质感,
 #: the axis that decides whether a slow chapter is worth its length.
 MAX_GENRE_AXES = 5
+
+
+def anchors_for(key: str) -> str:
+    """这条轴的 0 / 3 / 5 各是什么样子，按 key 取。
+
+    锚点此前只进提示词，不进响应：屏幕上写着「线索投放 0/5」，而 5 分长什么样只有模型
+    知道。读者看到一个分数和一句针对本场的理由，却无从判断这个刻度严不严——
+    ``GenreAxis`` 的文档里已经说明了没有锚点的后果（clarity 在 42 个场景里 81% 返回 5），
+    那个道理对读者同样成立。
+
+    按 key 现取，而不是写进存下来的产物：这样这次改动之前跑的报告也能显示刻度，
+    而且刻度改了以后不会有两份说法。
+    """
+    for focus in CHAPTER_FOCI:
+        for axis in focus.axes:
+            if axis.key == key:
+                return axis.anchors
+    return ""
 
 
 def selected_axes(foci: Sequence[ChapterFocus]) -> tuple[GenreAxis, ...]:

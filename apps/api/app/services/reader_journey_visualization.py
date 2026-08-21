@@ -1026,7 +1026,20 @@ def _apply_v2_presentation_overrides(
                 node["role"] = "core"
 
         if isinstance(axes_by_ordinal, dict) and axes_by_ordinal.get(key):
-            node["genre_axes"] = list(axes_by_ordinal[key])
+            # 把这条轴的刻度（0/3/5 各是什么）现取现挂：屏幕上原先只有一个分数和一句针对
+            # 本场的理由，读者无从判断这个刻度严不严。按 key 现取而不是写进存下来的产物，
+            # 所以这次改动之前的报告也能显示，且刻度改了不会有两份说法。
+            from app.narrative_core.long_novel.chapter_focus import anchors_for
+
+            enriched = []
+            for axis in axes_by_ordinal[key]:
+                row = dict(axis) if isinstance(axis, dict) else axis
+                if isinstance(row, dict) and not row.get("anchors"):
+                    scale = anchors_for(str(row.get("key") or ""))
+                    if scale:
+                        row["anchors"] = scale
+                enriched.append(row)
+            node["genre_axes"] = enriched
         ledger_row = ledger_by_ordinal.get(key)
         if ledger_row is not None:
             # The one number on the page that remembers what came before it.

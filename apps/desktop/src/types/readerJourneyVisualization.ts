@@ -314,6 +314,8 @@ export type JourneyGenreAxis = {
   level: number;
   evidence_paragraph_ids: string[];
   rationale: string;
+  /** 这条轴的 0 / 3 / 5 各是什么样子。后端在读取时按 key 现挂，旧报告也有。 */
+  anchors?: string;
 };
 
 export type JourneyCraftFlag = {

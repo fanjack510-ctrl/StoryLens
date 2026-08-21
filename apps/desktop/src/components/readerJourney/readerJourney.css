@@ -4013,6 +4013,28 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   color: color-mix(in srgb, var(--text, #1a1a1a) 72%, transparent);
 }
 
+/* 刻度与依据：分数旁边要能回答「5 分长什么样」和「看着哪几段判的」。 */
+.scene-genre-axis-scale {
+  margin-top: 4px;
+}
+.scene-genre-axis-scale > summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 58%, transparent);
+}
+.scene-genre-axis-scale > p {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 66%, transparent);
+}
+.scene-genre-axis-evidence {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 52%, transparent);
+}
+
 .scene-craft-flag-list > li {
   display: flex;
   gap: 10px;

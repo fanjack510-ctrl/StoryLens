@@ -355,6 +355,20 @@ export function JourneySceneDetailPanel({
                   {axis.rationale ? (
                     <span className="scene-genre-axis-reason">{axis.rationale}</span>
                   ) : null}
+                  {/* 分数旁边要有刻度和依据，否则「0/5」只是一个数字：读者既不知道 5 分
+                      长什么样，也不知道这个判断是看着哪几段做出的。两样后端本来就有——
+                      锚点在轴的定义里，段号在 evidence_paragraph_ids 里——只是没上屏。 */}
+                  {axis.anchors ? (
+                    <details className="scene-genre-axis-scale">
+                      <summary>这条怎么算分</summary>
+                      <p>{axis.anchors}</p>
+                    </details>
+                  ) : null}
+                  {axis.evidence_paragraph_ids?.length ? (
+                    <span className="scene-genre-axis-evidence">
+                      依据：{axis.evidence_paragraph_ids.join("、")}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
