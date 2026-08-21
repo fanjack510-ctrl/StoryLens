@@ -21,6 +21,7 @@ the failure mode this rebuild exists to end.
 
 from __future__ import annotations
 
+from collections import Counter
 import re
 from typing import Any, Mapping, Sequence
 
@@ -359,6 +360,14 @@ def _major_character(
     goals = list(facts.get("goals", ()))
     choices = list(facts.get("choices", ()))
     to_lead = list(facts.get("to_lead", ()))
+    # 身份：正文写明的说法，抽取层一直在产出（role_hint），此前一路被丢掉。取出现次数最多的
+    # 那个说法——同一个人在不同块里可能被写成「十班班长」和「班长」，多数票选出更完整的那个。
+    roles = [r for r in facts.get("roles", ()) if r]
+    identity = Counter(roles).most_common(1)[0][0] if roles else ""
+    # 结局：这个人最后一次状态变化落在哪。是清点结果，不是对结局的判断——书里没写他变过，
+    # 这一栏就空着。
+    states = sorted(facts.get("states", ()), key=lambda x: x[0])
+    ending = str(states[-1][2]) if states else ""
     costs = [c for _, cs, _ in choices for c in cs]
     gains = [g for _, _, gs in choices for g in gs]
     return {
@@ -366,7 +375,7 @@ def _major_character(
         "name": str(entity.get("display_surface_norm", "")),
         "aliases": list(entity.get("aliases", [])),
         "importance": round(min(1.0, entity.get("centrality", 0) / max(1, top_centrality)), 2),
-        "identity": "",
+        "identity": identity,
         "role": "protagonist" if index == 0 else "supporting",
         "initial_goal": goals[0] if goals else "",
         "final_goal": goals[-1] if goals else "",
@@ -397,7 +406,7 @@ def _major_character(
         "major_choice": choices[0][0] if choices else "",
         "cost_paid": costs[:4],
         "gain_received": gains[:4],
-        "ending": "",
+        "ending": ending,
         "evidence": list(dict.fromkeys(facts.get("evidence", ())))[:5]
         or list(entity.get("evidence_ids", []))[:5],
     }
@@ -700,9 +709,31 @@ def _empty(availability: str = "unavailable") -> dict[str, Any]:
 #: the report.  Absent from this table means "no axis this engine knows how to compute", which
 #: renders as the stage list rather than as a line — see ``JourneyAxis`` on the contract for
 #: why an ordinal staircase is not an acceptable fallback.
+#: Which quantity each narrative engine's journey is about.
+#:
+#: Every engine names one. Before this only two did, so four of the six — 情感、群像、种田、
+#: 单元 — drew no curve at all and said nothing about why. The rule for adding one is
+#: unchanged: the axis must be a **counted** quantity that can fall, never a number read out
+#: of prose.
 _JOURNEY_AXIS: dict[str, tuple[str, str]] = {
     "mystery": ("cognition", "认知度"),
     "progression": ("ladder", "阶位"),
+    "romance": ("relationship", "关系亲疏"),
+    "ensemble_politics": ("screen_time", "戏份占比"),
+    "slice_of_life": ("stakes", "得失累计"),
+    "episodic_transmigration": ("stakes", "得失累计"),
+}
+
+#: How far each relationship beat moves the bond. Commitment and reconciliation are worth
+#: more than a warm scene; a betrayal costs more than a cooling. Mirrors _COGNITION_WEIGHT:
+#: a closed set with signed weights is the only thing that can be summed into a curve.
+#: Ladder beats that move the wrong way. Unlike the summed axes this one is not a
+#: weight table — a rank is a level, not an accumulation — so the fall is named.
+_LADDER_DOWN_KINDS = frozenset({"demote", "setback"})
+
+_RELATIONSHIP_WEIGHT: dict[str, int] = {
+    "meet": 1, "warm": 2, "commit": 4, "reconcile": 3,
+    "cool": -2, "rift": -3, "betray": -5, "part": -4,
 }
 
 #: How far each suspense action moves the cognition axis.  Reveals and answers add; a twist
@@ -881,6 +912,8 @@ def build_journey_section(
     chapter_count: int,
     suspense_actions: Sequence[Mapping[str, Any]] = (),
     power_beats: Sequence[Mapping[str, Any]] = (),
+    relationship_changes: Sequence[Mapping[str, Any]] = (),
+    lead: str = "",
     screen_time: Mapping[str, Sequence[int]] | None = None,
     screen_time_spans: Mapping[str, tuple[int, int, int]] | None = None,
     bins: int = 0,
@@ -905,8 +938,26 @@ def build_journey_section(
             section = _cognition_journey(label, suspense_actions, chapter_count)
         elif kind == "ladder":
             section = _ladder_journey(label, power_beats)
+        elif kind == "relationship":
+            section = _relationship_journey(label, relationship_changes, lead, chapter_count)
+        elif kind == "screen_time" and screen_time:
+            section = _screen_time_journey(screen_time, screen_time_spans or {}, bins)
+        elif kind == "stakes":
+            section = _stakes_journey(label, ledger, chapter_count)
         else:
             section = conform(JourneyResult, {"availability": "unavailable", "axis": "none"})
+        # 一条轴算不出点来，不该让这一页变成空白。得失累计只需要每一程的得失条数，任何书
+        # 都有，所以它同时是四种引擎的本轴和其余引擎的兜底。两条都空，才真的没有可画的。
+        if not section.get("points") and kind != "stakes":
+            fallback = _stakes_journey("", ledger, chapter_count)
+            if fallback.get("points"):
+                section = fallback
+    # 一条轴只有在真画得出线的时候才算数。算不出点来就报 none——契约里 none 的意思正是
+    # 「这本书没有可画的纵轴」，而客户端也是据此决定不画图、改说明原因的。声明了轴却交出
+    # 零个点，会让前端拿着空数组去画一条线。
+    if not section.get("points") and not section.get("bands"):
+        section["axis"] = "none"
+        section["axis_label"] = ""
     # The ledger is axis-independent: what a stage cost is worth showing even when no curve
     # could be drawn, which is the whole point of keeping it out of the chart.
     section["ledger"] = list(ledger)
@@ -955,6 +1006,7 @@ def _cognition_journey(
         points.append(conform(JourneyPoint, {
             "chapter": max(1, int(row.get("chapter_ref") or 1)),
             "value": running, "kind": kind, "load_bearing": True,
+            "down": _COGNITION_WEIGHT[kind] < 0,
             "note": str(row.get("information_added") or "")[:40],
             "evidence": list(row.get("evidence_ids") or []),
         }))
@@ -967,6 +1019,89 @@ def _cognition_journey(
         "availability": "available" if points else "unavailable",
         "axis": "cognition", "axis_label": label or "认知度",
         "ticks": ["什么都不知道", "知道得最多"], "points": points, "caveat": caveat,
+    })
+
+
+def _relationship_journey(
+    label: str, changes: Sequence[Mapping[str, Any]], lead: str, chapter_count: int
+) -> dict[str, Any]:
+    """The lead's bond with everyone else, summed over typed relationship beats.
+
+    情感关系 books had no axis because ``relation`` is prose — 「从敌对到缓和」 cannot be added
+    up. The beats now carry a closed ``change_kind`` and the chapter they land in, which is
+    what makes a line possible without inventing a number from a sentence.
+
+    Beats not involving the lead are skipped: this is the protagonist's journey, and a side
+    couple's falling-out is not a fall in it.
+    """
+    moves = []
+    for row in changes:
+        kind = str(row.get("change_kind") or "")
+        if kind not in _RELATIONSHIP_WEIGHT:
+            continue
+        pair = (str(row.get("from_entity_ref") or ""), str(row.get("to_entity_ref") or ""))
+        if lead and not any(lead in side for side in pair):
+            continue
+        other = pair[1] if lead and lead in pair[0] else pair[0]
+        moves.append((int(row.get("chapter_ref") or 0), kind, other, row))
+    moves.sort(key=lambda m: m[0])
+    running, points = 0.0, []
+    for chapter, kind, other, row in moves:
+        running += _RELATIONSHIP_WEIGHT[kind]
+        points.append(conform(JourneyPoint, {
+            "chapter": max(1, chapter or 1),
+            "value": running, "kind": kind, "who": other, "load_bearing": True,
+            "down": _RELATIONSHIP_WEIGHT[kind] < 0,
+            "note": str(row.get("relation") or "")[:40],
+            "evidence": list(row.get("evidence_ids") or []),
+        }))
+    down = sum(1 for _, kind, _, _ in moves if _RELATIONSHIP_WEIGHT[kind] < 0)
+    caveat = ""
+    if points and not down:
+        caveat = (f"全书 {chapter_count} 章没有抽到一次疏远、裂痕或背叛，所以这条线只涨不跌。"
+                  "这通常是抽取时把降温也记成了升温，而不是书里真的一路顺遂。")
+    return conform(JourneyResult, {
+        "availability": "available" if points else "unavailable",
+        "axis": "relationship", "axis_label": label or "关系亲疏", "lead": lead,
+        "ticks": ["最疏远", "最亲近"], "points": points, "caveat": caveat,
+    })
+
+
+def _stakes_journey(
+    label: str, ledger: Sequence[Mapping[str, Any]], chapter_count: int
+) -> dict[str, Any]:
+    """净得失：what each stage won minus what it cost, accumulated.
+
+    The universal fallback. Every book produces choices with costs and gains — that is what
+    the stage ledger is built from — so this axis exists wherever any axis can. It is what a
+    book gets when its engine has no axis of its own, and what any engine falls back to when
+    its own axis came up empty.
+
+    Counting entries rather than weighing them is deliberate: how much a loss hurt is not
+    measured anywhere, and inventing a magnitude is exactly what these axes must not do.
+    """
+    running, points = 0.0, []
+    for stage in ledger:
+        gained = int(stage.get("gained_total") or len(stage.get("gained") or ()))
+        lost = int(stage.get("lost_total") or len(stage.get("lost") or ()))
+        if not gained and not lost:
+            continue
+        running += gained - lost
+        points.append(conform(JourneyPoint, {
+            "chapter": max(1, int(stage.get("chapter_end") or stage.get("chapter_start") or 1)),
+            "value": running,
+            "label": str(stage.get("stage_name") or ""),
+            "kind": "gain" if gained >= lost else "setback",
+            "load_bearing": True,
+            "down": lost > gained,
+            "note": f"得 {gained} · 失 {lost}",
+            "evidence": [],
+        }))
+    return conform(JourneyResult, {
+        "availability": "available" if points else "unavailable",
+        "axis": "stakes", "axis_label": label or "得失累计",
+        "ticks": ["失大于得", "得大于失"], "points": points,
+        "caveat": "纵轴是每一程「获得」条数减「付出」条数的累计，衡量的是得失的件数，不是分量。",
     })
 
 
@@ -986,6 +1121,8 @@ def _ladder_journey(label: str, beats: Sequence[Mapping[str, Any]]) -> dict[str,
             "label": str(row.get("level") or ""), "kind": str(row.get("kind") or ""),
             "who": str(row.get("entity_ref") or ""), "note": str(row.get("why") or "")[:40],
             "load_bearing": str(row.get("entity_ref") or "") == lead and row.get("rank") is not None,
+            # 阶梯轴上，节拍名带着数值没有的信息：一次重伤濒死是下跌，哪怕阶位没变。
+            "down": str(row.get("kind") or "") in _LADDER_DOWN_KINDS,
             "evidence": list(row.get("evidence_ids") or []),
         })
         for row in sorted(beats, key=lambda r: int(r.get("chapter_ref") or 0))

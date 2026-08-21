@@ -107,12 +107,63 @@ def test_a_bin_nobody_appears_in_is_a_gap_not_an_even_split():
     assert [band["share"] for band in section["bands"]] == [[0.5, 0.0], [0.5, 0.0]]
 
 
-def test_an_engine_with_no_axis_refuses_to_draw_rather_than_inventing_a_staircase():
-    for engine in ("romance", "slice_of_life", "episodic_transmigration", ""):
+def test_an_engine_with_nothing_counted_refuses_to_draw_rather_than_inventing_a_staircase():
+    """每种引擎现在都指定了一条轴，但轴名不是画图的许可证——数不出点就仍然不画。
+
+    这条用例原先钉的是「情感/种田/单元 永远是 none」。那是当时的事实，不是该守的规矩：
+    该守的是「没有清点结果就不画线」。轴名在没有点时回落为 none，因为 none 的含义正是
+    「这本书没有可画的纵轴」，客户端据此改为说明原因。
+    """
+    for engine in ("romance", "slice_of_life", "episodic_transmigration", "mystery", ""):
         section = build_journey_section(axes={"engine": engine}, chapter_count=500)
         assert section["axis"] == "none"
         assert section["availability"] == "unavailable"
         assert section["points"] == []
+
+
+def test_every_engine_names_an_axis_and_draws_it_when_the_facts_are_there():
+    """四种引擎此前一条线都画不出来，因为轴表里只有悬疑和升级流。"""
+    ledger = [
+        {"stage_name": "一", "chapter_start": 1, "chapter_end": 16,
+         "gained": ["a", "b"], "lost": ["c"], "gained_total": 2, "lost_total": 1},
+        {"stage_name": "二", "chapter_start": 17, "chapter_end": 40,
+         "gained": ["d"], "lost": ["e", "f", "g"], "gained_total": 1, "lost_total": 3},
+    ]
+    rels = [
+        {"from_entity_ref": "甲", "to_entity_ref": "乙", "relation": "缓和", "chapter_ref": 5, "change_kind": "warm"},
+        {"from_entity_ref": "甲", "to_entity_ref": "乙", "relation": "吵翻", "chapter_ref": 20, "change_kind": "rift"},
+        {"from_entity_ref": "丙", "to_entity_ref": "丁", "relation": "与主角无关", "chapter_ref": 9, "change_kind": "warm"},
+    ]
+    romance = build_journey_section(
+        axes={"engine": "romance"}, chapter_count=76, ledger=ledger,
+        relationship_changes=rels, lead="甲",
+    )
+    assert romance["axis"] == "relationship"
+    # 与主角无关的那一对不计入主角的历程。
+    assert [p["chapter"] for p in romance["points"]] == [5, 20]
+    # 能跌，正是这条轴存在的理由。
+    assert romance["points"][1]["value"] < romance["points"][0]["value"]
+
+    for engine in ("slice_of_life", "episodic_transmigration"):
+        section = build_journey_section(
+            axes={"engine": engine}, chapter_count=76, ledger=ledger,
+        )
+        assert section["axis"] == "stakes"
+        assert [p["value"] for p in section["points"]] == [1.0, -1.0]
+
+
+def test_an_axis_that_came_up_empty_falls_back_to_stakes_rather_than_to_a_blank_page():
+    """得失累计只要每一程的得失条数，任何书都有——所以它同时是本轴也是兜底。"""
+    ledger = [
+        {"stage_name": "一", "chapter_start": 1, "chapter_end": 16,
+         "gained": ["a"], "lost": [], "gained_total": 1, "lost_total": 0},
+    ]
+    section = build_journey_section(
+        axes={"engine": "romance"}, chapter_count=76, ledger=ledger,
+        relationship_changes=[], lead="甲",
+    )
+    assert section["axis"] == "stakes"
+    assert section["points"]
 
 
 def test_a_progression_book_with_no_named_rank_does_not_pretend_to_have_a_ladder():

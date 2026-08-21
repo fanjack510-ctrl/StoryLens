@@ -156,7 +156,7 @@ class AnalysisMetadata(M):
 #: because its height *is* the stage index.  These axes each carry a quantity that can fall:
 #: 806 chapters of a mystery yielded 1 downward move, 1299 chapters of a progression novel
 #: yielded 130, and that difference is the analysis.
-JourneyAxis=Literal["cognition","ladder","screen_time","none"]
+JourneyAxis=Literal["cognition","ladder","screen_time","relationship","stakes","none"]
 
 class JourneyPoint(M):
     """One reading on the journey axis.
@@ -167,9 +167,17 @@ class JourneyPoint(M):
     not connected.  On 《我不是戏神》 that distinction is load-bearing in the literal sense: a
     ``gain`` reading often names the rank of the *skill* acquired rather than the character's
     own, so a line through every reading climbs a ladder the book never climbed.
+
+    ``down`` says this reading moved the wrong way. The engine decides it, because only the
+    engine holds the axis weights — a client-side list of "downward" beat names has to be
+    updated for every new axis, and was not: 关系亲疏 shipped with `rift` and `betray` missing
+    from it, so a book with three ruptures displayed 「下跌 0 次」. Nor is falling value enough
+    on its own: a 重伤濒死 setback is a fall even when the rank it is recorded against did
+    not change.
     """
     chapter:int=Field(ge=1); value:float; label:str=""; kind:str=""; who:str=""
-    note:str=""; load_bearing:bool=False; evidence:list[str]=Field(default_factory=list)
+    note:str=""; load_bearing:bool=False; down:bool=False
+    evidence:list[str]=Field(default_factory=list)
 
 class ScreenTimeBand(M):
     """One character's share of the action, bin by bin.

@@ -86,7 +86,8 @@ describe("历程图本身", () => {
       { chapter: 41, value: 1, label: "第一阶", kind: "promote", who: "陈伶", note: "登临第一阶", load_bearing: true, evidence: [] },
       { chapter: 171, value: 3, label: "三阶", kind: "gain", who: "陈伶", note: "获得三阶技能", load_bearing: false, evidence: [] },
       { chapter: 324, value: 2, label: "第二阶", kind: "promote", who: "陈伶", note: "晋升第二阶", load_bearing: true, evidence: [] },
-      { chapter: 807, value: 2, label: "", kind: "setback", who: "陈伶", note: "重伤濒死", load_bearing: false, evidence: [] },
+      // 引擎标的：一次重伤濒死是下跌，哪怕它记在的那个阶位没有变。数值比较看不出这件事。
+      { chapter: 807, value: 2, label: "", kind: "setback", who: "陈伶", note: "重伤濒死", load_bearing: false, down: true, evidence: [] },
     ],
   });
 
@@ -103,6 +104,29 @@ describe("历程图本身", () => {
     const { container } = openJourney(withJourney(ladder), "升级历程");
     expect(container.querySelectorAll(".wb2-journey-dot.down")).toHaveLength(1);
     expect(screen.getByText(/共 4 个读数，其中下跌 1 次/)).toBeInTheDocument();
+  });
+
+  // 这次改动之前生成的报告里没有 down 这个字段。累计型的轴上，值降了就是跌了——所以旧报告
+  // 也不会退化成「下跌 0 次」，而这正是关系亲疏那条轴刚上线时的样子。
+  it("旧报告没有 down 字段时，按数值判断跌在哪", () => {
+    const legacy = {
+      availability: "available" as const,
+      axis: "relationship" as const,
+      axis_label: "关系亲疏",
+      lead: "甲",
+      ticks: ["最疏远", "最亲近"],
+      caveat: "",
+      bands: [],
+      bins: 0,
+      points: [
+        { chapter: 5, value: 2, label: "", kind: "warm", who: "乙", note: "缓和", load_bearing: true, evidence: [] },
+        { chapter: 20, value: -1, label: "", kind: "rift", who: "乙", note: "吵翻", load_bearing: true, evidence: [] },
+        { chapter: 56, value: 3, label: "", kind: "commit", who: "乙", note: "在一起", load_bearing: true, evidence: [] },
+      ],
+    };
+    const { container } = openJourney(withJourney(legacy as never), "关系历程");
+    expect(container.querySelectorAll(".wb2-journey-dot.down")).toHaveLength(1);
+    expect(screen.getByText(/共 3 个读数，其中下跌 1 次/)).toBeInTheDocument();
   });
 
   it("后端给的 caveat 原样显示，不由前端决定说不说", () => {

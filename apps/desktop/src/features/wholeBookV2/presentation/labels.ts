@@ -56,6 +56,8 @@ export const JOURNEY_TAB: Record<JourneyAxis, string> = {
   cognition: "认知历程",
   ladder: "升级历程",
   screen_time: "戏份分布",
+  relationship: "关系历程",
+  stakes: "得失历程",
   none: "主角历程",
 };
 

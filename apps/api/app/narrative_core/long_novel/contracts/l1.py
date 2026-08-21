@@ -165,10 +165,22 @@ class SuspenseAction(_Fact):
     chapter_ref: int = Field(ge=1)
 
 
+#: What a relationship beat did to the bond. Closed, so it can carry a weight — the same
+#: reason ``suspense_actions.action_kind`` is closed. Free text cannot be summed, and a
+#: relationship curve drawn from prose would be a number invented from a sentence.
+RELATIONSHIP_KINDS = (
+    "meet", "warm", "commit", "reconcile", "cool", "rift", "betray", "part",
+)
+
+
 class RelationshipChange(_Fact):
     from_entity_ref: str
     to_entity_ref: str
     relation: str = Field(max_length=24)
+    #: Which chapter the beat lands in. Without it the change cannot be placed on any
+    #: timeline, which is why the relationship axis could not be drawn at all.
+    chapter_ref: int = Field(default=0, ge=0)
+    change_kind: str = Field(default="", max_length=16)
 
 
 class GoalChange(_Fact):

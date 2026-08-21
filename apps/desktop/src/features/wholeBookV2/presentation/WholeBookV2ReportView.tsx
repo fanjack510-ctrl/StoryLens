@@ -486,6 +486,15 @@ const JOURNEY_KIND_LABELS: Record<string, string> = {
   faceslap: "打脸压制",
   setback: "受挫",
   demote: "跌落",
+  // 关系亲疏这条轴上的节拍。
+  meet: "初识",
+  warm: "拉近",
+  commit: "确立关系",
+  reconcile: "和解",
+  cool: "疏远",
+  rift: "裂痕",
+  betray: "背叛",
+  part: "断绝",
 };
 
 function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapterCount: number }) {
@@ -496,6 +505,7 @@ function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapt
   // revealed, what was overturned — was previously only in a hover <title>, which is content
   // the reader can never see all of and touch devices can never see at all.
   const [at, setAt] = useState<number | null>(null);
+  const falling = fallingPoints(journey.points);
 
   if (journey.axis === "screen_time") {
     const bins = journey.bins || journey.bands[0]?.share.length || 0;
@@ -577,7 +587,7 @@ function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapt
             cx={x(p.chapter)}
             cy={y(p.value)}
             r={at === i ? 6 : p.load_bearing ? 4.2 : 2.6}
-            className={`wb2-journey-dot${DOWN_KINDS.has(p.kind) ? " down" : ""}${p.load_bearing ? " lead" : ""}${at === i ? " selected" : ""}`}
+            className={`wb2-journey-dot${falling[i] ? " down" : ""}${p.load_bearing ? " lead" : ""}${at === i ? " selected" : ""}`}
             onClick={() => setAt(at === i ? null : i)}
           >
             <title>{`第 ${p.chapter} 章　${p.who || ""}${p.label ? " " + p.label : ""}　${p.kind}　${p.note}`}</title>
@@ -587,7 +597,7 @@ function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapt
       {at !== null && journey.points[at] && (
         <div className="wb2-journey-point-detail">
           <b className="wb2-journey-point-ch">第 {journey.points[at].chapter} 章</b>
-          <span className={`wb2-journey-point-kind${DOWN_KINDS.has(journey.points[at].kind) ? " down" : ""}`}>
+          <span className={`wb2-journey-point-kind${falling[at] ? " down" : ""}`}>
             {JOURNEY_KIND_LABELS[journey.points[at].kind] ?? journey.points[at].kind}
           </span>
           {journey.points[at].who && <span>{journey.points[at].who}</span>}
@@ -598,11 +608,12 @@ function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapt
       <p className="wb2-journey-axis-note">
         纵轴＝{journey.axis_label}
         {journey.lead && `　主线＝${journey.lead}`}　共 {journey.points.length} 个读数，其中下跌{" "}
-        {journey.points.filter((p) => DOWN_KINDS.has(p.kind)).length} 次　·　点任意一个点看它的内容
+        {falling.filter(Boolean).length} 次　·　点任意一个点看它的内容
       </p>
       {journey.caveat && <p className="wb2-journey-caveat">{journey.caveat}</p>}
       <JourneyTurnList
         points={journey.points}
+        falling={falling}
         active={at}
         onPick={(i) => setAt(at === i ? null : i)}
       />
@@ -619,16 +630,19 @@ function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapt
  */
 function JourneyTurnList({
   points,
+  falling,
   active,
   onPick,
 }: {
   points: JourneyResult["points"];
+  falling: readonly boolean[];
   active: number | null;
   onPick: (index: number) => void;
 }) {
+  // 转折＝线掉下来的地方，外加「给出答案」这种即使不掉也算转折的节拍。
   const rows = points
-    .map((p, i) => ({ ...p, index: i }))
-    .filter((p) => DOWN_KINDS.has(p.kind) || p.kind === "resolve" || p.kind === "demote");
+    .map((p, i) => ({ ...p, index: i, down: falling[i] === true }))
+    .filter((p) => p.down || p.kind === "resolve");
   if (!rows.length) return null;
   return (
     <ol className="wb2-journey-turns">
@@ -640,7 +654,7 @@ function JourneyTurnList({
             aria-pressed={active === p.index}
           >
             <b>第 {p.chapter} 章</b>
-            <i className={DOWN_KINDS.has(p.kind) ? "down" : ""}>
+            <i className={p.down ? "down" : ""}>
               {JOURNEY_KIND_LABELS[p.kind] ?? p.kind}
             </i>
             <span>{p.note || "（无说明）"}</span>
@@ -651,7 +665,28 @@ function JourneyTurnList({
   );
 }
 
-const DOWN_KINDS = new Set(["setback", "demote", "twist", "misdirect"]);
+/** 哪些读数是下跌的。
+ *
+ *  引擎说了算——只有它握着各条轴的权重。此前这里是一张写死的节拍名单
+ *  （setback / demote / twist / misdirect），每加一条新轴就会漏掉它的节拍：关系亲疏上线时
+ *  `rift` 和 `betray` 不在名单里，于是一本有三次裂痕的书在页面上写着「下跌 0 次」。
+ *
+ *  这次改动之前生成的报告没有 `down` 这个字段，对它们退回按数值比较——累计型的轴上，
+ *  值降了就是跌了。只沿主线比较：阶梯轴上别人的读数不在这条线上。
+ */
+function fallingPoints(points: JourneyResult["points"]): boolean[] {
+  if (points.some((p) => p.down !== undefined)) return points.map((p) => p.down === true);
+  const flags = points.map(() => false);
+  let previous: number | null = null;
+  points.forEach((point, index) => {
+    if (!point.load_bearing) return;
+    // 首个读数没有「前一个」可比，但累计轴从 0 起步——首点为负，本身就是一次下跌。
+    const from = previous ?? 0;
+    if (point.value < from) flags[index] = true;
+    previous = point.value;
+  });
+  return flags;
+}
 
 /** Per-stage 遇见谁 / 做了什么 / 得到 / 失去.
  *

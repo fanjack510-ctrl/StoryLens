@@ -4,8 +4,8 @@ export type ArcStage={chapter:number;chapter_end:number;stage_name:string;entry_
 export type GrowthPoint={chapter:number;stage_name:string;state:string;cost_paid:string[];gain_received:string[];evidence:string[]};
 /** What "up" means on the protagonist-journey chart. Chosen by the engine from the book's
  *  profile; the client renders whatever it is told and never picks the axis itself. */
-export type JourneyAxis="cognition"|"ladder"|"screen_time"|"none";
-export type JourneyPoint={chapter:number;value:number;label:string;kind:string;who:string;note:string;load_bearing:boolean;evidence:string[]};
+export type JourneyAxis="cognition"|"ladder"|"screen_time"|"relationship"|"stakes"|"none";
+export type JourneyPoint={chapter:number;value:number;label:string;kind:string;who:string;note:string;load_bearing:boolean;down?:boolean;evidence:string[]};
 export type ScreenTimeBand={name:string;share:number[];first_chapter:number;last_chapter:number;chapters:number;total:number};
 export type LedgerMeeting={chapter:number;name:string;relation:string};
 export type LedgerEvent={chapter:number;text:string};

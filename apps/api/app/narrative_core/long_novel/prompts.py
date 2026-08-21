@@ -80,8 +80,17 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
   `open`(第一次抛出) `advance`(推进但不揭示) `foreshadow`(埋伏笔)
   `misdirect`(把读者往错的方向引) `partial`(只揭示一部分) `reveal`(揭示关键信息)
   `twist`(推翻先前的认知) `resolve`(给出答案) `close`(收束)。
-- `relationship_changes` / `goal_changes` / `choices`：关系、目标、抉择的变化。
+- `relationship_changes`：两个人之间关系的变化。`chapter_ref` 填这一变化发生的章。
+  `change_kind` 必须从这些里选，**按这一处实际发生的事选**：
+  `meet`(初次建立关系) `warm`(拉近、升温) `commit`(确立、承诺) `reconcile`(和解、修复)
+  `cool`(疏远、降温) `rift`(裂痕、冲突) `betray`(背叛) `part`(断绝、离开)。
+- `goal_changes` / `choices`：目标与抉择的变化。
+  （曾在这里加过一条「尽量覆盖不同的人」的指令，想让配角档案不再空白。实测无效：一次
+  抽取给出 20 条目标，仍然只落在 2 个人身上。原因不是配额被主角吃光，是书里本来就没写
+  其余人的目标——继续加压只会换来编造的目标，而这正是上面第 3 条禁止的。）
 - `mentions`：人物称呼在某段的出现。`provisional_entities` 把你认为指同一人的 mention 下标归为一组。
+- `mentions` 的 `role_hint`：这个人在书中的身份，用正文里写明的说法（「十班班长」「路星辞的母亲」
+  「同班同学」）。这是人物档案里的「身份」一栏，**正文没写明就留空，不要猜**。
 - `identity_assertions`：正文**明确**说明两个称呼是/不是同一人时才写。
 """
 
@@ -98,6 +107,7 @@ _SCHEMA_SKELETON = """{
   "suspense_actions": [{"thread_ref": "", "action_kind": "foreshadow|misdirect|partial|reveal|twist|resolve|advance",
                         "information_added": "", "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
   "relationship_changes": [{"from_entity_ref": "", "to_entity_ref": "", "relation": "",
+                            "chapter_ref": 1, "change_kind": "meet|warm|commit|reconcile|cool|rift|betray|part",
                             "evidence": [{"paragraph_ref": 1}]}],
   "goal_changes": [{"entity_ref": "", "goal_text": "", "change_kind": "formed",
                     "evidence": [{"paragraph_ref": 1}]}],

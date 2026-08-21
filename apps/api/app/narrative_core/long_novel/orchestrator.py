@@ -1194,7 +1194,18 @@ class RunCoordinator:
         so the page and the tracks agree about who did what.
         """
         facts: dict[str, dict[str, Any]] = {
-            name: {"key_events": [], "goals": [], "choices": [], "to_lead": [], "evidence": []}
+            name: {
+                "key_events": [],
+                "goals": [],
+                "choices": [],
+                "to_lead": [],
+                "evidence": [],
+                # 身份与结局这两栏此前在代码里写死为空字符串，而抽取层其实一直在产出
+                # 它们的原料：role_hint 是正文写明的身份，state_changes 的最后一条 to_state
+                # 就是这个人最后落在哪。两者都是清点结果，不是推断。
+                "roles": [],
+                "states": [],
+            }
             for name in names if name
         }
         if not facts:
@@ -1205,6 +1216,18 @@ class RunCoordinator:
                     if any(name in actor for actor in event.actors):
                         row["key_events"].append((event.chapter_ref, event.summary))
                         row["evidence"].extend(self._cite(block_key, event))
+            for cluster in asset.provisional_entities:
+                hint = str(getattr(cluster, "role_hint", "") or "").strip()
+                surface = str(getattr(cluster, "display_surface_norm", "") or "")
+                if not hint or not surface:
+                    continue
+                for name, row in facts.items():
+                    if name in surface or surface in name:
+                        row["roles"].append(hint)
+            for state in asset.character_state_changes:
+                for name, row in facts.items():
+                    if name in state.entity_ref:
+                        row["states"].append((state.chapter_ref, state.from_state, state.to_state))
             for change in asset.goal_changes:
                 for name, row in facts.items():
                     if name in change.entity_ref:
@@ -2194,4 +2217,16 @@ class RunCoordinator:
             screen_time={name: counts[name] for name in top},
             screen_time_spans={name: spans[name] for name in top},
             bins=bins,
+            # 情感关系那条轴要的原料。beat 自带 chapter_ref 与 change_kind 之后，关系变化
+            # 才第一次能被放到时间轴上。
+            relationship_changes=[
+                {"from_entity_ref": rel.from_entity_ref, "to_entity_ref": rel.to_entity_ref,
+                 "relation": rel.relation,
+                 "chapter_ref": getattr(rel, "chapter_ref", 0),
+                 "change_kind": getattr(rel, "change_kind", ""),
+                 "evidence_ids": self._cite(key, rel.evidence)}
+                for key, asset in assets.items()
+                for rel in asset.relationship_changes
+            ],
+            lead=lead,
         )
