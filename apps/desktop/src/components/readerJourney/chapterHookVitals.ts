@@ -113,7 +113,12 @@ export function buildChapterHookVitals(
   const last = scenes[scenes.length - 1];
   const openingScore = scoreOf(first, "hook");
   const endingScore = scoreOf(last, "hook");
+  // open_questions.opened / .closed 是**这一场**开了几个、收了几个；balance 才是累计。
+  // 拿末场的 opened/closed 当「本章开几收几」，会印出「开 5 收 3，仍欠 12」这种自己都
+  // 对不上的话——5 减 3 不是 12。本章的开与收要把每一场加起来。
   const ledger = last.open_questions ?? null;
+  const openedTotal = scenes.reduce((t, n) => t + (Number(n.open_questions?.opened) || 0), 0);
+  const closedTotal = scenes.reduce((t, n) => t + (Number(n.open_questions?.closed) || 0), 0);
   const position = firstHookPosition(visualization);
 
   const openingReading =
@@ -134,10 +139,9 @@ export function buildChapterHookVitals(
           ? "章末有牵引，但不够硬"
           : "章末几乎没有往下拉";
 
-  const ledgerBasis =
-    ledger && typeof ledger.opened === "number" && typeof ledger.closed === "number"
-      ? `本章开 ${ledger.opened} 收 ${ledger.closed}，走到章末仍欠 ${ledger.balance ?? 0}`
-      : "本章未记录未答问题账本";
+  const ledgerBasis = ledger
+    ? `本章开 ${openedTotal} 收 ${closedTotal}，走到章末仍欠 ${ledger.balance ?? 0}`
+    : "本章未记录未答问题账本";
 
   const positionReading =
     position.paragraph == null

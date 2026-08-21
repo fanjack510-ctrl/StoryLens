@@ -261,6 +261,9 @@ export type ReaderJourneyResult = {
   analysis_run_id: number;
   status: string;
   formula_version: string;
+  /** 后端一直在返回，只是以前没人用；导出报告要把它印进口径附录。 */
+  provider_name?: string | null;
+  model_name?: string | null;
   scene_contract_version?: string | null;
   scene_prompt_version?: string | null;
   visualization?: ReaderJourneyVisualization | null;

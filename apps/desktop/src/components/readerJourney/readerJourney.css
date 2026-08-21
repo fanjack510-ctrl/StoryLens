@@ -4460,3 +4460,54 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   line-height: 1.5;
   opacity: 0.75;
 }
+
+/* 章节评测报告导出 —— 跟对比工具同一行，紧贴曲线上方：报告讲的就是这条曲线。 */
+.journey-report-export-btn {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 5px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--accent, #14503c);
+  background: transparent;
+  border: 1px solid var(--accent, #14503c);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.journey-report-export-btn:hover:not(:disabled) {
+  color: #fff;
+  background: var(--accent, #14503c);
+}
+.journey-report-export-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.journey-vip-notice {
+  flex: 1 1 100%;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  border: 1px solid var(--border, #d8e0da);
+  border-left: 3px solid var(--accent, #14503c);
+  border-radius: 6px;
+  background: var(--surface-2, rgba(20, 80, 60, 0.04));
+}
+.journey-vip-notice b {
+  display: block;
+  margin-bottom: 2px;
+}
+.journey-vip-notice p {
+  margin: 0 0 4px;
+}
+.journey-vip-notice button {
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border, #d8e0da);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+}

@@ -320,6 +320,20 @@ export function ReaderJourneySyncWorkspace({
       />
     );
 
+  // 导出报告要在附录里印模型与旅程任务号，和 journeyRunId 取的是同一份缓存结果，
+  // 所以一次取全，避免三个 IIFE 各算一遍还可能算出不同的 run。
+  const cachedJourney = (() => {
+    const fromQuery = searchParams.get("analysisRun");
+    const runId =
+      fromQuery && Number.isFinite(Number(fromQuery))
+        ? Number(fromQuery)
+        : typeof window !== "undefined"
+          ? Number(window.location.pathname.match(/\/analysis-runs\/(\d+)/)?.[1])
+          : NaN;
+    if (!Number.isFinite(runId)) return null;
+    return queryClient.getQueryData<ReaderJourneyResult>(["reader-journey", runId]) ?? null;
+  })();
+
   const journeyPane = (
     <ReaderJourneyWorkspace
       visualization={visualization}
@@ -344,18 +358,9 @@ export function ReaderJourneySyncWorkspace({
         }
         return null;
       })()}
-      journeyRunId={(() => {
-        const fromQuery = searchParams.get("analysisRun");
-        const runId =
-          fromQuery && Number.isFinite(Number(fromQuery))
-            ? Number(fromQuery)
-            : typeof window !== "undefined"
-              ? Number(window.location.pathname.match(/\/analysis-runs\/(\d+)/)?.[1])
-              : NaN;
-        if (!Number.isFinite(runId)) return null;
-        const cached = queryClient.getQueryData<ReaderJourneyResult>(["reader-journey", runId]);
-        return cached?.journey_run_id ?? null;
-      })()}
+      journeyRunId={cachedJourney?.journey_run_id ?? null}
+      providerName={cachedJourney?.provider_name ?? null}
+      modelName={cachedJourney?.model_name ?? null}
     />
   );
 

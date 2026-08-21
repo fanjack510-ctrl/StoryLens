@@ -128,6 +128,11 @@ import {
 import { JourneyPaneSplitter } from "./JourneyPaneSplitter";
 import { resolveJourneyStageToken } from "./journeyVisualTokens";
 import { enrichVisualizationComprehensivePresentation } from "./comprehensiveReadingPresentation";
+import {
+  downloadChapterReportHtml,
+  downloadChapterReportPdf,
+  VipRequiredError,
+} from "../../features/readerJourney/chapterReportDownload";
 import "./readerJourney.css";
 
 function exportErrorMessage(error: unknown): string {
@@ -171,6 +176,10 @@ type Props = {
   /** Optional presentation labels for 分析信息 (no new runs). */
   analysisRunId?: number | null;
   journeyRunId?: number | null;
+  /** Printed on the report's cover and in its 口径 appendix. Absent → those rows are omitted. */
+  bookTitle?: string | null;
+  providerName?: string | null;
+  modelName?: string | null;
   /** Optional SourcePane (正文) for three-column workspace grid. */
   sourcePane?: ReactNode;
   sourceCollapsed?: boolean;
@@ -190,6 +199,9 @@ export function ReaderJourneyWorkspace({
   compactHead = false,
   analysisRunId: analysisRunIdProp,
   journeyRunId: journeyRunIdProp,
+  bookTitle,
+  providerName,
+  modelName,
   sourcePane,
   sourceCollapsed: sourceCollapsedProp,
 }: Props) {
@@ -254,6 +266,8 @@ export function ReaderJourneyWorkspace({
     "idle",
   );
   const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [vipNotice, setVipNotice] = useState<{ message: string; url: string } | null>(null);
   const exportRootRef = useRef<HTMLDivElement>(null);
   const exportFullRootRef = useRef<HTMLDivElement>(null);
   const [heightPreset, setHeightPreset] = useState<ChartHeightPreset>(() => readChartHeightPreset());
@@ -920,6 +934,38 @@ export function ReaderJourneyWorkspace({
     }
   };
 
+  /** 结构化的章节评测报告。PDF 走后端的无头 Chromium；那台机器上没有浏览器时落回 HTML，
+   *  内容一模一样——但授权门拒绝不是故障，那时候不落回，否则等于把收费的东西换个名字发出去。 */
+  const handleReportExport = async () => {
+    if (reportBusy) return;
+    setReportBusy(true);
+    setVipNotice(null);
+    const input = {
+      visualization,
+      chapterTitle: chapterTitle ?? summary.chapter_title,
+      bookTitle,
+      analysisRunId: analysisRunIdProp ?? null,
+      journeyRunId: journeyRunIdProp ?? null,
+      providerName,
+      modelName,
+    };
+    try {
+      await downloadChapterReportPdf(input);
+      setExportStatus("succeeded");
+      setExportMessage("已导出章节评测报告 PDF");
+    } catch (error) {
+      if (error instanceof VipRequiredError) {
+        setVipNotice({ message: error.message, url: error.afdianUrl });
+      } else {
+        downloadChapterReportHtml(input);
+        setExportStatus("succeeded");
+        setExportMessage("本机没有可用的打印内核，已导出同内容的 HTML（浏览器里打印即得 PDF）");
+      }
+    } finally {
+      setReportBusy(false);
+    }
+  };
+
   const selectedPhaseData = useMemo(
     () => visualization.phases.find((item) => item.ordinal === selectedPhase) ?? null,
     [visualization.phases, selectedPhase],
@@ -1439,7 +1485,36 @@ export function ReaderJourneyWorkspace({
               onResetView={() => syncViewToUrl(1, sceneCount)}
               liveMessage={compareLiveMessage}
             />
+            <button
+              type="button"
+              className="journey-report-export-btn"
+              data-testid="journey-export-report-pdf"
+              title="一份结构化的章节评测报告：三项判断、追读曲线、悬念账本、逐场证据"
+              disabled={reportBusy}
+              onClick={() => void handleReportExport()}
+            >
+              {reportBusy ? "正在生成…" : "导出报告 · VIP"}
+            </button>
           </div>
+          {vipNotice && (
+            <div className="journey-vip-notice" data-testid="journey-vip-notice" role="alert">
+              <b>PDF 导出是 VIP 功能</b>
+              <p>{vipNotice.message}</p>
+              <p>
+                {vipNotice.url ? (
+                  <a href={vipNotice.url} target="_blank" rel="noreferrer">
+                    前往爱发电购买月卡授权 →
+                  </a>
+                ) : (
+                  <span>购买入口尚未配置，请联系作者获取授权码。</span>
+                )}
+                　已有授权码？在 设置 → 授权 中激活。
+              </p>
+              <button type="button" onClick={() => setVipNotice(null)}>
+                知道了
+              </button>
+            </div>
+          )}
 
         {!isHookPayoffLens(observationLens) ? (
         <section className="journey-phase-strip-wrap" data-testid="journey-phase-strip-wrap">
