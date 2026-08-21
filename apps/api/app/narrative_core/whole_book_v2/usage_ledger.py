@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AnalysisRun, ModelInvocation, WholeBookCheckpoint, WholeBookRun
 from app.model_gateway.base import ModelResponse
+from app.services.cloud_pricing import estimate_cost
 
 USAGE_STAGE = "provider_usage"
 TASK_TYPE = "whole_book_v2"
@@ -144,6 +145,12 @@ def record_provider_call(
             checkpoint_payload_json=payload,
         )
     )
+    # 定价表里没有这个模型时返回 None，那就仍然写 NULL——宁可空着，也不要写一个编出来的
+    # 价钱：日闸门是按它拦人的。
+    cost, currency, pricing_version = estimate_cost(
+        model, response.input_tokens, response.output_tokens
+    )
+
     snap = {
         "unit_key": unit_key,
         "window_id": window_id,
@@ -171,6 +178,13 @@ def record_provider_call(
             input_tokens=response.input_tokens,
             output_tokens=response.output_tokens,
             total_tokens=safe_meta["total_tokens"],
+            # 这三列此前一律不写，于是全书分析的每一次调用都以 NULL 费用落库：171 次云端调用
+            # 里 121 次没有价钱。日费用统计对这些行求和，得到 0——跑了一整天的全书分析，
+            # 「今日已花」纹丝不动。而费用现在是唯一的日闸门，一个永远为 0 的计数器等于没有
+            # 闸门。价钱按 token 和定价表算，跟单章分析走的是同一个 estimate_cost。
+            estimated_cost=cost,
+            currency=currency,
+            pricing_version=pricing_version,
             request_id=safe_meta["request_id"],
             finish_reason=response.finish_reason,
             is_cloud=True,

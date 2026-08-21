@@ -147,10 +147,17 @@ def cloud_block_reasons(
         reasons.append("云端预算保护未启用")
     if budget["cloud_stop_on_unknown_pricing"] and not pricing["enabled"]:
         reasons.append("价格未知或尚未验证")
-    if requests >= budget["cloud_daily_request_limit"]:
-        reasons.append("今日请求数已达到上限")
-    if tokens >= budget["cloud_daily_token_limit"]:
-        reasons.append("今日Token已达到上限")
+    # 只有钱能拦人。
+    #
+    # 这里原先还有请求数和 Token 两道日闸。它们量的是同一件事的另外两种单位——用得多就是
+    # 花得多——却各自独立地拦，于是出现了实际只花了 ¥1.7、费用额度 ¥50 一分没动，却因为
+    # Token 到顶而无法分析的情况。而屏幕上只写「当前额度不足」，三条里撞了哪条都不说。
+    #
+    # 用量仍然逐项统计并展示（请求数、Token、费用都在 usage 里），只是不再各自设闸：
+    # 想知道用了多少，看得到；能不能继续，只问钱。
     if cost >= budget["cloud_daily_estimated_cost_limit"]:
-        reasons.append("今日估算费用已达到上限")
+        reasons.append(
+            f"今日估算费用已达上限（{budget['currency']} {cost:.2f} / "
+            f"{budget['cloud_daily_estimated_cost_limit']:.2f}），明天零点重置"
+        )
     return reasons

@@ -22,24 +22,30 @@ describe("wholeBookStartLimits CHG-062/077", () => {
     expect(message).toContain("确认");
   });
 
-  it("flags provider calls / input / output too low and passes budget", () => {
+  // 调用次数、输入 / 输出 Token 三条上限已经不再拦人：它们量的是同一件事的另外三种单位，
+  // 用得多就是花得多。四个数字里随便哪个填低了都会把人拦住，而屏幕上只说「额度不足」。
+  it("只有费用一条能拦住开始，另外三条填多低都不拦", () => {
     const gaps = compareLimitsToEstimate(EST, {
-      max_provider_calls: "200",
-      max_input_tokens: "500000",
-      max_output_tokens: "100000",
+      max_provider_calls: "1",
+      max_input_tokens: "1",
+      max_output_tokens: "1",
       max_cost_budget_cny: "10",
     });
-    expect(gaps.map((g) => g.code)).toEqual([
-      "LIMIT_PROVIDER_CALLS_TOO_LOW",
-      "LIMIT_INPUT_TOKENS_TOO_LOW",
-      "LIMIT_OUTPUT_TOKENS_TOO_LOW",
-    ]);
-    expect(gaps.some((g) => g.kind === "budget")).toBe(false);
-    expect(formatLimitGapsMessage(gaps)).toContain("预计需要 425 次模型调用");
-    expect(formatLimitGapsMessage(gaps)).toContain("超过当前允许上限 200 次");
+    expect(gaps).toEqual([]);
   });
 
-  it("enables start when all limits cover estimate", () => {
+  it("费用不够时说清楚差在哪", () => {
+    const gaps = compareLimitsToEstimate(EST, {
+      max_provider_calls: "500",
+      max_input_tokens: "2000000",
+      max_output_tokens: "350000",
+      max_cost_budget_cny: "1",
+    });
+    expect(gaps.map((g) => g.code)).toEqual(["BUDGET_TOO_LOW"]);
+    expect(formatLimitGapsMessage(gaps)).toContain("2.5005");
+  });
+
+  it("enables start when the budget covers the estimate", () => {
     const gaps = compareLimitsToEstimate(EST, {
       max_provider_calls: "500",
       max_input_tokens: "2000000",
@@ -48,7 +54,6 @@ describe("wholeBookStartLimits CHG-062/077", () => {
     });
     expect(gaps).toEqual([]);
   });
-
   it("maps backend codes to product copy with numbers", () => {
     expect(
       mapWholeBookStartError("LIMIT_PROVIDER_CALLS_TOO_LOW", "x", {
@@ -69,7 +74,9 @@ describe("wholeBookStartLimits CHG-062/077", () => {
     );
   });
 
-  it("clearly blocks start when estimated calls exceed max calls", () => {
+  // 调用次数远超上限也不再拦——2444 次调用配 300 次上限，只要费用够就放行。
+  // 后端仍然会按自己的护栏拒绝，那时错误码照常映射成人话（见上一条用例）。
+  it("调用次数远超上限也不拦，只要费用够", () => {
     const gaps = compareLimitsToEstimate(
       { estimated_provider_calls: 2444, estimated_cost_max_cny: "2.73" },
       {
@@ -79,9 +86,6 @@ describe("wholeBookStartLimits CHG-062/077", () => {
         max_cost_budget_cny: "10",
       },
     );
-    expect(gaps).toHaveLength(1);
-    expect(gaps[0]?.code).toBe("LIMIT_PROVIDER_CALLS_TOO_LOW");
-    expect(formatLimitGapsMessage(gaps)).toContain("2444");
-    expect(formatLimitGapsMessage(gaps)).toContain("300");
+    expect(gaps).toEqual([]);
   });
 });

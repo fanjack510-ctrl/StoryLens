@@ -40,8 +40,6 @@ function nextLocalMidnightLabel(): string {
 export function SettingsUsageCostTab() {
   const qc = useQueryClient();
   const [costLimit, setCostLimit] = useState("");
-  const [requestLimit, setRequestLimit] = useState("");
-  const [tokenLimit, setTokenLimit] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const mode = readStoredAnalysisMode();
@@ -54,33 +52,13 @@ export function SettingsUsageCostTab() {
     if (budgetQuery.data?.cloud_daily_estimated_cost_limit != null) {
       setCostLimit(String(budgetQuery.data.cloud_daily_estimated_cost_limit));
     }
-    if (budgetQuery.data?.cloud_daily_request_limit != null) {
-      setRequestLimit(String(budgetQuery.data.cloud_daily_request_limit));
-    }
-    if (budgetQuery.data?.cloud_daily_token_limit != null) {
-      setTokenLimit(String(budgetQuery.data.cloud_daily_token_limit));
-    }
-  }, [
-    budgetQuery.data?.cloud_daily_estimated_cost_limit,
-    budgetQuery.data?.cloud_daily_request_limit,
-    budgetQuery.data?.cloud_daily_token_limit,
-  ]);
+  }, [budgetQuery.data?.cloud_daily_estimated_cost_limit]);
 
   const saveLimits = async () => {
     setMessage("");
     const costValue = Number(costLimit);
-    const requestValue = Number(requestLimit);
-    const tokenValue = Number(tokenLimit);
     if (!Number.isFinite(costValue) || costValue <= 0) {
       setMessage("保存失败：费用上限必须大于 0。");
-      return;
-    }
-    if (!Number.isInteger(requestValue) || requestValue <= 0) {
-      setMessage("保存失败：每日请求额度必须为正整数。");
-      return;
-    }
-    if (!Number.isInteger(tokenValue) || tokenValue <= 0) {
-      setMessage("保存失败：每日 Token 额度必须为正整数。");
       return;
     }
     setSaving(true);
@@ -88,8 +66,6 @@ export function SettingsUsageCostTab() {
       await settingsApi.saveCloudBudget({
         ...budgetQuery.data,
         cloud_daily_estimated_cost_limit: costValue,
-        cloud_daily_request_limit: requestValue,
-        cloud_daily_token_limit: tokenValue,
         currency: "CNY",
       });
       setMessage("额度设置已保存。");
@@ -106,8 +82,6 @@ export function SettingsUsageCostTab() {
 
   const restoreDefaults = async () => {
     setCostLimit(String(DEFAULT_COST_LIMIT));
-    setRequestLimit(String(DEFAULT_REQUEST_LIMIT));
-    setTokenLimit(String(DEFAULT_TOKEN_LIMIT));
     setMessage("");
     setSaving(true);
     try {
@@ -203,31 +177,14 @@ export function SettingsUsageCostTab() {
           />
         </label>
 
-        <label className="settings-field">
-          <span>每日请求上限</span>
-          <input
-            type="number"
-            min={1}
-            step={1}
-            aria-label="每日请求上限"
-            data-testid="cost-request-limit-input"
-            value={requestLimit}
-            onChange={(e) => setRequestLimit(e.target.value)}
-          />
-        </label>
-
-        <label className="settings-field">
-          <span>每日 Token 上限</span>
-          <input
-            type="number"
-            min={1}
-            step={1000}
-            aria-label="每日 Token 上限"
-            data-testid="cost-token-limit-input"
-            value={tokenLimit}
-            onChange={(e) => setTokenLimit(e.target.value)}
-          />
-        </label>
+        {/* 请求数和 Token 两个上限已经不再拦人——它们量的是同一件事的另外两种单位，
+            用得多就是花得多，却各自独立地拦：曾出现实际只花了 ¥1.7、费用额度 ¥50 一分
+            没动，却因为 Token 到顶而无法分析。用量仍然照常统计并显示在上面，只是能不能
+            继续，只问钱。 */}
+        <p className="muted" data-testid="cost-limits-note">
+          能不能继续分析，只看费用这一条。请求数与 Token 仍然照常统计（见上方用量），但不再
+          单独设闸——它们量的是同一件事的另外两种单位。
+        </p>
 
         {message && <p role="status">{message}</p>}
         <div className="settings-actions">

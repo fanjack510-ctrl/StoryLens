@@ -588,7 +588,9 @@ export function StartAnalysisDialog({
     if (blockers.includes("provider_unhealthy") || blockers.includes("provider_health_stale")) {
       return "Provider暂时不可用，请重新验证连接";
     }
-    if (blockers.includes("budget_unavailable")) return "当前额度不足";
+    // 「当前额度不足」四个字曾让人以为要花钱买：实际是今日费用到顶，明天零点自己重置。
+    // 现在只有费用一条能拦人，所以这句话可以说得具体。
+    if (blockers.includes("budget_unavailable")) return "今日费用已达上限，明天零点重置";
     if (blockers.length) {
       const first = blockers[0];
       const mapped: Record<string, string> = {

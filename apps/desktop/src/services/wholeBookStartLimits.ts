@@ -38,66 +38,33 @@ function parsePositiveNumber(raw: string): number | null {
   return n;
 }
 
+/** 这次分析能不能开始——只问钱。
+ *
+ *  这里原先并排比四条：调用次数、输入 Token、输出 Token、费用。前三条量的是同一件事的
+ *  另外三种单位——调用多就是 token 多，token 多就是钱多——却各自独立地拦，于是四个数字
+ *  里随便哪个填低了都会把人拦住，而屏幕上只说「额度不足」。
+ *
+ *  预估里那三项照常显示（想知道要跑多少次、多少 token，看得见），只是不再各自设闸。
+ */
 export function compareLimitsToEstimate(
   estimate: WholeBookEstimateLike | null | undefined,
   limits: WholeBookLimitsLike,
 ): LimitGap[] {
   if (!estimate) return [];
-  const gaps: LimitGap[] = [];
-
-  const estCalls = Number(estimate.estimated_provider_calls ?? 0);
-  const limCalls = parsePositiveNumber(limits.max_provider_calls);
-  if (estCalls > 0 && (limCalls == null || limCalls < estCalls)) {
-    gaps.push({
-      kind: "provider_calls",
-      code: "LIMIT_PROVIDER_CALLS_TOO_LOW",
-      label: "预计模型调用",
-      estimated: estCalls,
-      limit: limCalls ?? 0,
-    });
-  }
-
-  const estIn = Number(estimate.estimated_input_tokens ?? 0);
-  const limIn = parsePositiveNumber(limits.max_input_tokens);
-  if (estIn > 0 && (limIn == null || limIn < estIn)) {
-    gaps.push({
-      kind: "input_tokens",
-      code: "LIMIT_INPUT_TOKENS_TOO_LOW",
-      label: "预计输入 Token",
-      estimated: estIn,
-      limit: limIn ?? 0,
-    });
-  }
-
-  const estOut = Number(estimate.estimated_output_tokens ?? 0);
-  const limOut = parsePositiveNumber(limits.max_output_tokens);
-  if (estOut > 0 && (limOut == null || limOut < estOut)) {
-    gaps.push({
-      kind: "output_tokens",
-      code: "LIMIT_OUTPUT_TOKENS_TOO_LOW",
-      label: "预计输出 Token",
-      estimated: estOut,
-      limit: limOut ?? 0,
-    });
-  }
-
   const estCostMax = Number(estimate.estimated_cost_max_cny ?? NaN);
   const limBudget = parsePositiveNumber(limits.max_cost_budget_cny);
-  if (Number.isFinite(estCostMax) && estCostMax > 0) {
-    if (limBudget == null || limBudget < estCostMax) {
-      gaps.push({
-        kind: "budget",
-        code: "BUDGET_TOO_LOW",
-        label: "预计最高费用",
-        estimated: estCostMax,
-        limit: limBudget ?? 0,
-      });
-    }
-  }
-
-  return gaps;
+  if (!Number.isFinite(estCostMax) || estCostMax <= 0) return [];
+  if (limBudget != null && limBudget >= estCostMax) return [];
+  return [
+    {
+      kind: "budget",
+      code: "BUDGET_TOO_LOW",
+      label: "预计最高费用",
+      estimated: estCostMax,
+      limit: limBudget ?? 0,
+    },
+  ];
 }
-
 export function formatLimitGapsMessage(gaps: LimitGap[]): string {
   if (!gaps.length) return "";
   const lines = gaps.map((g) => {
