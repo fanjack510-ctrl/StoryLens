@@ -1262,7 +1262,12 @@ export function StartAnalysisDialog({
                       // health 不过期、刷新 health 又要跑这个测试——一旦连接掉了，三者就
                       // 锁成一个圈，而弹窗里没有任何「连接」入口。connect 不发请求也不花钱，
                       // 所以这里无条件先做一次。
-                      await providersApi.connect(provider).catch(() => undefined);
+                      // connect 失败不该挡住验证：真正的结论由下面那次探测给出。
+                      try {
+                        await providersApi.connect(provider);
+                      } catch {
+                        /* 已经连着，或这一步不适用 */
+                      }
                       await providersApi.testConnection(provider, 32);
                     }
                   } catch (error) {

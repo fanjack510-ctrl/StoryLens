@@ -661,13 +661,58 @@ export function BookRoutePage() {
 
   useEffect(() => {
     if (progress.uiState === "boundary_review_required" && analysisRunId) {
-      setReviewOpen(true);
+      // 分析跑到这一步时，去能改的那个屏幕——它正是工具栏「确认场景划分」打开的那个，
+      // 支持在段落处拆分场景、把相邻两场合并。
+      //
+      // 此前这里落到 reviewOpen，渲染出的是 ConfirmBoundaryDivisionPanel：标题同样叫
+      // 「确认场景划分」，却只能接受或重新识别。于是同一个名字下有两个屏幕，一个能改一个
+      // 不能改，而分析流程里出现的偏偏是不能改的那个——用户手里那本书划错了场景，除了
+      // 「重新识别」（再花一次钱、结果还未必如意）之外没有别的办法。
+      openSceneBoundaryReview();
       setPanelCollapsed(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress.uiState, analysisRunId]);
 
-  // CHG-041: do not auto-mount scene boundary editor onto reader-journey / reviewOpen.
-  // Entry is via view=scene-boundary-review (toolbar CTA / journey gate).
+  // 场景分析跑完就自动接着生成阅读旅程。
+  //
+  // 此前流程会停在这里，侧栏写着「正在生成阅读旅程 ●」，正文却写着「阅读旅程尚未生成」，
+  // 还要再点一次按钮——同一个屏幕上两句话自相矛盾，而那个按钮在问一个没有第二个答案的
+  // 问题：场景分析之后就是旅程，中间不需要人做任何决定。
+  //
+  // 不是偷偷多花钱：开始之前的预检报的就是「含边界、Scene Analysis、Reader Journey」的
+  // 完整费用，人同意的是那一整次分析。真停下来（预算不够、失败）时按钮仍然会出现，
+  // 并且说明为什么停。
+  const autoJourneyStartedRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (compositionUiState !== "awaiting_reader_journey_start") return;
+    const run = progress.run;
+    if (!run || awaitingSceneBoundaryConfirmation) return;
+    // 只在「还没有旅程」时自动起。旅程起过又断了的，该走 resume 续跑而不是 recover 重来——
+    // CHG-023 钉的就是这条：拿 recover 去接一个中断的旅程，会静默空转。
+    if (journeyRunId != null || journey.data?.journey_run_id != null) return;
+    if (autoJourneyStartedRef.current.has(run.id)) return;
+    autoJourneyStartedRef.current.add(run.id);
+    void (async () => {
+      try {
+        await analysisRecoveryApi.recover(run.id, {
+          client_request_id: getOrCreateJourneyClientRequestId(run.id),
+          cloud_consent: true,
+          confirmed: true,
+          recovery_mode: "unified",
+          resume: true,
+        });
+      } catch {
+        // 起不来就把这一次放回去，让那颗按钮重新出现——它此时是有意义的。
+        autoJourneyStartedRef.current.delete(run.id);
+      } finally {
+        void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+        void journey.refetch();
+        void progress.refresh();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compositionUiState, progress.run?.id, awaitingSceneBoundaryConfirmation, journeyRunId]);
 
   useEffect(() => {
     if (progress.uiState !== "awaiting_budget_adjustment" || !progress.run) return;

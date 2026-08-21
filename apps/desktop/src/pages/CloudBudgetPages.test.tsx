@@ -199,33 +199,31 @@ describe("外观与AI服务普通模式", () => {
 });
 
 describe("使用额度", () => {
-  it("显示费用、请求与 Token 额度入口且无高级单请求字段", async () => {
+  // 请求数与 Token 两个日限已经不再拦人——它们量的是同一件事的另外两种单位，用得多就是
+  // 花得多。曾出现实际只花 ¥1.7、费用额度 ¥50 一分没动，却因为 Token 到顶而无法分析。
+  it("只留费用一个额度入口", async () => {
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-cost"));
     await waitFor(() => expect(screen.getByTestId("cost-limit-input")).toHaveValue(1));
-    expect(screen.getByTestId("cost-request-limit-input")).toHaveValue(30);
-    expect(screen.getByTestId("cost-token-limit-input")).toHaveValue(200000);
+    expect(screen.queryByTestId("cost-request-limit-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("cost-token-limit-input")).not.toBeInTheDocument();
+    // 用量仍然照常统计并显示，只是不再各自设闸。
+    expect(screen.getByTestId("cost-limits-note")).toBeInTheDocument();
     expect(screen.queryByLabelText("单请求最大输入 Token")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("启用云端AI")).not.toBeInTheDocument();
   });
 
-  it("保存费用与请求 Token 额度到后端", async () => {
+  it("保存费用额度到后端", async () => {
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-cost"));
-    await waitFor(() => expect(screen.getByTestId("cost-limit-input")).toHaveValue(1));
-    fireEvent.change(screen.getByTestId("cost-request-limit-input"), { target: { value: "80" } });
-    fireEvent.change(screen.getByTestId("cost-token-limit-input"), { target: { value: "300000" } });
+    const input = await screen.findByTestId("cost-limit-input");
+    await waitFor(() => expect(input).toHaveValue(1));
+    fireEvent.change(input, { target: { value: "8" } });
     fireEvent.click(screen.getByTestId("cost-save"));
     expect(await screen.findByText("额度设置已保存。")).toBeInTheDocument();
     expect(settingsApi.saveCloudBudget).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cloud_daily_estimated_cost_limit: 1,
-        cloud_daily_request_limit: 80,
-        cloud_daily_token_limit: 300000,
-      }),
+      expect.objectContaining({ cloud_daily_estimated_cost_limit: 8 }),
     );
   });
-
   it("拒绝非法费用输入", async () => {
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-cost"));
@@ -234,17 +232,6 @@ describe("使用额度", () => {
     fireEvent.change(input, { target: { value: "0" } });
     fireEvent.click(screen.getByTestId("cost-save"));
     expect(await screen.findByText(/保存失败/)).toBeInTheDocument();
-    expect(settingsApi.saveCloudBudget).not.toHaveBeenCalled();
-  });
-
-  it("拒绝非法请求额度输入", async () => {
-    renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-cost"));
-    const input = await screen.findByTestId("cost-request-limit-input");
-    await waitFor(() => expect(input).toHaveValue(30));
-    fireEvent.change(input, { target: { value: "0" } });
-    fireEvent.click(screen.getByTestId("cost-save"));
-    expect(await screen.findByText(/每日请求额度必须为正整数/)).toBeInTheDocument();
     expect(settingsApi.saveCloudBudget).not.toHaveBeenCalled();
   });
 

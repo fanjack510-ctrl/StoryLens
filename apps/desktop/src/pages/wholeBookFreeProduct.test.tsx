@@ -572,7 +572,9 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(createRunSpy).toHaveBeenCalled();
   });
 
-  it("blocks start locally when estimated calls exceed max calls", async () => {
+  // 调用次数上限不再拦人：它和 Token 量的是同一件事的另外两种单位，只有费用能拦。
+  // 这里费用 ¥2.73 在 ¥10 的上限之内，所以 2444 次调用照样放行。
+  it("调用次数远超上限也放行，只要费用够", async () => {
     realProviderState.enabled = true;
     prepareSpy.mockResolvedValue(
       basePrepare({
@@ -603,11 +605,10 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     );
     renderPage("/books/1/whole-book");
     await screen.findByTestId("whole-book-free-prepare");
-    // Seeded recommended limits (300) are below estimate (2444).
-    expect(await screen.findByTestId("whole-book-free-limit-gaps-message")).toHaveTextContent("2444");
+    // 推荐上限里的调用次数 300 远低于预估的 2444，但那不再是闸门。
+    expect(screen.queryByTestId("whole-book-free-limit-gaps-message")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("whole-book-free-consent-checkbox"));
-    expect(screen.getByTestId("whole-book-free-start-formal")).toBeDisabled();
-    expect(createRunSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId("whole-book-free-start-formal")).not.toBeDisabled();
   });
 
   it("shows fixture preview button separately from formal start", async () => {

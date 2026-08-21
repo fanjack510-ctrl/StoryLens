@@ -10,7 +10,10 @@ import { ApiError } from "../../services/apiClient";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 vi.mock("../../services/providersApi", () => ({
-  providersApi: { list: vi.fn(), cloud: vi.fn(), configuration: vi.fn(), testConnection: vi.fn() },
+  providersApi: {
+    list: vi.fn(), cloud: vi.fn(), configuration: vi.fn(),
+    connect: vi.fn(), testConnection: vi.fn(),
+  },
 }));
 vi.mock("../../services/analysisApi", () => ({
   analysisApi: { start: vi.fn(), preflight: vi.fn(), executionPlan: vi.fn() },
