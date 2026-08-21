@@ -943,6 +943,8 @@ export function ReaderJourneyWorkspace({
     const input = {
       visualization,
       chapterTitle: chapterTitle ?? summary.chapter_title,
+      // journeyRunId 由宿主传入；拿不到时 downloadChapterReportPdf 会明说是这一条缺了，
+      // 而不是让调用方替它编一个原因。
       bookTitle,
       analysisRunId: analysisRunIdProp ?? null,
       journeyRunId: journeyRunIdProp ?? null,
@@ -957,9 +959,13 @@ export function ReaderJourneyWorkspace({
       if (error instanceof VipRequiredError) {
         setVipNotice({ message: error.message, url: error.afdianUrl });
       } else {
+        // 这里以前固定说「本机没有可用的打印内核」——它没查过，只是猜。用户机器上明明装着
+        // 浏览器，真实原因却是这个页面拿不到旅程任务号，于是一句编出来的诊断把人指向了
+        // 完全错误的方向。一条自己没验证过的原因，比不给原因更糟。
         downloadChapterReportHtml(input);
         setExportStatus("succeeded");
-        setExportMessage("本机没有可用的打印内核，已导出同内容的 HTML（浏览器里打印即得 PDF）");
+        const why = error instanceof Error && error.message ? error.message : "PDF 生成失败";
+        setExportMessage(`${why}；已导出同内容的 HTML，浏览器里打印即得 PDF`);
       }
     } finally {
       setReportBusy(false);

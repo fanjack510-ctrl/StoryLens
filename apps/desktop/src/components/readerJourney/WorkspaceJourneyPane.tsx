@@ -289,6 +289,10 @@ export function WorkspaceJourneyPane({
         visualization={journey.visualization}
         tab={syncTab}
         onTabChange={setSyncTab}
+        journeyRunId={journey?.journey_run_id ?? null}
+        analysisRunId={journey?.analysis_run_id ?? null}
+        providerName={journey?.provider_name ?? null}
+        modelName={journey?.model_name ?? null}
         variant="workspace"
       />
     </div>

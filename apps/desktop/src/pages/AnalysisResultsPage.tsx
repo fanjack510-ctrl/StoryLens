@@ -790,6 +790,10 @@ export function AnalysisResultsPage() {
           onTabChange={setTab}
           taskControls={journeyTaskControls}
           exportBar={exportBar}
+          journeyRunId={journeyData.journey_run_id ?? null}
+          analysisRunId={journeyData.analysis_run_id ?? null}
+          providerName={journeyData.provider_name ?? null}
+          modelName={journeyData.model_name ?? null}
         />
       </section>
     );

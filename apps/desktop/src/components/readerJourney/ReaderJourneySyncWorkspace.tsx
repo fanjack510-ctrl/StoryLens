@@ -35,6 +35,16 @@ type Props = {
   taskControls?: ReactNode;
   exportBar?: ReactNode;
   /**
+   * 这份旅程本身。以前这几个值是从 URL 里反推的（`/analysis-runs/:id` 或 ?analysisRun=），
+   * 而书籍工作台的地址里根本没有那一段——于是导出报告拿不到任务号，直接失败。
+   * 调用方手上就有这份数据，传下来即可；没传时才回退到旧的地址推断。
+   */
+  journeyRunId?: number | null;
+  analysisRunId?: number | null;
+  providerName?: string | null;
+  modelName?: string | null;
+  bookTitle?: string | null;
+  /**
    * When embedded in Book Workspace Journey pane:
    * hide AnalysisResults legacy tabs (structure/overview/…) — primary nav already covers that.
    */
@@ -70,6 +80,11 @@ export function ReaderJourneySyncWorkspace({
   onTabChange,
   taskControls,
   exportBar,
+  journeyRunId: journeyRunIdProp,
+  analysisRunId: analysisRunIdProp,
+  providerName,
+  modelName,
+  bookTitle,
   variant = "standalone",
 }: Props) {
   const textPaneRef = useRef<StructuredChapterTextPaneHandle>(null);
@@ -323,6 +338,14 @@ export function ReaderJourneySyncWorkspace({
   // 导出报告要在附录里印模型与旅程任务号，和 journeyRunId 取的是同一份缓存结果，
   // 所以一次取全，避免三个 IIFE 各算一遍还可能算出不同的 run。
   const cachedJourney = (() => {
+    if (journeyRunIdProp != null) {
+      return {
+        journey_run_id: journeyRunIdProp,
+        analysis_run_id: analysisRunIdProp ?? null,
+        provider_name: providerName ?? null,
+        model_name: modelName ?? null,
+      } as unknown as ReaderJourneyResult;
+    }
     const fromQuery = searchParams.get("analysisRun");
     const runId =
       fromQuery && Number.isFinite(Number(fromQuery))
@@ -349,7 +372,9 @@ export function ReaderJourneySyncWorkspace({
       sourcePane={state.pageMode === "sync" ? textPane : undefined}
       sourceCollapsed={sourceCollapsed}
       onSourceCollapsedChange={setSourceCollapsed}
+      bookTitle={bookTitle}
       analysisRunId={(() => {
+        if (analysisRunIdProp != null) return analysisRunIdProp;
         const fromQuery = searchParams.get("analysisRun");
         if (fromQuery && Number.isFinite(Number(fromQuery))) return Number(fromQuery);
         if (typeof window !== "undefined") {
