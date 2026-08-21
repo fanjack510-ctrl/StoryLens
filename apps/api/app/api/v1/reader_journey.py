@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -683,6 +684,29 @@ def cancel_reader_journey(
     journey_run.completed_at = datetime.now(timezone.utc)
     session.commit()
     return {"journey_run_id": journey_run.id, "status": journey_run.status}
+
+
+class _ChapterPdfRequest(BaseModel):
+    html: str
+
+
+@router.post("/reader-journey-runs/{journey_run_id}/export-pdf")
+def export_reader_journey_pdf(
+    journey_run_id: int,
+    req: _ChapterPdfRequest,
+    session: Session = Depends(get_db),
+):
+    """单章分析转 PDF。与全书走同一条打印路径、同一道 Pro 门。
+
+    客户端渲染 HTML、这里只负责变成纸——和全书那条一样的分工：报告长什么样归客户端，
+    它拥有版式与全部标签，后端不该有第二份说法。
+    """
+    journey_run = session.get(ReaderJourneyRun, journey_run_id)
+    if journey_run is None:
+        raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
+    from app.narrative_core.whole_book_v2.router import render_report_pdf
+
+    return render_report_pdf(session, req.html)
 
 
 @router.get("/reader-journey-runs/{journey_run_id}/export")

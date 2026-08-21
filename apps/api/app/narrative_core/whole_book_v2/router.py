@@ -120,17 +120,14 @@ def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=
         return asyncio.run(run())
     except Exception:
         return None
-@router.post("/{run_id}/v2/export-pdf")
-def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Response:
-    """Print the client-rendered report HTML to a real PDF via a headless Chromium.
+def render_report_pdf(db:Session,html:str)->Response:
+    """把客户端渲染好的报告 HTML 打成 PDF。全书和单章共用这一条。
 
-    The client builds the HTML (it owns the report's shape and label maps); this endpoint
-    only turns it into paper. Kept synchronous: a 12-chapter report prints in ~2s and the
-    caller is a click handler with a spinner.
+    客户端负责报告长什么样（它拥有版式与所有标签），这里只负责变成纸。同步执行：一份
+    十二章的报告约 2 秒，调用方是一个带转圈的点击。
 
-    Pro-gated (advanced_export): the HTML export stays free — it is the audit surface —
-    while the finished hand-off artifact is the paid tier, purchasable as an 爱发电 monthly
-    card and activated in 设置."""
+    Pro 门（advanced_export）：HTML 导出保持免费——它是可核对的那一份；成品 PDF 是付费档。
+    """
     from app.services.entitlement import can_use_feature,commerce_config
     gate=can_use_feature(db,"advanced_export")
     if not gate.get("enabled"):
@@ -147,17 +144,13 @@ def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Respon
         raise HTTPException(status_code=501,detail={"error_code":"PDF_BROWSER_NOT_FOUND","message":"未找到可用于生成 PDF 的浏览器（Edge/Chrome）。","details":{}})
     with tempfile.TemporaryDirectory(prefix="storylens-pdf-") as td:
         src=os.path.join(td,"report.html"); dst=os.path.join(td,"report.pdf")
-        with open(src,"w",encoding="utf-8") as f: f.write(req.html)
+        with open(src,"w",encoding="utf-8") as f: f.write(html)
         url="file:///"+src.replace("\\","/")
-        # The page number lives in the browser's footer template, so try DevTools first and keep
-        # the CLI as the path that always works. The title comes off the document rather than the
-        # request so the client owns the report's wording in one place.
-        m=re.search(r"<title>(.*?)</title>",req.html,re.S|re.I)
+        m=re.search(r"<title>(.*?)</title>",html,re.S|re.I)
         pdf=_print_via_devtools(browser,os.path.join(td,"cdp-profile"),url,
                                 (m.group(1) if m else "").split("·")[0].strip())
         if pdf: return Response(content=pdf,media_type="application/pdf")
         last_err=b""
-        # --headless=new is current Chromium; plain --headless keeps older Edge builds working.
         for headless_flag in ("--headless=new","--headless"):
             cmd=[browser,headless_flag,"--disable-gpu","--no-first-run","--disable-extensions",
                  f"--user-data-dir={os.path.join(td,'profile')}","--no-pdf-header-footer",
@@ -172,6 +165,14 @@ def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Respon
             raise HTTPException(status_code=500,detail={"error_code":"PDF_RENDER_FAILED","message":last_err.decode(errors="replace")[-500:],"details":{}})
         with open(dst,"rb") as f: pdf=f.read()
     return Response(content=pdf,media_type="application/pdf")
+
+
+@router.post("/{run_id}/v2/export-pdf")
+def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Response:
+    """全书报告转 PDF。run_id 只用于定位这次点击，渲染完全由传来的 HTML 决定。"""
+    del run_id
+    return render_report_pdf(db,req.html)
+
 @router.get("/{run_id}/v2/progress")
 def get_v2_progress(run_id:int,r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
     progress=r.load_progress(run_id)

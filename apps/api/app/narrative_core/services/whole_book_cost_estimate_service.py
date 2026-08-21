@@ -145,6 +145,31 @@ def estimate_whole_book_analysis(
             f"book {book_id} not found",
         )
 
+    # 同一本书、同一版本、同一读法、同一模型，预估就是同一个数——先找现成的那一行。
+    #
+    # 这个函数是「准备全书分析」页调的，而那个页面在有任务跑着时每 3 秒轮询一次。每调一次
+    # 插一行，于是一个纯粹用来看的页面成了写入方，跟正在跑的分析抢同一把写锁：日志里 84 次
+    # `database is locked` 全是它，而《我不是戏神》1299 章的估算又慢，撞得更狠——最后是
+    # 「准备全书分析」自己 500，页面显示「本地分析服务暂时不可用」。
+    #
+    # 有效性判定复用 is_estimate_valid：过期、书变了、换了 provider 或模型，都会重算。
+    existing = session.scalars(
+        select(WholeBookCostEstimate)
+        .where(
+            WholeBookCostEstimate.book_id == book_id,
+            WholeBookCostEstimate.mode == resolved_mode.value,
+            WholeBookCostEstimate.provider_config_id == provider_config_id,
+        )
+        .order_by(WholeBookCostEstimate.id.desc())
+        .limit(1)
+    ).first()
+    if existing is not None:
+        reusable, _reason = is_estimate_valid(
+            session, existing, now=now, provider_config_id=provider_config_id
+        )
+        if reusable:
+            return existing
+
     provider = session.get(ProviderConfiguration, provider_config_id)
     model_name = _resolve_model_name(provider)
     pricing_status_value = "unavailable"
