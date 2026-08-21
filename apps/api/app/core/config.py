@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     config_dir: str = ""
     default_model_provider: str = "none"
 
+    #: 长篇引擎抽取阶段同时在跑的分区数（STORYLENS_LONG_NOVEL_EXTRACT_CONCURRENCY）。
+    #:
+    #: 1 = 逐块串行。1299 章切成 163 块，每块一次调用约 70 秒 —— 三个多小时，而这段
+    #: 时间几乎全在等网络。块在分区内必须按顺序（每块带着上一块的连续性状态），但分区
+    #: 之间本来就是独立的归约单元。4 是在提速和服务商限流之间取的一个稳当值。
+    long_novel_extract_concurrency: int = 4
+
     local_llama_base_url: str = "http://127.0.0.1:8080/v1"
     local_llama_api_key: str = "local"
     local_llama_model: str = "qwen-local"

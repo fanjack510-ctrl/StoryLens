@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import time
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -29,6 +31,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Book, WholeBookRun
 from app.model_gateway.base import ModelRequest
 from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStatus
+from app.core.config import get_settings
 from app.narrative_core.long_novel import constants as C
 from app.narrative_core.long_novel.block_store import SqlBlockAssetStore
 from app.narrative_core.long_novel.budget import ContextCosts, joint_resolve
@@ -101,7 +104,11 @@ class _GatewayProvider:
         run_id: int = 0,
         repository: Any | None = None,
         on_call: Callable[[int, str], None] | None = None,
+        #: 抽取阶段多个分区并行时，这些计数器和下面的 Session 都会被多个线程碰到。
+        #: 跟 SqlBlockAssetStore 用同一把锁，两边就不会各自以为自己独占 Session。
+        lock: Any | None = None,
     ) -> None:
+        self._lock = lock
         self._on_call = on_call
         self._gateway = gateway
         self._provider_name = provider_name
@@ -132,30 +139,33 @@ class _GatewayProvider:
                 ),
             )
         )
-        self.calls += 1
-        self.input_tokens += int(getattr(response, "input_tokens", 0) or 0)
-        self.output_tokens += int(getattr(response, "output_tokens", 0) or 0)
-        if self._session is not None and self._run_id:
-            from app.narrative_core.whole_book_v2.usage_ledger import record_provider_call
+        # 记账和计数是共享状态；模型调用本身在锁外，那才是七十秒所在。
+        with (self._lock if self._lock is not None else nullcontext()):
+            self.calls += 1
+            self.input_tokens += int(getattr(response, "input_tokens", 0) or 0)
+            self.output_tokens += int(getattr(response, "output_tokens", 0) or 0)
+            calls_so_far = self.calls
+            if self._session is not None and self._run_id:
+                from app.narrative_core.whole_book_v2.usage_ledger import record_provider_call
 
-            record_provider_call(
-                self._session,
-                whole_book_run_id=self._run_id,
-                unit_key=unit_key,
-                provider=self._provider_name,
-                model=self._model_name,
-                response=response,
-                repair=unit_key.endswith(":repair"),
-            )
-            if self._repository is not None and hasattr(self._repository, "commit_usage"):
-                self._repository.commit_usage()
+                record_provider_call(
+                    self._session,
+                    whole_book_run_id=self._run_id,
+                    unit_key=unit_key,
+                    provider=self._provider_name,
+                    model=self._model_name,
+                    response=response,
+                    repair=unit_key.endswith(":repair"),
+                )
+                if self._repository is not None and hasattr(self._repository, "commit_usage"):
+                    self._repository.commit_usage()
         # Progress is emitted per *completed provider call* and nowhere else. A percentage
         # driven by stage transitions moves in jumps and then sits still for the twenty
         # minutes that extraction actually takes; a percentage driven by paid calls is the
         # one number that cannot claim work that did not happen.
         if self._on_call is not None:
             try:
-                self._on_call(self.calls, unit_key)
+                self._on_call(calls_so_far, unit_key)
             except Exception:  # noqa: BLE001 — reporting must never fail the run
                 logger.warning("long_novel_progress_write_failed run_id=%s", self._run_id)
         return response
@@ -536,6 +546,8 @@ def execute_long_novel_pipeline_v1(
     expected_calls = len(plan.blocks) + len(plan.stages) + (
         _BREAKDOWN_UNITS if breakdown else _UNITS_BESIDES_STAGES
     )
+    # 抽取阶段的分区并发共用这一把锁：store 和 provider 压着同一个 Session。
+    extract_lock = threading.Lock()
     provider = _GatewayProvider(
         gateway,
         provider_name=provider_name,
@@ -545,6 +557,7 @@ def execute_long_novel_pipeline_v1(
         session=session,
         run_id=int(run_id),
         repository=repo,
+        lock=extract_lock,
         on_call=_progress_writer(
             repo,
             run_id=int(run_id),
@@ -584,6 +597,7 @@ def execute_long_novel_pipeline_v1(
             density_profile=str(resolved.density_profile),
         ),
         enabled=use_fake_gateway is None,
+        lock=extract_lock,
     )
     coordinator = RunCoordinator(
         extractor=BlockExtractor(
@@ -647,6 +661,10 @@ def execute_long_novel_pipeline_v1(
         technique_reader=(
             lambda payload: provider.json_unit("techniques", REUSABLE_INSTRUCTION, payload)
         ) if breakdown else None,
+        # 分区并发。串行时这一层是全流程最慢的一段，而它绝大部分时间在等网络：
+        # 1299 章切成 163 块，每块一次调用约 70 秒，加起来三个多小时。分区之间互不
+        # 依赖，可以同时读；块在分区内仍然按顺序，连续性链不断。
+        extract_concurrency=get_settings().long_novel_extract_concurrency,
     )
 
     if run.status == WholeBookRunStatus.pending.value:

@@ -21,6 +21,8 @@ a reader than nothing at all — provided they are told which one is missing.
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Sequence
 
@@ -301,9 +303,20 @@ class RunCoordinator:
         cast_reader: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         technique_reader: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         max_provider_calls: int | None = None,
+        #: 同时在跑的分区数。1 = 逐块串行，与并发出现之前一字不差。
+        #:
+        #: 串行是这一层最贵的一条：1299 章切成 163 块，每块一次调用约 70 秒，加起来三个多
+        #: 小时，而这段时间里进程绝大部分是在等网络。块必须按顺序读——每块的提示词里带着上
+        #: 一块的连续性状态——但**分区之间**本来就是独立的归约单元，可以同时读。
+        extract_concurrency: int = 1,
     ) -> None:
         self._extractor = extractor
         self._profile = profile
+        self._extract_concurrency = max(1, int(extract_concurrency))
+        #: 抽取阶段共享的那几处状态（assets / _anchors / _evidence / report）都从工作线程写，
+        #: 而它们下面还压着一个 SQLAlchemy Session。锁得粗一点没关系：这些操作是毫秒级的，
+        #: 而它保护的那次模型调用要七十秒。
+        self._extract_lock = threading.Lock()
         self._interpret = stage_interpreter
         self._synthesize = topic_synthesizer
         self._assess = assessor
@@ -347,7 +360,7 @@ class RunCoordinator:
             chapters_planned=len(chapters_by_order),
         )
 
-        assets = self._extract_all(plan.blocks, chapters_by_order, report)
+        assets = self._extract_all(plan, chapters_by_order, report)
         report.assets = assets
         signals = self._collect_signals(assets)
         stage_skeleton = self._build_stage_skeleton(plan, assets)  # facts added below
@@ -1851,26 +1864,74 @@ class RunCoordinator:
     # ------------------------------------------------------------------ stages
     def _extract_all(
         self,
-        blocks: Sequence[PlannedBlock],
+        plan: BookPlan,
         chapters_by_order: dict[int, SourceChapter],
         report: RunReport,
     ) -> dict[str, BlockAsset]:
-        """Extract every block, threading the carry slate forward.
+        """Extract every block, threading the carry slate forward within each partition.
 
         A block that fails is recorded and skipped rather than aborting: the carry slate is
         left unchanged so the next block still sees the last known-good continuity state,
         which keeps one bad response from corrupting everything downstream of it.
+
+        块必须按顺序读：每块的提示词里带着上一块留下的连续性状态（未收的线、在办的目标）。
+        但那条链**只需要在分区内成立**——分区本来就是归约单元，起承转合的边界只落在分区边上，
+        `reduce_partition` 也是按分区收的。所以每个分区自带一条链，从空开始；分区之间并行。
+
+        代价说清楚：分区头那一块看不到上一分区留下的连续性提示，163 块里有 27 道这样的接缝。
+        换来的是墙上时间除以并发数——1299 章从三个多小时降到四十分钟上下。
         """
         assets: dict[str, BlockAsset] = {}
+        by_key = {b.block_key: b for b in plan.blocks}
+        chains: list[list[PlannedBlock]] = [
+            [by_key[k] for k in part.block_keys if k in by_key] for part in plan.partitions
+        ]
+        # 计划没给分区（老计划、测试替身），就退回整本一条链——正是并发出现之前的样子。
+        planned = {b.block_key for chain in chains for b in chain}
+        leftovers = [b for b in plan.blocks if b.block_key not in planned]
+        if leftovers:
+            chains.append(leftovers)
+        chains = [c for c in chains if c]
+
+        if self._extract_concurrency <= 1 or len(chains) <= 1:
+            for chain in chains:
+                self._extract_chain(chain, chapters_by_order, report, assets)
+            return assets
+
+        with ThreadPoolExecutor(max_workers=self._extract_concurrency) as pool:
+            list(
+                pool.map(
+                    lambda chain: self._extract_chain(
+                        chain, chapters_by_order, report, assets
+                    ),
+                    chains,
+                )
+            )
+        return assets
+
+    def _extract_chain(
+        self,
+        blocks: Sequence[PlannedBlock],
+        chapters_by_order: dict[int, SourceChapter],
+        report: RunReport,
+        assets: dict[str, BlockAsset],
+    ) -> None:
+        """One partition's blocks, in order, threading that partition's carry slate.
+
+        Everything this touches outside its own locals is shared with the other partitions'
+        threads, so every read-modify-write of it goes through the lock.
+        """
         carry = CarryForwardState()
 
         for block in blocks:
-            if self._budget_exhausted(report):
-                report.blocks_failed.append((block.block_key, "MAX_PROVIDER_CALLS_REACHED"))
-                continue
+            with self._extract_lock:
+                if self._budget_exhausted(report):
+                    report.blocks_failed.append((block.block_key, "MAX_PROVIDER_CALLS_REACHED"))
+                    continue
             chapters = [chapters_by_order[o] for o in block.chapter_orders if o in chapters_by_order]
             if not chapters:
-                report.blocks_failed.append((block.block_key, "SOURCE_CHAPTERS_MISSING"))
+                with self._extract_lock:
+                    report.blocks_failed.append((block.block_key, "SOURCE_CHAPTERS_MISSING"))
                 continue
             # One clean retry before the block is given up on.
             #
@@ -1887,17 +1948,22 @@ class RunCoordinator:
             result = None
             last_error: LongNovelError | None = None
             for attempt in range(2):
-                if attempt and self._budget_exhausted(report):
-                    break
+                if attempt:
+                    with self._extract_lock:
+                        if self._budget_exhausted(report):
+                            break
                 try:
+                    # 唯一不持锁的一步，也是唯一慢的一步：七十秒的网络等待。并发拿回来的
+                    # 全部时间都在这里。
                     result = self._extractor.extract(
                         block_key=block.block_key, chapters=chapters, carry_in=carry
                     )
                     break
                 except LongNovelError as exc:
                     last_error = exc
-                    report.provider_calls += 1
-                    report.blocks_retried += attempt == 0
+                    with self._extract_lock:
+                        report.provider_calls += 1
+                        report.blocks_retried += attempt == 0
             if result is None:
                 # The message, not just the code. A run that records only "SCHEMA_MISMATCH"
                 # cannot be diagnosed afterwards without paying to reproduce it — which is
@@ -1905,17 +1971,18 @@ class RunCoordinator:
                 exc = last_error
                 detail = (exc.message.strip().splitlines()[0][:300] if exc and exc.message else "")
                 code = exc.code.value if exc else "UNKNOWN"
-                report.blocks_failed.append((block.block_key, f"{code}: {detail}"))
-                report.chapters_lost.extend(block.chapter_orders)
+                with self._extract_lock:
+                    report.blocks_failed.append((block.block_key, f"{code}: {detail}"))
+                    report.chapters_lost.extend(block.chapter_orders)
                 continue
-            assets[block.block_key] = result.asset
-            self._anchors[block.block_key] = result.evidence_by_anchor
-            for row in result.evidence:
-                self._evidence.setdefault(row["evidence_id"], row)
-            report.blocks_extracted += 1
-            report.provider_calls += result.provider_calls
+            with self._extract_lock:
+                assets[block.block_key] = result.asset
+                self._anchors[block.block_key] = result.evidence_by_anchor
+                for row in result.evidence:
+                    self._evidence.setdefault(row["evidence_id"], row)
+                report.blocks_extracted += 1
+                report.provider_calls += result.provider_calls
             carry = build_carry_out(result.asset, carry)
-        return assets
 
     def _budget_exhausted(self, report: RunReport) -> bool:
         return self._max_calls is not None and report.provider_calls >= self._max_calls

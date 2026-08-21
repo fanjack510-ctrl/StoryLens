@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
+from contextlib import nullcontext
 import logging
 from typing import Any
 
@@ -64,7 +66,12 @@ class SqlBlockAssetStore:
         model_name: str,
         semantic_compat_key: str,
         enabled: bool = True,
+        #: 抽取阶段可能有多个分区同时在跑，而这个 store 和 provider 共用同一个
+        #: SQLAlchemy Session——Session 不是线程安全的。同一把锁传给两边即可：
+        #: 这里的读写都是毫秒级，锁不会成为瓶颈。
+        lock: threading.Lock | None = None,
     ) -> None:
+        self._lock = lock
         self._session = session
         self._run_id = int(run_id)
         self._snapshot_id = int(snapshot_id)
@@ -76,9 +83,16 @@ class SqlBlockAssetStore:
         self.hits = 0
         self.writes = 0
 
+    def _guard(self):
+        return self._lock if self._lock is not None else nullcontext()
+
     def get(self, fingerprint: str) -> BlockAsset | None:
         if not self._enabled or not fingerprint:
             return None
+        with self._guard():
+            return self._get_locked(fingerprint)
+
+    def _get_locked(self, fingerprint: str) -> BlockAsset | None:
         row = self._session.execute(
             text(
                 "SELECT asset_json, run_id FROM long_novel_blocks"
@@ -118,6 +132,10 @@ class SqlBlockAssetStore:
     def put(self, fingerprint: str, block_key: str, asset: BlockAsset) -> None:
         if not self._enabled or not fingerprint:
             return
+        with self._guard():
+            self._put_locked(fingerprint, block_key, asset)
+
+    def _put_locked(self, fingerprint: str, block_key: str, asset: BlockAsset) -> None:
         asset_json = json.dumps(asset.model_dump(mode="json"), ensure_ascii=False)
         payload: dict[str, Any] = {
             "run_id": self._run_id,
