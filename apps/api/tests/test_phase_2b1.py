@@ -134,6 +134,11 @@ async def test_blocked_before_send_creates_no_invocation(testing_session):
 
 
 def test_reservation_rejects_before_work_and_records_gate(testing_session):
+    """钱不够就在动手之前拒绝，并记下这次拦截。
+
+    原先这条用请求数触发（要 4 次、剩 2 次）。请求数已不再是闸门——它和 Token 量的是同一
+    件事的另外两种单位——所以改用费用触发。要守的规矩没变：不能先干活再发现超预算。
+    """
     with pytest.raises(InsufficientBudgetReservation):
         reserve_budget(
             testing_session,
@@ -141,7 +146,7 @@ def test_reservation_rejects_before_work_and_records_gate(testing_session):
             stage="boundary_review_generation",
             required_requests=4,
             required_tokens=100,
-            required_cost=0.01,
+            required_cost=2.0,
             remaining_requests=2,
             remaining_tokens=1000,
             remaining_cost=1,

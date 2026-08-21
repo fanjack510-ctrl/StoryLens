@@ -211,15 +211,26 @@ describe("开始分析人工审阅入口", () => {
       analysis_mode: "assisted_boundary_review", provider_name: "aliyun_qwen_plus",
     })));
   });
-  it("Stage1预算预览不含Scene Analysis", async () => {
+  // 开始之前要决定的只有一件事：花不花这个钱。十四张卡片（段落数、Transition 数、
+  // Detection 批次、预计/最坏 Token…）是引擎遥测，没有人会因为「Adjudication 批次 = 1」
+  // 改变主意，而真正要看的那个数字埋在第九张卡片里。
+  it("正文里只说这次花多少，不铺一屏遥测", async () => {
     renderDialog();
     await openCloudPlusWithConsent();
     const preview = await screen.findByTestId("stage1-budget-preview");
-    expect(preview).toHaveTextContent("本阶段仅识别场景边界");
-    expect(preview).toHaveTextContent("不会执行 Scene Analysis");
-    expect(preview).toHaveTextContent("最坏请求");
-    expect(preview).toHaveTextContent("6");
-    expect(screen.getByTestId("stage1-budget-grid").querySelectorAll(".budget-summary-card").length).toBeGreaterThanOrEqual(13);
+    expect(preview).toHaveTextContent("这次预计花费");
+    expect(preview).toHaveTextContent("确认边界后");
+    expect(preview).not.toHaveTextContent("Detection批次");
+    expect(preview).not.toHaveTextContent("最坏Token");
+  });
+
+  it("那些数字一个不少，收在技术详情里", async () => {
+    renderDialog();
+    await openCloudPlusWithConsent();
+    const grid = await screen.findByTestId("stage1-budget-grid");
+    expect(grid.querySelectorAll(".budget-summary-card").length).toBeGreaterThanOrEqual(13);
+    expect(grid).toHaveTextContent("Detection批次");
+    expect(grid).toHaveTextContent("最坏Token");
   });
   it("创建前显示完整Run请求预检", async () => {
     renderDialog();

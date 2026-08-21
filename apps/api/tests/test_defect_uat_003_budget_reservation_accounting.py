@@ -487,6 +487,8 @@ def test_13_concurrent_runs_cannot_exceed_daily(testing_session):
         remaining_tokens=200000,
         remaining_cost=20.0,
     )
+    # 第二个运行要的钱超过了扣掉第一个预留之后的剩余——闸门在钱这一维上，
+    # 请求数不再单独拦人。要守的规矩没变：两个并发运行加起来不能超出日预算。
     with pytest.raises(Exception) as exc:
         reserve_budget(
             testing_session,
@@ -494,7 +496,7 @@ def test_13_concurrent_runs_cannot_exceed_daily(testing_session):
             stage="boundary_review_generation",
             required_requests=20,
             required_tokens=1000,
-            required_cost=0.1,
+            required_cost=19.95,
             remaining_requests=30,
             remaining_tokens=200000,
             remaining_cost=20.0,

@@ -50,7 +50,8 @@ def test_screenshot_case_executable_when_estimated_fits(testing_session):
     required = BudgetAmounts(requests=7, tokens=9895, estimated_cost=0.052046)
     worst = BudgetAmounts(requests=14, tokens=22197, estimated_cost=0.14385)
     assert exceeded_dimensions(required, remaining) == []
-    assert exceeded_dimensions(worst, remaining) == ["requests"]
+    # 请求数不再单独成维：它和 Token 量的是同一件事的另外两种单位，只有钱能拦人。
+    assert exceeded_dimensions(worst, remaining) == []
     # Hard gate must follow estimated, so executable.
     assert not exceeded_dimensions(required, remaining)
 
@@ -98,6 +99,7 @@ def test_full_pipeline_advisory_blocks_when_estimated_exceeds(testing_session):
         stage1_worst_cost=0.14385,
         remaining=remaining,
     )
+    # 完整流程的预计请求数确实超过剩余请求数——但请求数不再是闸门，钱够就放行。
     assert advisory.full_expected_requests > remaining.requests
-    assert advisory.within_budget is False
-    assert "requests" in advisory.exceeded_dimensions
+    assert advisory.within_budget is True
+    assert advisory.exceeded_dimensions == []

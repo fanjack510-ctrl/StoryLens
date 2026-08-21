@@ -118,7 +118,34 @@ function formatBudgetGaps(preflight: any): string {
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** 开始之前，一个人需要知道的：这次要花多少钱。
+ *
+ *  这里原先铺了十四张卡片——段落数、Transition 数、Detection 批次、Adjudication 批次、
+ *  预计/最坏请求、预计/最坏 Token、预计/最坏费用、剩余请求/Token/费用、是否可执行——
+ *  再往下还有九张「完整分析预算预检」。那是引擎的遥测，不是决策要用的东西：没有人会因为
+ *  「Adjudication 批次 = 1」而改变主意，而真正要看的那个数字埋在第九张卡片里。
+ *
+ *  现在正文里只留一句话：这次大概花多少、最坏多少。其余全部收进弹窗底部本来就有的
+ *  「技术详情」折叠区——需要对账的人点开就有，不需要的人不用滚过三屏。
+ */
 function Stage1BudgetSummary({ preflight, budgetBlocked }: { preflight: any; budgetBlocked: boolean }) {
+  const currency = preflight.currency || "CNY";
+  return (
+    <div className="budget-preview" data-testid="stage1-budget-preview">
+      <p className="budget-headline" data-testid="stage1-budget-headline">
+        这次预计花费 <b>{preflight.estimated_cost} {currency}</b>
+        <span className="muted">（最坏 {preflight.worst_case_cost} {currency}）</span>
+      </p>
+      <p className="muted">
+        本阶段只识别场景边界。确认边界后，会按最终场景数重新估算下一阶段的费用。
+      </p>
+      {budgetBlocked && <pre data-testid="stage1-budget-gap">{formatBudgetGaps(preflight)}</pre>}
+    </div>
+  );
+}
+
+/** 上面那张卡片省下来的所有数字，原样放在这里。 */
+function Stage1BudgetDetail({ preflight, budgetBlocked }: { preflight: any; budgetBlocked: boolean }) {
   const currency = preflight.currency || "CNY";
   const cards = [
     { label: "段落数", value: preflight.paragraph_count },
@@ -136,26 +163,20 @@ function Stage1BudgetSummary({ preflight, budgetBlocked }: { preflight: any; bud
     { label: "剩余费用", value: preflight.remaining?.estimated_cost },
   ];
   return (
-    <div className="budget-preview" data-testid="stage1-budget-preview">
-      <h3>本阶段仅识别场景边界</h3>
-      <p>本阶段不会执行 Scene Analysis。人工确认边界后，系统会根据最终 Scene 数量重新估算 Scene Analysis 预算。</p>
-      <dl className="budget-summary-grid" data-testid="stage1-budget-grid">
-        {cards.map((card) => (
-          <div key={card.label} className="budget-summary-card">
-            <dt>{card.label}</dt>
-            <dd>{card.value}</dd>
-          </div>
-        ))}
-        <div className="budget-summary-card budget-summary-card--status">
-          <dt>是否可执行</dt>
-          <dd>{budgetBlocked ? "否" : "是"}</dd>
+    <dl className="budget-summary-grid" data-testid="stage1-budget-grid">
+      {cards.map((card) => (
+        <div key={card.label} className="budget-summary-card">
+          <dt>{card.label}</dt>
+          <dd>{card.value}</dd>
         </div>
-      </dl>
-      {budgetBlocked && <pre data-testid="stage1-budget-gap">{formatBudgetGaps(preflight)}</pre>}
-    </div>
+      ))}
+      <div className="budget-summary-card budget-summary-card--status">
+        <dt>是否可执行</dt>
+        <dd>{budgetBlocked ? "否" : "是"}</dd>
+      </div>
+    </dl>
   );
 }
-
 function RequestQuotaBlockPanel({
   required,
   available,
@@ -798,9 +819,11 @@ export function StartAnalysisDialog({
   });
 
   const stage1Dims: string[] = preflight?.exceeded_dimensions || [];
-  const tokenBlocked = stage1Dims.includes("tokens")
-    || (typeof preflight?.estimated_total_tokens === "number"
-      && remainingTokens < preflight.estimated_total_tokens);
+  // Token 和请求数不再拦人——它们量的是同一件事的另外两种单位，用得多就是花得多。一次
+  // 全书分析把 Token 日限用光之后，这里报「Token不足：预计需要 13789，当前剩余 0」，而
+  // 费用额度 ¥50 一分没动。后端已经只按费用判，这里也不能再自己算一遍：前端曾独立比较
+  // remainingTokens < estimated_total_tokens，所以后端放行了它照样拦。
+  const tokenBlocked = false;
   const costBlocked = stage1Dims.includes("estimated_cost")
     || (typeof preflight?.estimated_cost === "number"
       && remainingCost + 1e-9 < preflight.estimated_cost);
@@ -876,9 +899,9 @@ export function StartAnalysisDialog({
     aiView.apiKeyConfigured,
     planAllowsStart,
     unavailableReason,
-    stage1RequestShortfall,
     preflight,
     stage1Estimated,
+    stage1RequestShortfall,
     remainingRequests,
     fullWorst,
     tokenBlocked,
@@ -932,8 +955,6 @@ export function StartAnalysisDialog({
     if (!provider) {
       return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
     }
-    if (stage1RequestShortfall > 0) return "当前技术请求额度不足";
-    if (tokenBlocked) return "当前 Token 额度不足";
     if (costBlocked) return "当前费用额度不足";
     return null;
   }, [
@@ -948,8 +969,6 @@ export function StartAnalysisDialog({
     mode,
     consent,
     provider,
-    stage1RequestShortfall,
-    tokenBlocked,
     costBlocked,
   ]);
 
@@ -1366,9 +1385,7 @@ export function StartAnalysisDialog({
 
           {(mode === "cloud" || mode === "hybrid") && preflight && (
             <>
-              {developerMode && (
-                <Stage1BudgetSummary preflight={preflight} budgetBlocked={budgetBlocked} />
-              )}
+              <Stage1BudgetSummary preflight={preflight} budgetBlocked={budgetBlocked} />
               {showRequestQuotaPanel && requestOnly && (
                 <RequestQuotaBlockPanel
                   required={requestOnly.required ?? stage1Estimated}
@@ -1385,13 +1402,15 @@ export function StartAnalysisDialog({
                 />
               )}
               <HardBudgetBlockers blockers={createBlockers} />
-              {(developerMode || budgetDetailOpen) && (
+              {/* 完整预检那九张卡片挪进底部「技术详情」了：开始之前要决定的只有花不花这个钱，
+                  Boundary/Scene/Journey 各自的预计与最坏请求数不影响那个决定。 */}
+              {budgetDetailOpen && (
                 <FullPipelineBudgetAdvisory
                   advisory={fullAdvisory}
                   preflight={preflight}
                   usage={cloudUsage.data}
                   budget={budgetSettings.data}
-                  detailOpen={developerMode || budgetDetailOpen || !showRequestQuotaPanel}
+                  detailOpen
                 />
               )}
             </>
@@ -1416,6 +1435,19 @@ export function StartAnalysisDialog({
             <details className="start-analysis-tech-details" data-testid="start-analysis-tech-details">
               <summary>技术详情</summary>
               <div className="advanced">
+                {preflight && (mode === "cloud" || mode === "hybrid") && (
+                  <>
+                    <b>本阶段预算明细</b>
+                    <Stage1BudgetDetail preflight={preflight} budgetBlocked={budgetBlocked} />
+                    <FullPipelineBudgetAdvisory
+                      advisory={fullAdvisory}
+                      preflight={preflight}
+                      usage={cloudUsage.data}
+                      budget={budgetSettings.data}
+                      detailOpen
+                    />
+                  </>
+                )}
                 <b>Provider</b>
                 <span>ID：{selected?.name || provider || "—"}</span>
                 <span>Model：{selected?.default_model || "—"}</span>

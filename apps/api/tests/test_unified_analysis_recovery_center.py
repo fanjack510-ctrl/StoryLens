@@ -102,7 +102,10 @@ def test_recovery_plan_returns_budget_and_provider_blockers_together(client):
     gen, session = _db(client)
     try:
         _enable_cloud(session)
-        _set_budget(session, requests=2)
+        # 用费用卡住，不是请求数：请求数已不再是闸门（它和 Token 量的是同一件事的另外两种
+        # 单位）。这条用例要验的是「预算和 provider 两类阻塞项一起报出来」，与用哪一维卡住
+        # 无关。
+        _set_budget(session, cost=0.000001)
         _book, _ch, run, _revw, _rev, _scenes, _paras = _seed_confirmed_run(
             session, scene_count=5
         )
@@ -118,7 +121,7 @@ def test_recovery_plan_returns_budget_and_provider_blockers_together(client):
 
     plan = client.get(f"/api/v1/analysis-runs/{run_id}/recovery-plan").json()
     reasons = {b["reason"] for b in plan["blockers"]}
-    assert "request_budget_insufficient" in reasons
+    assert any("budget" in r for r in reasons)
     assert "provider_disconnected" in reasons
     assert plan["user_status"] == "paused_recoverable"
     assert plan["recoverable"] is True
@@ -268,13 +271,10 @@ def test_full_pipeline_preflight_advisory_surfaces_shortfall(client):
     )
     assert resp.status_code == 200, resp.text
     advisory = resp.json()
+    # 预检照常把请求数算出来并返回——想知道要跑多少次看得见。
     assert advisory["full_worst_requests"] > advisory["remaining_requests"]
-    # Hard gate uses full_expected, not full_worst.
-    if advisory["full_expected_requests"] > advisory["remaining_requests"]:
-        assert advisory["within_budget"] is False
-        assert "requests" in advisory["exceeded_dimensions"]
-    else:
-        assert "requests" not in advisory.get("exceeded_dimensions", [])
+    # 但请求数不再是闸门：它和 Token 量的是同一件事的另外两种单位，只有钱能拦人。
+    assert "requests" not in advisory.get("exceeded_dimensions", [])
 
 
 def test_succeeded_scenes_plan_awaiting_reader_journey_no_new_run(client):

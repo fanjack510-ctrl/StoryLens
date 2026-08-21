@@ -82,14 +82,18 @@ class StageEstimate:
 
 
 def exceeded_dimensions(required: BudgetAmounts, remaining: BudgetAmounts) -> list[str]:
-    dims: list[str] = []
-    if required.requests > remaining.requests:
-        dims.append("requests")
-    if required.tokens > remaining.tokens:
-        dims.append("tokens")
+    """哪一维不够——只看钱。
+
+    请求数与 Token 曾各自成维，于是同一件事被拦三次：一次全书分析把 Token 日限用光之后，
+    单章分析的预检报「Token不足：预计需要 13789 Token，当前剩余 0」，而费用额度 ¥50 一分
+    没动。三者量的是同一件事的三种单位——调用多就是 token 多，token 多就是钱多。
+
+    required/remaining 仍然把三项都算出来并原样返回，屏幕上照常显示预计要多少请求、多少
+    token；只是能不能开始，只问钱。
+    """
     if required.estimated_cost > remaining.estimated_cost:
-        dims.append("estimated_cost")
-    return dims
+        return ["estimated_cost"]
+    return []
 
 
 def _plus_model_name() -> str:
