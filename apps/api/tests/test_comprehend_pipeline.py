@@ -86,3 +86,29 @@ def test_the_novel_profile_gate_does_not_block_a_monograph() -> None:
     assert 'analysis_mode == "comprehend"' in src, "读懂仍然要过画像门"
     # 小说那两种读法必须照旧受门约束 —— 画像对它们是真有用的
     assert "profile_confirmation_state(db, book_id)" in src
+
+
+def test_the_progress_row_this_pipeline_writes_actually_validates() -> None:
+    """ProgressV2 的字段全是必填，少一个就整条进度写不进去。
+
+    第一次在产品里真跑就栽在这儿——而且异常被外层标成「模型中间结果格式不符合要求」，
+    屏幕上显示的阶段还是层级引擎的 overview_synthesis，把人指向模型和另一个引擎。
+    埋在闭包里的构造只有真跑一次才会炸，所以把它抽出来，让测试直接盯。
+    """
+    from app.narrative_core.services.comprehend_pipeline_v1 import build_progress
+
+    p = build_progress(
+        done=3, total=38, stage="digest_sections", action="正在逐节读取",
+        elapsed=12.5, provider="deepseek", model="deepseek-v4-flash",
+    )
+    assert p.provider_calls_completed == 3
+    assert p.total_windows == 38
+    assert p.current_action == "正在逐节读取"
+
+    # 一次调用都还没完成时不能除零，也不能报出荒唐的剩余时间
+    zero = build_progress(
+        done=0, total=38, stage="parse_structure", action="正在识别章节结构",
+        elapsed=0.0, provider="p", model="m",
+    )
+    assert zero.overall_percent == 0
+    assert zero.estimated_remaining_seconds >= 0

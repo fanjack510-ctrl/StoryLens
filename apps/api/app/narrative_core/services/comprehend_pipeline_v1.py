@@ -19,6 +19,7 @@ import json
 import logging
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -39,6 +40,7 @@ __all__ = [
     "COMPREHEND_MODE",
     "COMPREHEND_ENGINE_VERSION",
     "COMPREHEND_RESULT_STAGE",
+    "build_progress",
     "execute_comprehend_pipeline_v1",
     "load_comprehend_result",
 ]
@@ -117,6 +119,49 @@ def _save_result(session: Session, run_id: int, payload: dict[str, Any]) -> None
     session.flush()
 
 
+def build_progress(
+    *,
+    done: int,
+    total: int,
+    stage: str,
+    action: str,
+    elapsed: float,
+    provider: str,
+    model: str,
+) -> ProgressV2:
+    """这一条进度长什么样。
+
+    抽成纯函数，是因为它埋在闭包里时只有真跑一次才会炸——而它真的炸了：ProgressV2 的字段
+    全是必填，少一个就整条进度写不进去，异常还会被外层标成「模型中间结果格式不符合要求」，
+    把人指向模型。
+    """
+    per = elapsed / max(1, done)
+    return ProgressV2(
+        overall_percent=round(min(99.0, 100.0 * done / max(1, total)), 2),
+        current_stage=stage,
+        stage_percent=round(100.0 * done / max(1, total), 2),
+        current_window=done,
+        total_windows=total,
+        current_chapter=done,
+        total_chapters=total,
+        provider_calls_completed=done,
+        provider_calls_estimated=total,
+        successful_calls=done,
+        failed_calls=0,
+        retry_calls=0,
+        repair_calls=0,
+        elapsed_seconds=int(elapsed),
+        estimated_remaining_seconds=int(per * max(0, total - done)),
+        estimated_cost=0.0,
+        estimated_actual_cost=0.0,
+        provider=provider,
+        model=model,
+        last_completed_action=action,
+        current_action=action,
+        last_activity_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
 def execute_comprehend_pipeline_v1(
     session: Session,
     run_id: int,
@@ -147,26 +192,16 @@ def execute_comprehend_pipeline_v1(
     lock = threading.Lock()
 
     def write_progress(done: int, total: int, stage: str, action: str) -> None:
-        elapsed = max(0.0, time.monotonic() - started)
-        per = elapsed / max(1, done)
         repo.save_progress(
             int(run_id),
-            ProgressV2(
-                overall_percent=round(min(99.0, 100.0 * done / max(1, total)), 2),
-                current_stage=stage,
-                stage_percent=round(100.0 * done / max(1, total), 2),
-                current_window=done,
-                total_windows=total,
-                current_chapter=done,
-                total_chapters=total,
-                provider_calls_completed=done,
-                provider_calls_estimated=total,
-                successful_calls=done,
-                elapsed_seconds=int(elapsed),
-                estimated_remaining_seconds=int(per * max(0, total - done)),
+            build_progress(
+                done=done,
+                total=total,
+                stage=stage,
+                action=action,
+                elapsed=max(0.0, time.monotonic() - started),
                 provider=provider,
                 model=model,
-                current_action=action,
             ),
         )
         if commit_progress:
