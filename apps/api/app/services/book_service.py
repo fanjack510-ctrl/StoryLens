@@ -54,6 +54,11 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
         suspect_reasons.append("CHAPTER_TOO_MANY_PARAGRAPHS")
     if len(detection.candidates) >= 5 and len(chapters) <= 1:
         suspect_reasons.append("MARKERS_FOUND_BUT_NOT_ADOPTED")
+    if FROM_BOOK_TOC in (detection.rules or []):
+        # 上面那几条门槛是给小说校准的：一「章」超过五万字符，在小说里意味着切章失败了。
+        # 但专著的结构来自**书自己的目录**——一节长就是长，不是识别错。照搬会让用户在一次
+        # 完全正确的导入上看到「章节识别可疑」，然后去反复重新识别。
+        suspect_reasons = [r for r in suspect_reasons if r == "SINGLE_CHAPTER"]
     suspect = bool(suspect_reasons)
     adopted = [item for item in detection.candidates if item.adopted]
     rejected = [item for item in detection.candidates if not item.adopted]
@@ -114,6 +119,11 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
     }
 
 
+#: 这份章节结构是从书自己的目录读出来的，不是用小说的切章器猜的。
+#: 诊断那边据此跳过为小说校准的门槛。
+FROM_BOOK_TOC = "结构来自原书目录"
+
+
 def _monograph_detection(filename: str, document: ExtractedDocument) -> ChapterDetection | None:
     """PDF 用大纲切「节」，而不是用小说的切章器。
 
@@ -137,7 +147,7 @@ def _monograph_detection(filename: str, document: ExtractedDocument) -> ChapterD
             if sec.paragraphs
         ],
         candidates=[],
-        rules=list(det.rules),
+        rules=[FROM_BOOK_TOC] + list(det.rules),
     )
 
 

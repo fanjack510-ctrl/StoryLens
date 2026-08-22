@@ -206,3 +206,26 @@ def test_a_pdf_with_almost_no_structure_falls_back_to_the_novel_detector() -> No
     pages = ("就是一段话。", "又一段。")
     doc = ExtractedDocument("\n".join(pages), "pdf/text", "none", "LF", 10, pages)
     assert _monograph_detection("flat.pdf", doc) is None
+
+
+def test_the_novel_calibrated_warning_does_not_misfire_on_a_monograph() -> None:
+    """「一章超过五万字符」在小说里意味着切章失败；在专著里，一节长就是长。
+
+    照搬会让用户在一次完全正确的导入上看到「章节识别可疑」，然后去反复重新识别。
+    """
+    from app.domain.ingestion import ChapterDetection, ParsedChapter
+    from app.services.book_service import FROM_BOOK_TOC, _diagnostics
+    from app.services.extractors import ExtractedDocument
+
+    huge = "x" * 60_000
+    det = ChapterDetection(
+        chapters=[ParsedChapter("第1章 1 一节", [huge]), ParsedChapter("第1章 2 另一节", ["短"])],
+        candidates=[],
+        rules=[FROM_BOOK_TOC],
+    )
+    doc = ExtractedDocument(huge, "pdf/text", "none", "LF", 10, ("p",))
+    assert _diagnostics(doc, det)["warning"] is None
+
+    # 同样的形状，若不是来自原书目录，仍然该报可疑 —— 那时它真的是切章失败
+    det_novel = ChapterDetection(chapters=det.chapters, candidates=[], rules=[])
+    assert _diagnostics(doc, det_novel)["warning"] == "CHAPTER_DETECTION_SUSPECT"
