@@ -70,3 +70,19 @@ def test_the_router_accepts_the_new_reading() -> None:
     src = inspect.getsource(mod)
     assert '"comprehend"' in src
     assert COMPREHEND_MODE == "comprehend"
+
+
+def test_the_novel_profile_gate_does_not_block_a_monograph() -> None:
+    """画像的五根轴是付费模式/读者/爽感引擎/人称/篇幅——全是网文的东西。
+
+    那道门存在，是因为画像决定小说分析走哪个引擎、量哪几条类型轴；读懂一条都不用。
+    让人去确认「这本人因工程手册的爽感引擎是什么」，是在问一个没有答案的问题。
+    """
+    import inspect
+
+    from app.routers import whole_book_free_product_router as mod
+
+    src = inspect.getsource(mod.create_free_analysis)
+    assert 'analysis_mode == "comprehend"' in src, "读懂仍然要过画像门"
+    # 小说那两种读法必须照旧受门约束 —— 画像对它们是真有用的
+    assert "profile_confirmation_state(db, book_id)" in src

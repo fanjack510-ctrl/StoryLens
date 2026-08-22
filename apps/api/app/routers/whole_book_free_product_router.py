@@ -149,7 +149,14 @@ def create_free_analysis(
     # 恢复的是已付费的进度，fixture 是开发工具。
     from app.narrative_core.services.long_novel_pipeline_v1 import profile_confirmation_state
 
-    profile_state = profile_confirmation_state(db, book_id)
+    # 「读懂」不过画像门。画像的五根轴是付费模式 / 读者 / 爽感引擎 / 人称 / 篇幅——全是网文
+    # 的东西；那道门存在，是因为画像决定小说分析走哪个引擎、量哪几条类型轴，而读懂一条都不用。
+    # 让人去确认「这本人因工程手册的爽感引擎是什么」，是在问一个没有答案的问题。
+    profile_state = (
+        "confirmed"
+        if body.analysis_mode == "comprehend"
+        else profile_confirmation_state(db, book_id)
+    )
     if profile_state != "confirmed":
         raise HTTPException(
             status_code=409,
