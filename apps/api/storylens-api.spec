@@ -23,6 +23,9 @@ datas = [
 ]
 
 hiddenimports = [
+    # PDF 摄入（专著读法）。它只在 extract_document 里按需 import，
+    # PyInstaller 的静态扫描看不到函数内部的延迟导入。
+    "pypdf",
     "uvicorn",
     "uvicorn.logging",
     "uvicorn.loops",
