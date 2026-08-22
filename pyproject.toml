@@ -13,6 +13,9 @@ dependencies = [
   "python-multipart>=0.0.9",
   "python-docx>=1.1",
   "ebooklib>=0.18",
+  # PDF 摄入（专著读法）。必须声明在这里：打包用的是 .venv，而它只装声明过的东西。
+  # 只把 pypdf 写进 PyInstaller 的 hiddenimports 不管用——它变不出一个没装的模块。
+  "pypdf>=4.0",
   "beautifulsoup4>=4.12",
   "httpx>=0.27",
   "tenacity>=9.0",

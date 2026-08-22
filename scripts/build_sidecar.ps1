@@ -21,6 +21,12 @@ try {
     & $Python -m pip install -q "pyinstaller>=6.3"
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
+    # spec 声明要打包的模块，构建用的解释器里必须真的装了。hiddenimports 变不出一个没装的
+    # 模块——打包会顺利通过，用户导入时才拿到 500。提前到这里，它只是一行报错。
+    Write-Host "==> Checking sidecar imports"
+    & $Python (Join-Path $Root "scripts\check_sidecar_imports.py")
+    if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
     Write-Host "==> PyInstaller sidecar"
     & $Python -m PyInstaller --noconfirm --clean --distpath $OutDir --workpath $WorkDir $Spec
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
