@@ -60,7 +60,7 @@ class CreateFreeRunRequest(BaseModel):
     #: Which reading to run: the diagnostic, or 拆文 (CHG-108). Defaults to the diagnostic, so
     #: every existing caller keeps the behaviour it has. The two share a snapshot, a planner and
     #: an extraction pass and differ only in the four bounded units above L1.
-    analysis_mode: Literal["diagnostic", "story_breakdown"] = "diagnostic"
+    analysis_mode: Literal["diagnostic", "story_breakdown", "comprehend"] = "diagnostic"
     # CHG-080 reanalysis
     reanalyse: bool = False
     force_full_reanalysis: bool = False
@@ -119,7 +119,7 @@ def _create_fixture(book_id: int, body: CreateFixtureFreeRunRequest, db: Session
 @router.get("/books/{book_id}/whole-book/free/prepare")
 def prepare_free_analysis(
     book_id: int,
-    analysis_mode: Literal["diagnostic", "story_breakdown"] = "diagnostic",
+    analysis_mode: Literal["diagnostic", "story_breakdown", "comprehend"] = "diagnostic",
     db: Session = Depends(get_db),
 ) -> dict:
     """The panel prices the run the caller is about to start, which is not always the
@@ -130,7 +130,7 @@ def prepare_free_analysis(
 @router.get("/books/{book_id}/whole-book/prepare")
 def prepare_free_analysis_product_alias(
     book_id: int,
-    analysis_mode: Literal["diagnostic", "story_breakdown"] = "diagnostic",
+    analysis_mode: Literal["diagnostic", "story_breakdown", "comprehend"] = "diagnostic",
     db: Session = Depends(get_db),
 ) -> dict:
     """Product-facing alias used by Wave D desktop client."""
@@ -236,6 +236,27 @@ def create_free_analysis(
             mode=body.analysis_mode,
         )
     return result
+
+
+@router.get("/whole-book-runs/{run_id}/comprehend")
+def read_comprehend_result(run_id: int, db: Session = Depends(get_db)) -> dict:
+    """「读懂」的结果。
+
+    单独一个口，不并进 v2：那份契约是给评测/拆文的（结构、节奏、人物、悬念），而这份产出是
+    主张 / 依据 / 做法 / 术语 / 存疑。塞进同一个口，读的人会以为它们是同一种东西。
+    """
+    from app.narrative_core.services.comprehend_pipeline_v1 import load_comprehend_result
+
+    payload = load_comprehend_result(db, int(run_id))
+    if payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error_code": "COMPREHEND_RESULT_NOT_FOUND",
+                "message": "这次「读懂」还没有结果。分析可能仍在进行，或者这本书用的是别的读法。",
+            },
+        )
+    return payload
 
 
 @router.post("/books/{book_id}/whole-book/free/resume")

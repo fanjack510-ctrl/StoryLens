@@ -62,6 +62,7 @@ def execute_free_whole_book_pipeline_background(
 
     del provider_config_id  # pinned on WholeBookRun at create; hierarchical uses run pin
 
+    from app.narrative_core.services.comprehend_pipeline_v1 import COMPREHEND_MODE
     from app.narrative_core.services.whole_book_foundation_errors import (
         WholeBookFoundationError,
     )
@@ -73,6 +74,17 @@ def execute_free_whole_book_pipeline_background(
     with session_factory() as session:
         request_session_id = id(session)
         try:
+            if str(mode) == COMPREHEND_MODE:
+                # 专著/工具书。挂同一套任务机制（进度、记账、心跳、重复防护），但引擎完全不同：
+                # 小说要花 163 次调用猜结构，专著的结构是白给的。
+                from app.narrative_core.services.comprehend_pipeline_v1 import (
+                    execute_comprehend_pipeline_v1,
+                )
+
+                execute_comprehend_pipeline_v1(session, int(run_id), commit_progress=True)
+                session.commit()
+                logger.info("comprehend_background_ok run_id=%s", run_id)
+                return
             execute_hierarchical_v2_pipeline_v1(
                 session,
                 int(run_id),
