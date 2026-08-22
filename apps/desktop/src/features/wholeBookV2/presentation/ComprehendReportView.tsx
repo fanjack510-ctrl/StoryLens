@@ -11,7 +11,13 @@
  *  每条主张都挂着节号，就是为了让他能翻回原文核对。对这类书，能不能翻回去，就是这份摘要可不
  *  可信的分界线。
  */
+import { useState } from "react";
 import type { ComprehendResult } from "../../../services/wholeBookFreeProductApi";
+import {
+  VipRequiredError,
+  downloadComprehendHtml,
+  downloadComprehendPdf,
+} from "../comprehendDownload";
 
 function Items({ label, items, tone }: { label: string; items: string[]; tone?: string }) {
   if (!items?.length) return null;
@@ -30,12 +36,40 @@ function Items({ label, items, tone }: { label: string; items: string[]; tone?: 
 export function ComprehendReportView({
   data,
   title,
+  runId,
 }: {
   data: ComprehendResult;
   title: string;
+  runId?: number | null;
 }) {
   const pct = Math.round((data.coverage ?? 0) * 100);
   const missed = (data.sections_total ?? 0) - (data.sections_covered ?? 0);
+  const [busy, setBusy] = useState(false);
+  const [vip, setVip] = useState<{ message: string; url: string } | null>(null);
+  const [note, setNote] = useState("");
+
+  const onExport = async () => {
+    if (busy || runId == null) return;
+    setBusy(true);
+    setVip(null);
+    setNote("");
+    try {
+      await downloadComprehendPdf(runId, data, title);
+    } catch (err) {
+      if (err instanceof VipRequiredError) {
+        // 门拒绝是一个答案，不是故障——这时不落回 HTML，否则等于把收费的东西换个名字发出去。
+        setVip({ message: err.message, url: err.afdianUrl });
+      } else {
+        downloadComprehendHtml(data, title);
+        setNote(
+          (err instanceof Error && err.message ? err.message : "PDF 生成失败") +
+            "；已导出同内容的 HTML，浏览器里打印即得 PDF",
+        );
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <section className="cmp-report" data-testid="comprehend-report">
@@ -52,6 +86,36 @@ export function ComprehendReportView({
             : `只覆盖了 ${data.sections_covered}/${data.sections_total} 节（${pct}%），有 ${missed} 节没读到。` +
               "这份摘要不完整，涉及那几节的内容请回原文核对。"}
         </p>
+        {runId != null && (
+          <div className="cmp-actions">
+            <button type="button" data-testid="comprehend-export-pdf" disabled={busy} onClick={() => void onExport()}>
+              {busy ? "正在生成…" : "导出报告 · VIP"}
+            </button>
+            <button type="button" onClick={() => downloadComprehendHtml(data, title)}>
+              HTML
+            </button>
+          </div>
+        )}
+        {note && <p className="cmp-note">{note}</p>}
+        {vip && (
+          <div className="cmp-vip" role="alert" data-testid="comprehend-vip-notice">
+            <b>PDF 导出是 VIP 功能</b>
+            <p>{vip.message}</p>
+            <p>
+              {vip.url ? (
+                <a href={vip.url} target="_blank" rel="noreferrer">
+                  前往爱发电购买月卡授权 →
+                </a>
+              ) : (
+                <span>购买入口尚未配置，请联系作者获取授权码。</span>
+              )}
+              　已有授权码？在 设置 → 授权 中激活。
+            </p>
+            <button type="button" onClick={() => setVip(null)}>
+              知道了
+            </button>
+          </div>
+        )}
       </header>
 
       {data.book?.error ? (

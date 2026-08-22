@@ -266,6 +266,33 @@ def read_comprehend_result(run_id: int, db: Session = Depends(get_db)) -> dict:
     return payload
 
 
+class _ComprehendPdfRequest(BaseModel):
+    html: str
+
+
+@router.post("/whole-book-runs/{run_id}/comprehend/export-pdf")
+def export_comprehend_pdf(
+    run_id: int, req: _ComprehendPdfRequest, db: Session = Depends(get_db)
+):
+    """「读懂」报告的 PDF。
+
+    跟全书、单章共用同一条打印路径（`render_report_pdf`）和同一道 Pro 门——三份文件的字体
+    嵌入、纸张、边距因此一定一致，不会出现「全书能印、读懂印成乱码」。
+    """
+    from app.narrative_core.services.comprehend_pipeline_v1 import load_comprehend_result
+    from app.narrative_core.whole_book_v2.router import render_report_pdf
+
+    if load_comprehend_result(db, int(run_id)) is None:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error_code": "COMPREHEND_RESULT_NOT_FOUND",
+                "message": "这次「读懂」还没有结果，无法导出。",
+            },
+        )
+    return render_report_pdf(db, req.html)
+
+
 @router.post("/books/{book_id}/whole-book/free/resume")
 def resume_failed_free_analysis(
     book_id: int,

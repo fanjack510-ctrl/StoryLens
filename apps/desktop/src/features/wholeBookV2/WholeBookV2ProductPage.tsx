@@ -1100,6 +1100,7 @@ function WholeBookV2ProductPageEnabled() {
         <ComprehendReportView
           data={comprehendQuery.data}
           title={String(prepare?.book_title ?? "")}
+          runId={completedV2Run?.run_id ?? null}
         />
       )}
 
