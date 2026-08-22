@@ -495,14 +495,64 @@ function ReanalyseConfirmPanel({
   );
 }
 
+/** 第一条进度写下来之前，接口本来就会答「还没有」。
+ *
+ *  这不是故障，是这一步的正常开头：任务刚创建，切章、规划窗口都还没跑完，一条进度也还没
+ *  写。而页面把它画成了红色感叹号加「无法读取数据」——用户看见的是「失败了」，于是去关
+ *  程序、去重开、来问我是不是坏了。
+ *
+ *  所以这一条单独认：它出现时显示「正在启动」，并继续轮询。但也不能永远转下去——真的死在
+ *  启动阶段的任务必须露出来，所以过了宽限期还是这一条，就照常报错。 */
+const PROGRESS_NOT_READY = "WHOLE_BOOK_V2_PROGRESS_NOT_FOUND";
+/** 启动阶段的宽限期。1299 章的书光切章规划就要几十秒，60 秒偏紧，90 秒够而不至于让一个
+ *  真死掉的任务藏太久。 */
+const STARTUP_GRACE_MS = 90_000;
+
+export function isNotReadyYet(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  return error.code === PROGRESS_NOT_READY || error.status === 404;
+}
+
+/** 该给用户看哪一屏。抽成纯函数是因为这里的判断比它看起来难：
+ *  「还没有进度」和「出事了」在接口上都是一个非 200，分错了用户就会去关程序。 */
+export function progressPanelState(input: {
+  isLoading: boolean;
+  hasData: boolean;
+  error: unknown;
+  everHadData: boolean;
+  waitedMs: number;
+}): "loading" | "starting" | "error" | "ready" {
+  if (input.isLoading) return "loading";
+  if (input.hasData) return "ready";
+  // 已经见过进度之后再读不到，就不是启动问题了，别再拿启动态盖住它。
+  if (input.everHadData) return "error";
+  if (input.waitedMs < STARTUP_GRACE_MS && isNotReadyYet(input.error)) return "starting";
+  return "error";
+}
+
 function ProgressPanel({ runId }: { runId: number }) {
   const progressQuery = useQuery({
     queryKey: ["whole-book-v2-progress", runId],
     queryFn: () => getWholeBookV2Progress(runId),
     refetchInterval: 2000,
   });
+  // 这一面板挂上的时刻，就是「等第一条进度」的起点。换任务重新计时。
+  const waitingSinceRef = useRef<{ runId: number; at: number }>({ runId, at: Date.now() });
+  if (waitingSinceRef.current.runId !== runId) {
+    waitingSinceRef.current = { runId, at: Date.now() };
+  }
+  const everHadData = useRef(false);
+  if (progressQuery.data) everHadData.current = true;
 
-  if (progressQuery.isLoading) {
+  const view = progressPanelState({
+    isLoading: progressQuery.isLoading,
+    hasData: Boolean(progressQuery.data),
+    error: progressQuery.error,
+    everHadData: everHadData.current,
+    waitedMs: Date.now() - waitingSinceRef.current.at,
+  });
+
+  if (view === "loading") {
     return (
       <section className="wbv2-state">
         <h1>读取 V2 进度…</h1>
@@ -510,7 +560,16 @@ function ProgressPanel({ runId }: { runId: number }) {
       </section>
     );
   }
-  if (progressQuery.isError || !progressQuery.data) {
+  if (view === "starting") {
+    return (
+      <section className="wbv2-state" data-testid="whole-book-v2-progress-starting">
+        <h1>正在启动分析…</h1>
+        <p>正在切分章节、规划窗口。第一条进度出来之前这里会是空的，这一步通常要一分钟。</p>
+        <Loading />
+      </section>
+    );
+  }
+  if (view === "error" || !progressQuery.data) {
     return <ErrorState error={progressQuery.error ?? new Error("进度不可用")} />;
   }
 
