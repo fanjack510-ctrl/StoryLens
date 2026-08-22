@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../../components/common/States";
+import { ComprehendReportView } from "./presentation/ComprehendReportView";
+import { getComprehendResult } from "./api";
 import { ApiError } from "../../services/apiClient";
 import { profileHref } from "../bookProfile/origin";
 import { isWholeBookFreeProductEnabled } from "../../services/wholeBookFreeProductFlag";
@@ -55,6 +57,11 @@ const ANALYSIS_MODES: ReadonlyArray<{
     value: "story_breakdown",
     label: "拆文",
     hint: "看别人的书：起承转合、爆点在哪、钩子怎么下、哪些写法可以拿走用。不打分。",
+  },
+  {
+    value: "comprehend",
+    label: "读懂",
+    hint: "看不是小说的书：专著、教材、工具书。逐节给出主张、依据、能照做的动作和术语对照，读英文原书也出中文。",
   },
 ];
 const REANALYSE_CONSENT_TEXT =
@@ -723,6 +730,14 @@ function WholeBookV2ProductPageEnabled() {
   const prepare = prepareQuery.data;
   const activeRun = prepare ? resolveActiveRun(prepare) : null;
   const completedV2Run = prepare ? resolveCompletedV2Run(prepare) : null;
+  // 「读懂」的结果在自己的口上。用 v2 那个口去读它只会拿到 404——它们回答的不是同一个问题。
+  // 404 在这里是正常答案（这本书用的是别的读法），所以不重试、也不当错误显示。
+  const comprehendQuery = useQuery({
+    queryKey: ["whole-book-comprehend", completedV2Run?.run_id ?? null],
+    queryFn: () => getComprehendResult(Number(completedV2Run?.run_id)),
+    enabled: completedV2Run?.run_id != null,
+    retry: false,
+  });
   const latestFailedRun = prepare ? resolveLatestFailedRun(prepare) : null;
   const nonRealCompletedRun = prepare ? resolveNonRealCompletedRun(prepare) : null;
   const activeRunId = activeRun?.run_id ?? null;
@@ -1073,7 +1088,16 @@ function WholeBookV2ProductPageEnabled() {
         </section>
       )}
 
-      {(pageMode === "completed-v2" || showOldResultWhileRunning) && v2ResultQuery.data && (
+      {(pageMode === "completed-v2" || showOldResultWhileRunning) && comprehendQuery.data && (
+        <ComprehendReportView
+          data={comprehendQuery.data}
+          title={String(prepare?.book_title ?? "")}
+        />
+      )}
+
+      {(pageMode === "completed-v2" || showOldResultWhileRunning) &&
+        !comprehendQuery.data &&
+        v2ResultQuery.data && (
         <WholeBookV2ReportView
           data={v2ResultQuery.data}
           activeModule={activeModule}

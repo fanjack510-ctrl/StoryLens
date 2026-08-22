@@ -156,7 +156,48 @@ export type CreateWholeBookRunRequest = {
 
 /** 评测 finds what to fix in your own book; 拆文 reads someone else's for how it is done.
  *  They are different products over the same extraction, not two lengths of one report. */
-export type WholeBookAnalysisMode = "diagnostic" | "story_breakdown";
+/** 三种读法。`comprehend`（读懂）给的不是小说：专著、教材、工具书。
+ *  它的产出形状跟前两种完全不同（主张 / 依据 / 做法 / 术语 / 存疑），所以走自己的读取口。 */
+export type WholeBookAnalysisMode = "diagnostic" | "story_breakdown" | "comprehend";
+
+/** 「读懂」的结果。字段与 WholeBookAnalysisV2 没有交集——它回答的是别的问题。 */
+export type ComprehendSection = {
+  label: string;
+  claims: string[];
+  evidence: string[];
+  actions: string[];
+  terms: string[];
+  open_questions: string[];
+  error?: string;
+};
+export type ComprehendChapter = {
+  chapter: string;
+  title: string;
+  summary: string;
+  through_line: string;
+  error?: string;
+  sections: ComprehendSection[];
+};
+export type ComprehendResult = {
+  schema_version: string;
+  book: {
+    one_paragraph: string;
+    argument: string;
+    what_you_get: string;
+    who_should_read: string;
+    error?: string;
+  };
+  chapters: ComprehendChapter[];
+  sections_total: number;
+  sections_covered: number;
+  coverage: number;
+  /** 覆盖率低于九成就是 false。读者据此决定要不要回去读原文。 */
+  trustworthy: boolean;
+  provider_calls: number;
+  failures: string[];
+  rules: string[];
+};
+
 
 export type CreateWholeBookRunResponse = {
   run: WholeBookRunRecord;
