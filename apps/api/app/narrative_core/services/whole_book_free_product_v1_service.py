@@ -133,10 +133,17 @@ def _completed_v2_run(session: Session, book_id: int) -> WholeBookRun | None:
     from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
     from app.narrative_core.whole_book_v2.result_origin import product_flags_for_result
 
+    from app.narrative_core.services.comprehend_pipeline_v1 import load_comprehend_result
+
     repo = WholeBookV2Repository(session)
     for run in list_runs_for_book(session, book_id):
         if run.status != WholeBookRunStatus.completed.value:
             continue
+        # 「读懂」的结果存在自己的检查点里，不在 V2 那份契约里。只认 V2 的话，一次跑完的读懂
+        # 对页面是不存在的——页面于是跳回「开始分析」，用户以为没跑成，再点一次，再付一次钱。
+        # 实测：同一本书因此被连开了三个任务。
+        if load_comprehend_result(session, int(run.id)) is not None:
+            return run
         result = repo.load_result(int(run.id))
         if result is None:
             continue
@@ -157,6 +164,8 @@ def reading_of_run(run: WholeBookRun) -> str:
     one place rather than spreading string surgery through the API.
     """
     version = str(getattr(run, "engine_version", "") or "")
+    if version.startswith("comprehend-engine"):
+        return "comprehend"
     return "story_breakdown" if version.endswith(BREAKDOWN_ENGINE_SUFFIX) else "diagnostic"
 
 
@@ -177,6 +186,13 @@ def _completed_v2_runs_by_reading(session: Session, book_id: int) -> dict[str, W
             continue
         reading = reading_of_run(run)
         if reading in newest:
+            continue
+        from app.narrative_core.services.comprehend_pipeline_v1 import (
+            load_comprehend_result,
+        )
+
+        if load_comprehend_result(session, int(run.id)) is not None:
+            newest[reading] = run
             continue
         result = repo.load_result(int(run.id))
         if result is None:

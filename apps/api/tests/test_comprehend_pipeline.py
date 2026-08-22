@@ -112,3 +112,58 @@ def test_the_progress_row_this_pipeline_writes_actually_validates() -> None:
     )
     assert zero.overall_percent == 0
     assert zero.estimated_remaining_seconds >= 0
+
+
+def _seed_run(session, run_id: int, book_id: int, engine_version: str):
+    from app.db.models import Book, BookSnapshot, WholeBookRun, utc_now
+
+    if session.get(Book, book_id) is None:
+        session.add(Book(id=book_id, title="书", source_file_name="a.pdf", source_file_hash=f"h{book_id}"))
+        session.add(BookSnapshot(id=book_id, book_id=book_id, content_hash=f"c{book_id}",
+                                 snapshot_status="completed"))
+    session.add(
+        WholeBookRun(
+            id=run_id, book_id=book_id, snapshot_id=book_id, mode="whole_book_native",
+            status="completed", idempotency_key=f"k{run_id}", engine_id="comprehend_engine",
+            engine_version=engine_version, contract_version="whole_book_contract_v1",
+            result_origin="formal", started_at=utc_now(),
+        )
+    )
+    session.commit()
+
+
+def test_a_finished_comprehend_run_is_visible_to_the_page(tmp_path) -> None:
+    """跑完的「读懂」如果页面看不见，页面就跳回「开始分析」——用户以为没跑成，再点一次，
+    再付一次钱。实测同一本书因此被连开了三个任务。
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    from app.narrative_core.services.comprehend_pipeline_v1 import _save_result
+    from app.narrative_core.services.whole_book_free_product_v1_service import (
+        _completed_v2_run,
+        reading_of_run,
+    )
+    from tests.whole_book_minimal_test_helpers import make_engine
+
+    engine = make_engine(tmp_path, "cmp-visible.db")
+    with sessionmaker(bind=engine)() as session:
+        _seed_run(session, 30, 1, "comprehend-engine-1.0")
+        _save_result(session, 30, {"provider_calls": 5, "sections_covered": 8, "sections_total": 8})
+        session.commit()
+
+        found = _completed_v2_run(session, 1)
+        assert found is not None and found.id == 30
+        assert reading_of_run(found) == "comprehend"
+
+
+def test_a_completed_run_with_no_result_at_all_still_does_not_count(tmp_path) -> None:
+    """没有结果的「完成」不是完成。放行它，页面会显示一份空报告。"""
+    from sqlalchemy.orm import sessionmaker
+
+    from app.narrative_core.services.whole_book_free_product_v1_service import _completed_v2_run
+    from tests.whole_book_minimal_test_helpers import make_engine
+
+    engine = make_engine(tmp_path, "cmp-empty.db")
+    with sessionmaker(bind=engine)() as session:
+        _seed_run(session, 31, 2, "comprehend-engine-1.0")
+        assert _completed_v2_run(session, 2) is None
