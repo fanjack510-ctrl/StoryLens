@@ -250,7 +250,10 @@ function PreparePanel({
   onAnalysisModeChange: (next: WholeBookAnalysisMode) => void;
 }) {
   const est = prepare.estimate;
-  const profileGateClosed = profileConfirmed === false;
+  // 「读懂」不过画像门。画像的五根轴是付费模式 / 读者 / 爽感引擎 / 人称 / 篇幅——全是网文的
+  // 东西；它决定的是小说分析走哪个引擎、量哪几条类型轴，而读懂一条都不用。后端已经放行了，
+  // 前端这里不跟上，按钮照样是灰的——那等于没放行。
+  const profileGateClosed = profileConfirmed === false && analysisMode !== "comprehend";
   const breakdownAvailable = prepare.planner === "long_novel_engine";
   return (
     <section className="wbv2-prepare" data-testid="whole-book-v2-prepare">

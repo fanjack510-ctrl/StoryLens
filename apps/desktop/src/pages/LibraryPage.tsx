@@ -17,13 +17,20 @@ import { StateView } from "../components/ui/StateView";
 import { isLocalWebShell, useRuntimeInfo } from "../services/runtimeCapabilities";
 import type { Book, ImportDiagnostics } from "../types";
 
-const FORMAT_OPTIONS = ["TXT", "DOCX", "EPUB"] as const;
+// 筛选器要跟得上摄入层。少列一种，用户导进来的书会落进「其他」，一筛就不见了——
+// 他会以为导入失败，而它其实好端端地在库里。
+const FORMAT_OPTIONS = ["TXT", "DOCX", "EPUB", "PDF", "MD", "TEX", "HTML", "ODT"] as const;
 type FormatOption = (typeof FORMAT_OPTIONS)[number];
 
+const EXT_ALIAS: Record<string, FormatOption> = {
+  TXT: "TXT", DOCX: "DOCX", EPUB: "EPUB", PDF: "PDF",
+  MD: "MD", MARKDOWN: "MD", TEX: "TEX", LATEX: "TEX",
+  HTML: "HTML", HTM: "HTML", XHTML: "HTML", ODT: "ODT",
+};
+
 function fileFormat(name: string): FormatOption | "OTHER" {
-  const ext = name.split(".").pop()?.toUpperCase();
-  if (ext === "TXT" || ext === "DOCX" || ext === "EPUB") return ext;
-  return "OTHER";
+  const ext = name.split(".").pop()?.toUpperCase() ?? "";
+  return EXT_ALIAS[ext] ?? "OTHER";
 }
 
 function importErrorKind(error: unknown): {
@@ -84,11 +91,11 @@ export function LibraryPage() {
   const runtime = useRuntimeInfo();
   const webShell = isLocalWebShell(runtime.data);
   const [search, setSearch] = useState("");
-  const [formats, setFormats] = useState<Record<FormatOption, boolean>>({
-    TXT: true,
-    DOCX: true,
-    EPUB: true,
-  });
+  // 从 FORMAT_OPTIONS 生成，而不是手写一份。手写的那份漏了新格式时不会报错，只会让书悄悄
+  // 从列表里消失——那正是最难被发现的一类问题。
+  const [formats, setFormats] = useState<Record<FormatOption, boolean>>(
+    () => Object.fromEntries(FORMAT_OPTIONS.map((f) => [f, true])) as Record<FormatOption, boolean>,
+  );
   const [sort, setSort] = useState<"recent" | "title">("recent");
   const [pendingFile, setPendingFile] = useState<File>();
   //: Which pipeline the reader says this work takes. Seeded from the server's suggestion when
@@ -166,7 +173,7 @@ export function LibraryPage() {
       <PageHeader className="library-title-compact">
         <div>
           <PageTitle>我的书库</PageTitle>
-          <PageSubtitle>管理已导入的小说和分析项目</PageSubtitle>
+          <PageSubtitle>管理已导入的书和分析项目</PageSubtitle>
           {webShell ? (
             <p className="muted library-local-upload-hint" data-testid="library-local-upload-hint">
               文件仅发送到本机 StoryLens 服务，不会上传互联网。
@@ -178,7 +185,7 @@ export function LibraryPage() {
           data-testid="import-book"
           onClick={() => input.current?.click()}
         >
-          导入小说
+          导入书籍
         </Button>
         <input
           ref={input}
@@ -262,16 +269,17 @@ export function LibraryPage() {
           </ol>
           {moreChapters > 0 && <p className="muted">还有 {moreChapters} 个章节</p>}
           <fieldset className="import-form-choice">
-            <legend>这是一部长篇，还是一个短篇？</legend>
+            <legend>这本书按哪种读法切？</legend>
             <p className="muted">
               决定它走「全书分析」还是「短篇精读」。识别到几章不参与这个判断——
               你手里拿着文件，比程序清楚。导入后随时可以改。
+              专著、教材、工具书选「整本」——它们要的是逐节读懂，不是按场景切段。
             </p>
             <div className="import-form-options" role="radiogroup">
               {(
                 [
-                  { value: "long", title: "长篇", hint: "分章读，出全书报告" },
-                  { value: "short", title: "短篇", hint: "按场景切段，出逐段拆稿" },
+                  { value: "long", title: "整本", hint: "分章/分节读，出全书报告（长篇小说、专著、教材都走这条）" },
+                  { value: "short", title: "短篇", hint: "按场景切段，出逐段拆稿（只适合短篇小说）" },
                 ] as const
               ).map((option) => {
                 // 短篇 has a hard ceiling: segmentation sends the whole piece to the model in
@@ -451,7 +459,7 @@ export function LibraryPage() {
           <div className="library-empty-guide" data-testid="library-search-miss">
             <StateView
               kind="empty"
-              title="没有找到匹配的小说"
+              title="没有找到匹配的书"
               description="尝试修改搜索内容或文件格式筛选。"
               data-testid="library-search-miss-state"
               primaryAction={
@@ -460,7 +468,12 @@ export function LibraryPage() {
                       label: "清除筛选",
                       onClick: () => {
                         setSearch("");
-                        setFormats({ TXT: true, DOCX: true, EPUB: true });
+                        setFormats(
+                          Object.fromEntries(FORMAT_OPTIONS.map((f) => [f, true])) as Record<
+                            FormatOption,
+                            boolean
+                          >,
+                        );
                       },
                       variant: "secondary",
                       testId: "library-clear-filters",
@@ -473,11 +486,11 @@ export function LibraryPage() {
           <div className="library-empty-guide" data-testid="library-empty-guide">
             <StateView
               kind="empty"
-              title="还没有导入小说"
+              title="还没有导入书籍"
               description="支持 TXT、DOCX 和 EPUB。导入后即可识别章节并开始分析。"
               data-testid="library-empty-state"
               primaryAction={{
-                label: "导入第一本小说",
+                label: "导入第一本书",
                 onClick: () => input.current?.click(),
                 testId: "library-empty-import",
               }}
