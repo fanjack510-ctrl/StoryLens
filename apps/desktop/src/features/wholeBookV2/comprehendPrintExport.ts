@@ -13,6 +13,7 @@
  *  容易被当成定稿，所以这条在纸上比在屏幕上更要紧。
  */
 import type { ComprehendResult } from "../../services/wholeBookFreeProductApi";
+import { compactSection } from "./comprehendCompact";
 
 const esc = (s: unknown): string =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -61,19 +62,32 @@ export function buildComprehendPrintHtml(data: ComprehendResult, title: string):
   const chapters = (data.chapters ?? [])
     .map((chapter) => {
       const secs = (chapter.sections ?? [])
-        .map((s) =>
-          s.error
-            ? // 读失败的节留在原位并说出原因。悄悄跳过，读者会以为这一节本来就没内容。
+        .map((s) => {
+          if (s.error) {
+            // 读失败的节留在原位并说出原因。悄悄跳过，读者会以为这一节本来就没内容。
+            return (
               `<div class="sec bad"><h4>${esc(s.label)}</h4>` +
               `<p class="err">这一节没有读到：${esc(s.error)}</p></div>`
-            : `<div class="sec"><h4>${esc(s.label)}</h4>` +
-              list("主张", s.claims) +
-              list("依据", s.evidence) +
-              list("做法", s.actions, "do") +
-              list("术语", s.terms, "term") +
-              list("存疑", s.open_questions, "q") +
-              `</div>`,
-        )
+            );
+          }
+          const k = compactSection(s);
+          return (
+            `<div class="sec"><h4>${esc(s.label)}</h4>` +
+            list("主张", k.claims) +
+            list("做法", k.actions, "do") +
+            // 依据压成一行「引了谁」。原文那句描述是书里本来就有的，摘要重述一遍只是变长；
+            // 而作者-年份才是读者翻回原文的抓手。可核对性没丢，字数掉了八成。
+            (k.citations.length
+              ? `<p class="cite">依据：${esc(k.citations.join("、"))}</p>`
+              : "") +
+            (k.terms.length
+              ? `<p class="term">术语：${esc(k.terms.join("；"))}` +
+                (k.hiddenTerms ? `　等 ${k.hiddenTerms + k.terms.length} 个` : "") +
+                `</p>`
+              : "") +
+            `</div>`
+          );
+        })
         .join("");
       return (
         `<section class="ch"><h2>${esc(chapter.chapter)} ${esc(chapter.title)}</h2>` +
@@ -132,7 +146,8 @@ ul { margin: .5mm 0 0; padding-left: 5mm; }
 li { padding: .3mm 0; }
 .do li { color: var(--key); }
 .q li { color: var(--warn); }
-.term li { font-family: var(--sans); font-size: 8.5pt; color: var(--mute); }
+.cite, .term { font-family: var(--sans); font-size: 8.5pt; color: var(--mute);
+  margin: 1.5mm 0 0; line-height: 1.6; }
 .err { color: var(--warn); font-size: 9pt; }
 .foot { margin-top: 10mm; padding-top: 3mm; border-top: .5pt solid var(--rule);
   font-size: 8.5pt; color: var(--mute); line-height: 1.7; }
@@ -145,8 +160,9 @@ ${cards}
 ${chapters}
 <p class="foot">
 结构由程序从原书解析：${esc((data.rules ?? []).join("；") || "—")}。
-每条主张都标注了所属章节，可回原文核对——对知识类书籍，能不能翻回去，就是这份摘要可不可信的
-分界线。${(data.failures ?? []).length ? `本次有 ${data.failures.length} 处没有读到，已在正文中逐条标出。` : ""}
+每条主张都标注了所属章节，「依据」一行给出原文引用的作者与年份——可回原文核对。对知识类书籍，
+能不能翻回去，就是这份摘要可不可信的分界线。本报告只保留主张与可照做的动作；原文对依据的描述、
+以及模型提出的存疑，都不在纸上（软件里可展开）。${(data.failures ?? []).length ? `本次有 ${data.failures.length} 处没有读到，已在正文中逐条标出。` : ""}
 </p>
 </html>`;
 }

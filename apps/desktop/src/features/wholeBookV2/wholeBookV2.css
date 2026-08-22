@@ -71,3 +71,9 @@
 .cmp-vip p { margin: 0 0 4px; }
 .cmp-vip button { padding: 3px 10px; font-size: 12px; cursor: pointer; border-radius: 5px;
   border: 1px solid var(--border, #d8e0da); background: transparent; color: inherit; }
+
+.cmp-fold > summary, .cmp-more > summary { cursor: pointer; font-size: 12px;
+  color: var(--accent, #14503c); padding: 4px 0; }
+.cmp-more { margin-top: 6px; }
+.cmp-more > summary { font-size: 11px; color: var(--muted, #6f7d74); }
+.cmp-cite { font-size: 11.5px; color: var(--muted, #6f7d74); margin: 6px 0 0; line-height: 1.65; }

@@ -18,6 +18,7 @@ import {
   downloadComprehendHtml,
   downloadComprehendPdf,
 } from "../comprehendDownload";
+import { compactSection } from "../comprehendCompact";
 
 function Items({ label, items, tone }: { label: string; items: string[]; tone?: string }) {
   if (!items?.length) return null;
@@ -138,6 +139,8 @@ export function ComprehendReportView({
         </div>
       )}
 
+      {/* 逐节默认折起来。读者要的是「不读原文也知道讲了什么」——那由上面四张卡和章级摘要
+          回答；逐节是拿来查的，不是拿来读的。全都摊开，报告就跟正文一样长，等于没摘要。 */}
       {data.chapters?.map((chapter) => (
         <section className="cmp-ch" key={`${chapter.chapter}-${chapter.title}`}>
           <h2>
@@ -147,24 +150,46 @@ export function ComprehendReportView({
           {chapter.through_line && <p className="cmp-line">主线：{chapter.through_line}</p>}
           {chapter.error && <p className="cmp-error">{chapter.error}</p>}
 
-          {chapter.sections?.map((section, i) =>
-            section.error ? (
-              // 读失败的节要留在原位并说出来。悄悄跳过，读者会以为这一节本来就没内容。
-              <div className="cmp-sec bad" key={`${section.label}-${i}`}>
-                <h4>{section.label}</h4>
-                <p className="cmp-error">这一节没有读到：{section.error}</p>
-              </div>
-            ) : (
-              <div className="cmp-sec" key={`${section.label}-${i}`}>
-                <h4>{section.label}</h4>
-                <Items label="主张" items={section.claims} />
-                <Items label="依据" items={section.evidence} />
-                <Items label="做法" items={section.actions} tone="do" />
-                <Items label="术语" items={section.terms} tone="term" />
-                <Items label="存疑" items={section.open_questions} tone="q" />
-              </div>
-            ),
-          )}
+          <details className="cmp-fold">
+            <summary>逐节细看（{chapter.sections?.length ?? 0} 节）</summary>
+            {chapter.sections?.map((section, i) => {
+              if (section.error) {
+                // 读失败的节要留在原位并说出来。悄悄跳过，读者会以为这一节本来就没内容。
+                return (
+                  <div className="cmp-sec bad" key={`${section.label}-${i}`}>
+                    <h4>{section.label}</h4>
+                    <p className="cmp-error">这一节没有读到：{section.error}</p>
+                  </div>
+                );
+              }
+              const k = compactSection(section);
+              return (
+                <div className="cmp-sec" key={`${section.label}-${i}`}>
+                  <h4>{section.label}</h4>
+                  <Items label="主张" items={k.claims} />
+                  <Items label="做法" items={k.actions} tone="do" />
+                  {k.citations.length > 0 && (
+                    <p className="cmp-cite">依据：{k.citations.join("、")}</p>
+                  )}
+                  {k.terms.length > 0 && (
+                    <p className="cmp-cite">
+                      术语：{k.terms.join("；")}
+                      {k.hiddenTerms > 0 ? `　等 ${k.hiddenTerms + k.terms.length} 个` : ""}
+                    </p>
+                  )}
+                  {/* 原文对依据的描述和模型的存疑不删，只是不摊开：删掉的东西读者不知道
+                      自己没看到，收起来的他知道。 */}
+                  {(k.fullEvidence.length > 0 || k.openQuestions.length > 0) && (
+                    <details className="cmp-more">
+                      <summary>依据原文与存疑</summary>
+                      <Items label="依据" items={k.fullEvidence} />
+                      <Items label="存疑" items={k.openQuestions} tone="q" />
+                    </details>
+                  )}
+                </div>
+              );
+            })}
+          </details>
         </section>
       ))}
 
