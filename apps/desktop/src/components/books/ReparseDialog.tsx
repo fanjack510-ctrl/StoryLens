@@ -81,7 +81,7 @@ export function ReparseDialog({
             ref={input}
             hidden
             type="file"
-            accept=".txt,.docx,.epub"
+            accept=".txt,.docx,.epub,.pdf,.md,.markdown,.tex,.latex,.html,.htm,.odt"
             data-testid="reparse-file-input"
             onChange={(event) => choose(event.target.files?.[0])}
           />

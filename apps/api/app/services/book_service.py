@@ -16,6 +16,7 @@ from app.domain.ingestion import (
     OVERSIZED_CHAPTER_CHARS,
     SUPPORTED_CHAPTER_FORMATS,
     ChapterDetection,
+    ParsedChapter,
     chapter_title_metadata,
     detect_chapters,
 )
@@ -113,9 +114,36 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
     }
 
 
+def _monograph_detection(filename: str, document: ExtractedDocument) -> ChapterDetection | None:
+    """PDF 用大纲切「节」，而不是用小说的切章器。
+
+    小说的切章器在这类书上会把整整一章塞成一个「章节」——实测那本手册切出 5 章，其中一章
+    4183 段。76 个小节的层级就这么没了，而那正是这类书唯一有用的结构。
+
+    只对 PDF 走这条：小说基本不会以 PDF 进来，而 PDF 又恰恰是小说切章器最没辙的格式。
+    别的格式保持原样，免得把一本 docx 小说切成一堆「1.1」。
+    """
+    if Path(filename).suffix.lower() != ".pdf" or not document.pages:
+        return None
+    from app.domain.monograph_ingestion import detect_monograph
+
+    det = detect_monograph(document.pages)
+    if len(det.sections) < 3:
+        return None
+    return ChapterDetection(
+        chapters=[
+            ParsedChapter(title=sec.display_title, paragraphs=list(sec.paragraphs))
+            for sec in det.sections
+            if sec.paragraphs
+        ],
+        candidates=[],
+        rules=list(det.rules),
+    )
+
+
 def preview_book(filename: str, content: bytes) -> tuple[ExtractedDocument, ChapterDetection, dict[str, object]]:
     document = extract_document(filename, content)
-    detection = detect_chapters(document.text)
+    detection = _monograph_detection(filename, document) or detect_chapters(document.text)
     if not detection.chapters:
         raise ValueError("未找到可导入的段落")
     return document, detection, _diagnostics(document, detection)

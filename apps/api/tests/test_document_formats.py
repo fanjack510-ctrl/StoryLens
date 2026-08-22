@@ -158,3 +158,51 @@ def test_an_unknown_suffix_lists_what_is_supported() -> None:
     with pytest.raises(UnsupportedFormatError) as err:
         outline_from_bytes("x.pages", b"x")
     assert "DOCX" in str(err.value).upper()
+
+
+def test_a_pdf_is_imported_as_sections_not_as_giant_chapters() -> None:
+    """小说的切章器在专著上会把一整章塞成一个「章节」。
+
+    实测那本手册：切出 5 章，其中一章 4183 段——76 个小节的层级就这么没了，而那正是这类书
+    唯一有用的结构。
+    """
+    from io import BytesIO
+
+    from pypdf import PdfWriter
+
+    from app.services.book_service import _monograph_detection
+    from app.services.extractors import ExtractedDocument
+
+    pages = [
+        "CHAPTER 9\nTITLE\n1 FIRST 3\n2 SECOND 4\n3 THIRD 5\n"
+        "1 FIRST opening body text here.",
+        "2 SECOND second body text here.",
+        "3 THIRD third body text here.",
+    ]
+    doc = ExtractedDocument("\n".join(pages), "pdf/text", "none", "LF", 10, tuple(pages))
+    det = _monograph_detection("x.pdf", doc)
+    assert det is not None
+    assert [c.title for c in det.chapters] == [
+        "第9章 1 FIRST", "第9章 2 SECOND", "第9章 3 THIRD",
+    ]
+    del PdfWriter, BytesIO
+
+
+def test_non_pdf_formats_keep_the_novel_chapter_detector() -> None:
+    """别把一本 docx 小说切成一堆「1.1」。这条路只对 PDF 开。"""
+    from app.services.book_service import _monograph_detection
+    from app.services.extractors import ExtractedDocument
+
+    doc = ExtractedDocument("第一章 开始\n正文", "txt", "none", "LF", 10, None)
+    assert _monograph_detection("novel.txt", doc) is None
+    assert _monograph_detection("novel.docx", doc) is None
+
+
+def test_a_pdf_with_almost_no_structure_falls_back_to_the_novel_detector() -> None:
+    """识别不出几节的 PDF，硬走大纲那条会得到一两个巨型节，还不如退回原路。"""
+    from app.services.book_service import _monograph_detection
+    from app.services.extractors import ExtractedDocument
+
+    pages = ("就是一段话。", "又一段。")
+    doc = ExtractedDocument("\n".join(pages), "pdf/text", "none", "LF", 10, pages)
+    assert _monograph_detection("flat.pdf", doc) is None

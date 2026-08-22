@@ -184,7 +184,7 @@ export function LibraryPage() {
           ref={input}
           hidden
           type="file"
-          accept=".txt,.docx,.epub"
+          accept=".txt,.docx,.epub,.pdf,.md,.markdown,.tex,.latex,.html,.htm,.odt"
           onChange={(event) => accept(event.target.files)}
         />
       </PageHeader>
