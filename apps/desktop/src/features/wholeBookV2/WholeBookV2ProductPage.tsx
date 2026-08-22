@@ -914,6 +914,11 @@ function WholeBookV2ProductPageEnabled() {
     if (latestFailedRun && !completedV2Run) return "failed";
     if (!completedV2Run && !activeRun && !nonRealCompletedRun) return "prepare";
     if (completedV2Run) {
+      // 「读懂」按设计就没有 V2 结果——那个 404 是正确答案，不是「这是旧版结果」的信号。
+      // 不先认它，一次成功的读懂会被判成 legacy，页面请用户「重新分析以生成 V2 完整结果」，
+      // 而那份读懂报告好端端地躺在库里。
+      if (comprehendQuery.data) return "completed-v2";
+      if (comprehendQuery.isLoading || comprehendQuery.isFetching) return "completed-v2";
       if (v2ResultQuery.isSuccess && v2ResultQuery.data) return "completed-v2";
       if (v2ResultQuery.isError && isLegacyV2Error(v2ResultQuery.error)) return "legacy";
       if (v2ResultQuery.isLoading || v2ResultQuery.isFetching) return "completed-v2";

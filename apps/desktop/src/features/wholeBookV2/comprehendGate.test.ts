@@ -25,3 +25,41 @@ describe("作品画像门", () => {
     expect(gateClosed(null, "diagnostic")).toBe(false);
   });
 });
+
+/** 「读懂」按设计没有 V2 结果，那个 404 是正确答案。
+ *
+ *  不先认它，一次成功的读懂会被判成「旧版分析结果」，页面请用户「重新分析以生成 V2 完整
+ *  结果」——而那份报告好端端躺在库里。用户照做，就又付一次钱。
+ */
+function pageMode(input: {
+  hasComprehend: boolean;
+  comprehendPending: boolean;
+  v2Success: boolean;
+  v2LegacyError: boolean;
+}): "completed-v2" | "legacy" | "failed" {
+  if (input.hasComprehend) return "completed-v2";
+  if (input.comprehendPending) return "completed-v2";
+  if (input.v2Success) return "completed-v2";
+  if (input.v2LegacyError) return "legacy";
+  return "failed";
+}
+
+describe("完成态该显示哪一屏", () => {
+  it("有「读懂」结果时显示报告，哪怕 V2 那个口是 404", () => {
+    expect(
+      pageMode({ hasComprehend: true, comprehendPending: false, v2Success: false, v2LegacyError: true }),
+    ).toBe("completed-v2");
+  });
+
+  it("读懂结果还在读取时不要闪一下「旧版结果」", () => {
+    expect(
+      pageMode({ hasComprehend: false, comprehendPending: true, v2Success: false, v2LegacyError: true }),
+    ).toBe("completed-v2");
+  });
+
+  it("真正的旧版结果仍然要提示重新分析", () => {
+    expect(
+      pageMode({ hasComprehend: false, comprehendPending: false, v2Success: false, v2LegacyError: true }),
+    ).toBe("legacy");
+  });
+});
