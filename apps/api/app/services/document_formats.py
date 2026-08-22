@@ -299,6 +299,7 @@ def outline_from_bytes(filename: str, content: bytes) -> BookOutline:
                         number=sec.number,
                         title=sec.title,
                         paragraphs=list(sec.paragraphs),
+                        chapter=f"第{sec.chapter_no}章" if sec.chapter_no is not None else "",
                     )
                 )
             return outline

@@ -32,6 +32,9 @@ class OutlineNode:
     number: str
     title: str
     paragraphs: list[str] = field(default_factory=list)
+    #: 这一节属于哪一章。四章里各有一个「1 INTRODUCTION」，不记章号就分不出是哪一个——
+    #: 而分不出，覆盖率检查就会把四个节当成一个，把真正的遗漏藏起来。
+    chapter: str = ""
 
     @property
     def word_count(self) -> int:
@@ -45,7 +48,8 @@ class OutlineNode:
 
     @property
     def display_title(self) -> str:
-        return f"{self.number} {self.title}".strip()
+        head = f"{self.chapter} " if self.chapter else ""
+        return f"{head}{self.number} {self.title}".strip()
 
 
 @dataclass
