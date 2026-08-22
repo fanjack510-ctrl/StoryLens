@@ -91,14 +91,26 @@ function isLegacyV2Error(err: unknown): boolean {
 }
 
 function resolveActiveRun(prepare: WholeBookPrepareResponse): WholeBookRunRecord | null {
-  if (prepare.active_run && isActiveRun(prepare.active_run.status)) {
-    return prepare.active_run;
+  // 谁还在跑，由后端说了算（INV-P4）。
+  //
+  // 以前这里自己挑：active_run 空了看 latest_run，再空看 recoverable_run，只要状态是
+  // running/paused/recoverable 就当成「正在进行」。于是一个进程早已消失、状态还停在 running
+  // 的空壳会把开始按钮永久堵住——《余罪》就是这样，只能靠手工调接口才解得开。而客户端凭状态
+  // 字段永远分不出「在跑」和「死了但没人改状态」。
+  //
+  // 后端用心跳判活并给出 live_run_id：为 null 就是没有在跑的任务，该显示开始按钮。
+  if (prepare.live_run_id != null) {
+    for (const run of [prepare.active_run, prepare.latest_run, prepare.recoverable_run]) {
+      if (run && run.run_id === prepare.live_run_id) return run;
+    }
   }
-  if (prepare.latest_run && isActiveRun(prepare.latest_run.status)) {
-    return prepare.latest_run;
-  }
-  if (prepare.recoverable_run && isActiveRun(prepare.recoverable_run.status)) {
-    return prepare.recoverable_run;
+  // 后端还没有这个字段（旧版本）时，退回原来的挑法，而不是把页面变成空白。
+  if (prepare.live_run_id === undefined) {
+    if (prepare.active_run && isActiveRun(prepare.active_run.status)) return prepare.active_run;
+    if (prepare.latest_run && isActiveRun(prepare.latest_run.status)) return prepare.latest_run;
+    if (prepare.recoverable_run && isActiveRun(prepare.recoverable_run.status)) {
+      return prepare.recoverable_run;
+    }
   }
   return null;
 }

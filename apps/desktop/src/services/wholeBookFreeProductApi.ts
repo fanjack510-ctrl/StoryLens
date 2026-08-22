@@ -94,6 +94,9 @@ export type WholeBookPrepareResponse = {
   fixture_preview_enabled: boolean;
   latest_run: WholeBookRunRecord | null;
   recoverable_run: WholeBookRunRecord | null;
+  /** 后端按心跳判定的「真正在跑的那个」。null = 没有在跑的任务；
+   *  undefined = 后端还是旧版本，客户端退回自己按状态挑。 */
+  live_run_id?: number | null;
   /** Last completed run that has or had V2 materialized. */
   completed_v2_run?: WholeBookRunRecord | null;
   /** Newest real completed run of each reading. A book can hold both a 评测 and a 拆文;

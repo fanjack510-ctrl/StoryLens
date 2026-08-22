@@ -161,6 +161,16 @@ class WholeBookV2Repository:
         run = self.session.get(WholeBookRun, int(run_id))
         if run is not None and progress.current_stage:
             run.current_stage_code = str(progress.current_stage)
+        if run is not None:
+            # 心跳。这一列早就建好了，却只在取消时被写过一次——于是「running」既可能是真在跑，
+            # 也可能是进程早就没了，谁也分不出来。分不出来的直接后果：一个死掉的任务会把
+            # 这本书的开始按钮永久堵住，而一个真在跑的任务拦不住第二次点击。
+            #
+            # 进度是「每完成一次付费调用」才写的，所以这里的时间戳等于「最后一次真干活是什么
+            # 时候」——正是判活该用的那个数，不是「任务是什么时候创建的」。
+            from app.narrative_core.services.whole_book_run_v1_service import utc_now
+
+            run.last_heartbeat_at = utc_now()
         self.session.flush()
         self._after_persist()
 

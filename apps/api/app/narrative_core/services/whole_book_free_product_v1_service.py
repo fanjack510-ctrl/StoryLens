@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import os
 import uuid
 from typing import Any
@@ -9,6 +11,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models import utc_now
 from app.db.models import Book, ProviderConfiguration, WholeBookRun
 from app.narrative_core.contracts.whole_book_contract_v1 import ResultOrigin, WholeBookMode, WholeBookRunStatus
 from app.narrative_core.services.whole_book_consent_service import create_whole_book_consent, validate_whole_book_consent
@@ -73,6 +76,44 @@ def _require_free_product_enabled() -> None:
 def _latest_run_for_book(session: Session, book_id: int) -> WholeBookRun | None:
     runs = list_runs_for_book(session, book_id)
     return runs[0] if runs else None
+
+
+#: 一次付费调用最长能跑多久还算「活着」。抽取一块约 70 秒，加上重试和网络抖动，
+#: 15 分钟没有任何进度写入，这个任务就不该再挡着别人。
+LIVE_RUN_STALE_AFTER = timedelta(minutes=15)
+
+
+def live_run_for_book(
+    session: Session, book_id: int, *, now: datetime | None = None
+) -> WholeBookRun | None:
+    """这本书上真正在跑的那个任务；杵住的不算。
+
+    今天同一本书两次起了两个任务：《我不是戏神》相差 10 秒，《余罪》相差 14 秒。多出来的那个
+    做完一两次调用就杵住，而页面挑任务挑的是「最新的那个」——于是屏幕盯着空壳，真正在跑的那
+    个反倒看不见，用户看到的是「卡在 4%」和「无法读取数据」。
+
+    幂等键防不住这件事：它的输入里有 client_request_id，每次点击都是新的，所以它防的是「同一
+    个请求重试」，不是「点了两次」。
+
+    「活着」以 last_heartbeat_at 为准——那是最后一次真的完成付费调用的时刻，不是任务创建时刻。
+    用创建时刻判活，1299 章跑三小时的任务会被误判成僵尸；用心跳判，跑得再久也认得出来。
+    没有心跳的（刚创建、还没写出第一条进度）给一个同样的宽限期，用 started_at 兜底。
+    """
+    current = now or utc_now()
+    for run in list_runs_for_book(session, book_id):
+        if run.status not in {
+            WholeBookRunStatus.pending.value,
+            WholeBookRunStatus.running.value,
+        }:
+            continue
+        beat = run.last_heartbeat_at or run.started_at or run.created_at
+        if beat is None:
+            return run
+        if beat.tzinfo is None:
+            beat = beat.replace(tzinfo=timezone.utc)
+        if current - beat <= LIVE_RUN_STALE_AFTER:
+            return run
+    return None
 
 
 def _recoverable_run(session: Session, book_id: int) -> WholeBookRun | None:
@@ -253,6 +294,7 @@ def prepare_free_whole_book_analysis_v1(
         ) from exc
     latest = _latest_run_for_book(session, book_id)
     recoverable = _recoverable_run(session, book_id)
+    live_now = live_run_for_book(session, book_id)
     snap_result = create_or_reuse_book_snapshot_v1(session, book_id)
     needs_new_snapshot = (
         latest is not None
@@ -341,6 +383,15 @@ def prepare_free_whole_book_analysis_v1(
         "latest_run": run_to_dict(latest) if latest is not None else None,
         "recoverable_run": run_to_dict(recoverable) if recoverable is not None else None,
         "active_run": run_to_dict(active_run) if active_run is not None else None,
+        # 哪个任务真的还在跑 —— 由后端判，客户端照着渲染（INV-P4）。
+        #
+        # 以前客户端自己挑：active_run 空了就看 latest_run，再空看 recoverable_run，只要状态
+        # 是 running/paused/recoverable 就当成「正在进行」。于是一个进程早已消失、状态还停在
+        # running 的空壳，会把这本书的开始按钮永久堵住——今天《余罪》就是这样，我只能用取消
+        # 接口手工解开。
+        #
+        # 判活以心跳为准（最后一次真的完成付费调用的时刻），所以跑三小时的大书不会被误判。
+        "live_run_id": int(live_now.id) if live_now is not None else None,
         "completed_v2_run": run_to_dict(completed_v2) if completed_v2 is not None else None,
         # Both readings, newest of each, so the client can offer the other one instead of
         # silently hiding it behind the most recent run.
@@ -491,6 +542,29 @@ def create_free_whole_book_analysis_v1(
     previous_run_id: int | None = None,
 ) -> dict[str, Any]:
     _require_free_product_enabled()
+    # 这本书已经有一个真在跑的任务，就把它交回去，不再建第二个。
+    #
+    # 今天两次都栽在这里：《我不是戏神》相差 10 秒起了两个，《余罪》相差 14 秒起了两个。多出
+    # 来的那个做完一两次调用就杵住，而页面挑的是「最新的那个」——屏幕上的「卡在 4%」和
+    # 「无法读取数据」，都是它在盯一个空壳。
+    #
+    # 幂等键拦不住这件事：它的输入里含 client_request_id，每次点击都是新的，所以它防的是
+    # 「同一个请求重试」，不是「点了两次」。
+    #
+    # 判活用心跳而不是创建时刻：跑三小时的大书不会被误判成僵尸，心跳停了 15 分钟的任务也不会
+    # 把这本书永久锁死——那是反方向的同一个坑。
+    live = live_run_for_book(session, book_id)
+    if live is not None:
+        return {
+            "run": run_to_dict(live),
+            "run_id": int(live.id),
+            "book_id": book_id,
+            "snapshot_id": int(live.snapshot_id or 0),
+            "run_status": live.status,
+            "reused_live_run": True,
+            "deferred_execution": False,
+            "message": "这本书已经有一个分析在进行中，已为你切换到那个任务。",
+        }
     require_capability_access("whole_book.overview", AccessTier.free)
     require_capability_access("whole_book.characters_events", AccessTier.free)
     require_capability_access("whole_book.structure", AccessTier.free)
