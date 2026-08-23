@@ -54,7 +54,6 @@ import {
   getNarrativeLoopConsistency,
   getNarrativeLoopRisks,
 } from "./narrativeLoopView";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 export type SceneDetailTab =
   | "overview"
@@ -122,7 +121,6 @@ export function JourneySceneDetailPanel({
   selectedLoopId = null,
   hookPresentation = null,
 }: Props) {
-  const developerMode = useDeveloperModeStore((state) => state.developerMode);
 
   const hookResolutionRow = useMemo(() => {
     if (!visualization || !isHookPayoffLens(observationLens) || !selectedLoopId) {
@@ -422,58 +420,6 @@ export function JourneySceneDetailPanel({
             </ol>
           </details>
         ) : null}
-
-        {developerMode ? (
-          <details className="journey-tech-details" data-testid="scene-detail-tech-details">
-            <summary>技术详情</summary>
-            {isHookPayoffLens(observationLens) && hookResolutionRow ? (
-              <HookResolutionEvidenceSection row={hookResolutionRow} />
-            ) : null}
-            <JourneyInspectorSection title="分数" testId="scene-tech-scores">
-              {lensBinding ? (
-                <p data-testid="scene-current-lens-score">
-                  {formatLensBindingCaption(lensBinding)}
-                </p>
-              ) : null}
-              {node.overall_reading_score != null ? (
-                <p data-testid="scene-overall-reading-score">
-                  综合阅读分 {Math.round(node.overall_reading_score)}
-                </p>
-              ) : null}
-              {node.composite_role_fit ? (
-                <p data-testid="scene-composite-role-fit">
-                  角色契合 {node.composite_role_fit}
-                </p>
-              ) : null}
-            </JourneyInspectorSection>
-            {node.insight_source ? (
-              <JourneyInspectorSection title="洞察来源" testId="scene-tech-insight-source">
-                <p>{node.insight_source}</p>
-              </JourneyInspectorSection>
-            ) : null}
-            {node.evidence_paragraph_ids?.length ? (
-              <JourneyInspectorSection title="正文证据" testId="scene-tech-evidence">
-                <JourneyEvidenceList rows={evidenceRows} onLocateEvidence={onLocateEvidence} />
-              </JourneyInspectorSection>
-            ) : null}
-            {narrative ? (
-              <JourneyInspectorSection title="前后承接" testId="scene-tech-bridging">
-                <ul data-testid="scene-narrative-list">
-                  <li>{narrative.whyHighOrLow}</li>
-                  <li>{narrative.priorSetup}</li>
-                  <li>{narrative.laterPayoff}</li>
-                </ul>
-              </JourneyInspectorSection>
-            ) : null}
-            {(node.primary_diagnosis || node.data_quality_issue) && (
-              <JourneyInspectorSection title="诊断" testId="scene-tech-diagnosis">
-                {node.primary_diagnosis ? <p>主诊断：{node.primary_diagnosis}</p> : null}
-                {node.data_quality_issue ? <p>数据质量：{node.data_quality_issue}</p> : null}
-              </JourneyInspectorSection>
-            )}
-          </details>
-        ) : null}
-
         {onOpenInSceneList ? (
           <button type="button" className="journey-inline-button" onClick={onOpenInSceneList}>
             在场景列表中定位

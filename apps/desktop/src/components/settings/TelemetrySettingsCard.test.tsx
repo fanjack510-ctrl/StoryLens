@@ -2,13 +2,11 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { TelemetrySettingsCard } from "./TelemetrySettingsCard";
 import { useTelemetryStore } from "../../stores/telemetry";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 describe("TelemetrySettingsCard", () => {
   beforeEach(() => {
     localStorage.clear();
     useTelemetryStore.setState({ consent: "UNKNOWN", installIdPreview: null });
-    useDeveloperModeStore.setState({ developerMode: false });
   });
 
   afterEach(() => {
@@ -34,12 +32,11 @@ describe("TelemetrySettingsCard", () => {
     expect(localStorage.getItem("storylens.telemetry.consent")).toBe("ENABLED");
   });
 
-  it("hides install id unless developer mode", () => {
+  // 原来这里是「开发者模式下才显示安装 ID」。开发者模式已删，那条断言的后半段
+  // ——「切到开发者模式后它应该出现」——现在没有任何路径能满足。留下的是前半段：
+  // 安装 ID 不出现在任何界面上。
+  it("安装 ID 不出现在界面上", () => {
     render(<TelemetrySettingsCard />);
     expect(screen.queryByTestId("telemetry-install-id")).not.toBeInTheDocument();
-    useDeveloperModeStore.setState({ developerMode: true });
-    cleanup();
-    render(<TelemetrySettingsCard />);
-    expect(screen.getByTestId("telemetry-install-id")).toBeInTheDocument();
   });
 });

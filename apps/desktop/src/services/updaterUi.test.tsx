@@ -18,10 +18,6 @@ vi.mock("../lib/useAppVersion", () => ({
   useAppVersion: () => "1.0.2",
 }));
 
-vi.mock("../stores/developerModeStore", () => ({
-  useDeveloperModeStore: (sel: (s: { developerMode: boolean }) => unknown) =>
-    sel({ developerMode: false }),
-}));
 
 vi.mock("../components/settings/AboutAppVersion", () => ({
   AboutAppVersion: () => <div data-testid="about-version">about</div>,

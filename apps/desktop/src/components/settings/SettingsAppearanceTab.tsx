@@ -7,16 +7,10 @@ import {
 } from "../../lib/interfaceZoom";
 import { useUiStore } from "../../stores/uiStore";
 import { settingsApi } from "../../services/settingsApi";
-import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import "./settings.css";
 
 export function SettingsAppearanceTab() {
   const ui = useUiStore();
-  const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
-  const setShowAdvanced = useAdvancedSettingsStore((s) => s.setShowAdvancedSettings);
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
-  const setDeveloperMode = useDeveloperModeStore((s) => s.setDeveloperMode);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -191,62 +185,6 @@ export function SettingsAppearanceTab() {
         </div>
       </section>
 
-      <details
-        className="settings-fold"
-        data-testid="appearance-ui-zone"
-        open={showAdvanced || developerMode}
-      >
-        <summary>高级界面选项</summary>
-        <div className="settings-fold-body">
-          <label className="settings-switch-row" data-testid="show-advanced-settings">
-            <span>
-              <b>显示开发者设置</b>
-              <small>开启后可配置连接参数与诊断项</small>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="settings-switch"
-              checked={showAdvanced}
-              aria-label="显示高级设置"
-              onChange={(e) => setShowAdvanced(e.target.checked)}
-            />
-          </label>
-
-          {(showAdvanced || developerMode) && (
-            <>
-              <label className="settings-switch-row" data-testid="developer-mode-in-settings">
-                <span>
-                  <b>开发者模式</b>
-                  <small>显示工程入口</small>
-                </span>
-                <input
-                  type="checkbox"
-                  role="switch"
-                  className="settings-switch"
-                  checked={developerMode}
-                  aria-label="开发者模式"
-                  onChange={(e) => setDeveloperMode(e.target.checked)}
-                />
-              </label>
-              <label className="settings-switch-row" data-testid="demo-mode-switch">
-                <span>
-                  <b>演示标记</b>
-                  <small>不影响分析逻辑</small>
-                </span>
-                <input
-                  type="checkbox"
-                  role="switch"
-                  className="settings-switch"
-                  checked={ui.demo}
-                  aria-label="Demo 模式"
-                  onChange={(e) => ui.setDemo(e.target.checked)}
-                />
-              </label>
-            </>
-          )}
-        </div>
-      </details>
 
       {message && <p role="status">{message}</p>}
       <div className="settings-actions">

@@ -2,11 +2,9 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JourneySceneNode, ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { JourneySceneDetailPanel } from "./JourneySceneDetailPanel";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 afterEach(() => {
   cleanup();
-  useDeveloperModeStore.setState({ developerMode: false });
 });
 
 function vizAndNode(): { viz: ReaderJourneyVisualization; node: JourneySceneNode } {
@@ -89,7 +87,6 @@ function vizAndNode(): { viz: ReaderJourneyVisualization; node: JourneySceneNode
 describe("hook resolution evidence in inspector", () => {
   it("ordinary hook_payoff shows scene insight without technical evidence", () => {
     const { viz, node } = vizAndNode();
-    useDeveloperModeStore.setState({ developerMode: false });
     render(
       <JourneySceneDetailPanel
         node={node}
@@ -104,36 +101,6 @@ describe("hook resolution evidence in inspector", () => {
     expect(screen.queryByTestId("scene-detail-tech-details")).not.toBeInTheDocument();
   });
 
-  it("developer mode folds ordinary conflict language under 技术详情", () => {
-    const { viz, node } = vizAndNode();
-    useDeveloperModeStore.setState({ developerMode: true });
-    render(
-      <JourneySceneDetailPanel
-        node={node}
-        visualization={viz}
-        observationLens="hook_payoff"
-        selectedLoopId="nl-conflict"
-        onLocateEvidence={vi.fn()}
-      />,
-    );
-    const tech = screen.getByTestId("scene-detail-tech-details");
-    expect(tech).not.toHaveAttribute("open");
-    expect(within(tech).getByTestId("hook-resolution-evidence")).toBeInTheDocument();
-    expect(within(tech).getByTestId("hook-resolution-evidence-conclusion").textContent).toMatch(
-      /未回收/,
-    );
-    expect(within(tech).getByTestId("hook-resolution-evidence-why").textContent).toMatch(
-      /没有足够的实体回报证据/,
-    );
-    expect(within(tech).getByTestId("hook-resolution-evidence-divergence").textContent).toMatch(
-      /分数提示可能存在回报/,
-    );
-    expect(within(tech).getByTestId("hook-resolution-evidence-divergence").textContent).not.toMatch(
-      /payoff_score/,
-    );
-    const analysis = within(tech).getByTestId("hook-resolution-evidence-tech");
-    expect(analysis).toBeInTheDocument();
-    expect(analysis.textContent).toMatch(/payoff_score=80/);
-    expect(screen.queryByText("冲突提醒")).not.toBeInTheDocument();
-  });
+  // 「developer mode folds ordinary conflict language under 技术详情」删除：「技术详情」折叠已随开发者模式删除。
+
 });

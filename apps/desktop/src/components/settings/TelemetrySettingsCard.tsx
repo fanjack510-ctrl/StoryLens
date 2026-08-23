@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTelemetryStore } from "../../stores/telemetry";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import "./settings.css";
 
 function maskInstallId(id: string | null): string {
@@ -15,7 +14,6 @@ export function TelemetrySettingsCard() {
   const setEnabled = useTelemetryStore((s) => s.setAnonymousTelemetryEnabled);
   const resetId = useTelemetryStore((s) => s.resetAnonymousInstallId);
   const refreshPreview = useTelemetryStore((s) => s.refreshInstallIdPreview);
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
   const [message, setMessage] = useState("");
   const [showCollected, setShowCollected] = useState(false);
 
@@ -102,24 +100,7 @@ export function TelemetrySettingsCard() {
             </div>
           </div>
         )}
-
-        {developerMode && (
-          <details className="settings-fold" data-testid="telemetry-advanced-fold">
-            <summary>统计高级详情</summary>
-            <div className="settings-fold-body">
-              <div className="settings-field" data-testid="telemetry-install-id">
-                <span>匿名安装 ID</span>
-                <output aria-live="polite">{maskInstallId(installIdPreview)}</output>
               </div>
-              <div className="settings-actions">
-                <button type="button" onClick={onResetId} data-testid="telemetry-reset-install-id">
-                  重置匿名ID
-                </button>
-              </div>
-            </div>
-          </details>
-        )}
-      </div>
 
       {message && (
         <p role="status" data-testid="telemetry-message">

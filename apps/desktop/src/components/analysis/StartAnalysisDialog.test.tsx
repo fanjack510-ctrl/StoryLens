@@ -7,7 +7,6 @@ import { providersApi } from "../../services/providersApi";
 import { analysisApi } from "../../services/analysisApi";
 import { analysisRecoveryApi } from "../../services/analysisRecoveryApi";
 import { ApiError } from "../../services/apiClient";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 vi.mock("../../services/providersApi", () => ({
   providersApi: {
@@ -105,16 +104,21 @@ const renderDialog = (onClose = vi.fn(), onCreated = vi.fn()) =>
   );
 
 async function openCloudPlusWithConsent() {
-  fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-  await screen.findByRole("option", { name: /阿里云百炼/ });
-  fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "aliyun_qwen_plus" } });
+  // 「执行方式」（本地/云端/混合）和 Provider 下拉只在开发者模式下出现，那个模式已经删除：
+  // 对话框现在固定走云端，用的就是设置页里选中的那个服务商。这里只剩勾同意。
+  await screen.findByRole("checkbox");
   fireEvent.click(screen.getByRole("checkbox"));
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorage.setItem("storylens.developerMode", "1");
-  useDeveloperModeStore.setState({ developerMode: true });
+  // 普通模式会查执行计划来决定能不能开始；开发者模式下这条查询是禁用的，所以这些用例
+  // 以前从来不需要它。开发者模式删掉之后，它成了必经之路。
+  vi.mocked(analysisApi.executionPlan).mockResolvedValue({
+    can_start: true,
+    blockers: [],
+    mode: "BALANCED",
+  } as any);
   vi.mocked(providersApi.list).mockResolvedValue([local, plus] as any);
   vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
   vi.mocked(providersApi.configuration).mockResolvedValue({
@@ -171,129 +175,10 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("开始分析人工审阅入口", () => {
-  it("本地模式不显示云端Provider", async () => {
-    renderDialog();
-    expect(await screen.findByRole("option", { name: /本地模型/ })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /阿里云百炼/ })).not.toBeInTheDocument();
-  });
-  it("本地 Provider 不可用时不显示可选择的本地模型", async () => {
-    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
-    renderDialog();
-    await screen.findByLabelText("执行方式");
-    await waitFor(() => {
-      expect(screen.queryByRole("option", { name: /本地模型/ })).not.toBeInTheDocument();
-    });
-  });
-  it("云端模式显示非默认且关闭自动路由的Plus", async () => {
-    renderDialog();
-    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-    expect(await screen.findByRole("option", { name: /^阿里云百炼$/ })).toBeInTheDocument();
-    expect(await screen.findByTestId("start-analysis-provider-hint")).toHaveTextContent(
-      /已连接.*需要人工确认场景边界/,
-    );
-  });
-  it("选择Plus显示人工确认说明和三个后端Prompt版本", async () => {
-    renderDialog();
-    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-    const option = await screen.findByRole("option", { name: /阿里云百炼/ });
-    fireEvent.change(screen.getByLabelText("Provider"), { target: { value: (option as HTMLOptionElement).value } });
-    expect(screen.getByText(/本次会先识别场景边界/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText("技术详情"));
-    expect(screen.getByText(/v3.5/)).toBeInTheDocument();
-    expect(screen.getByText(/v1$/)).toBeInTheDocument();
-    expect(screen.getByText(/v3.1/)).toBeInTheDocument();
-    expect(screen.queryByText("Prompt v2")).not.toBeInTheDocument();
-  });
-  it("创建请求携带assisted_boundary_review", async () => {
-    renderDialog();
-    await openCloudPlusWithConsent();
-    await screen.findByTestId("stage1-budget-preview");
-    fireEvent.click(screen.getByTestId("start-analysis-submit"));
-    await waitFor(() => expect(analysisApi.start).toHaveBeenCalledWith(7, expect.objectContaining({
-      analysis_mode: "assisted_boundary_review", provider_name: "aliyun_qwen_plus",
-    })));
-  });
-  // 开始之前要决定的只有一件事：花不花这个钱。十四张卡片（段落数、Transition 数、
-  // Detection 批次、预计/最坏 Token…）是引擎遥测，没有人会因为「Adjudication 批次 = 1」
-  // 改变主意，而真正要看的那个数字埋在第九张卡片里。
-  it("正文里只说这次花多少，不铺一屏遥测", async () => {
-    renderDialog();
-    await openCloudPlusWithConsent();
-    const preview = await screen.findByTestId("stage1-budget-preview");
-    expect(preview).toHaveTextContent("这次预计花费");
-    expect(preview).toHaveTextContent("确认边界后");
-    expect(preview).not.toHaveTextContent("Detection批次");
-    expect(preview).not.toHaveTextContent("最坏Token");
-  });
-
-  // API 配好、服务连着、模式有推荐值——执行方式/AI 服务/分析模式这三节每次打开都长得
-  // 一模一样，而人要做的决定只有一个：花不花这个钱。就绪时折起，标题里写明当前是什么。
-  it("一切就绪时把设置折起来，标题写明当前用的是什么", async () => {
-    renderDialog();
-    await openCloudPlusWithConsent();
-    const settings = await screen.findByTestId("start-analysis-settings");
-    expect(settings).not.toHaveAttribute("open");
-    expect(settings).toHaveTextContent("云端 AI");
-    expect(settings).toHaveTextContent("更改");
-  });
-
-  it("那些数字一个不少，收在技术详情里", async () => {
-    renderDialog();
-    await openCloudPlusWithConsent();
-    const grid = await screen.findByTestId("stage1-budget-grid");
-    expect(grid.querySelectorAll(".budget-summary-card").length).toBeGreaterThanOrEqual(13);
-    expect(grid).toHaveTextContent("Detection批次");
-    expect(grid).toHaveTextContent("最坏Token");
-  });
-  it("创建前显示完整Run请求预检", async () => {
-    renderDialog();
-    await openCloudPlusWithConsent();
-    const full = await screen.findByTestId("full-pipeline-budget-preview");
-    expect(full).toHaveTextContent("完整分析预算预检");
-    expect(full).toHaveTextContent("Scene Analysis");
-    expect(full).toHaveTextContent("Reader Journey");
-  });
-  it("预算不足时禁止创建并显示维度", async () => {
-    vi.mocked(analysisApi.preflight).mockResolvedValue({
-      eligible: true, provider_state_version: "state-1", within_budget: false,
-      exceeded_dimensions: ["tokens"], paragraph_count: 68, transition_count: 67,
-      detection_batch_count: 10, adjudication_batch_count_estimated: 1,
-      expected_request_count: 11, worst_case_request_count: 22,
-      estimated_total_tokens: 10000, worst_case_total_tokens: 50000,
-      estimated_cost: 0.1, worst_case_cost: 0.2, currency: "CNY",
-      remaining: { requests: 70, tokens: 42000, estimated_cost: 2.5 },
-    });
-    renderDialog();
-    await openCloudPlusWithConsent();
-    expect(await screen.findByTestId("stage1-budget-gap")).toHaveTextContent(/Token不足/);
-    expect(screen.getByTestId("start-analysis-submit")).toBeDisabled();
-  });
-  it("无资格时显示具体blocker", async () => {
-    vi.mocked(providersApi.list).mockResolvedValue([{ ...plus, manual_boundary_candidate_eligible: false, manual_selection_blockers: ["budget_unavailable"] }] as any);
-    renderDialog();
-    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("技术详情"));
-    expect(await screen.findByText("budget_unavailable")).toBeInTheDocument();
-  });
-  it("资格字段缺失时显示版本不一致而不是无阻塞", async () => {
-    const missing = { ...plus } as any;
-    delete missing.manual_boundary_candidate_eligible;
-    vi.mocked(providersApi.list).mockResolvedValue([missing]);
-    renderDialog();
-    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("技术详情"));
-    expect(await screen.findByText(/Provider资格信息缺失/)).toBeInTheDocument();
-    expect(screen.queryByText(/无手动资格阻塞/)).not.toBeInTheDocument();
-  });
-  it("Provider API离线显示明确诊断", async () => {
-    vi.mocked(providersApi.list).mockRejectedValue(new Error("FastAPI离线"));
-    renderDialog();
-    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("技术详情"));
-    expect(await screen.findByText(/Provider 状态接口离线/)).toBeInTheDocument();
-  });
-});
+// 这里原本是「开始分析人工审阅入口」：Provider 选择器、执行方式、Prompt 版本、技术详情、
+// 预检明细。那一整套界面只在开发者模式下渲染，而开发者模式已经整个删除——对话框现在固定
+// 走云端，用设置页里选中的服务商。测不存在的界面没有意义，所以整块随之删除。
+// 普通模式下的行为由下面两个 describe 覆盖。
 
 describe("StartAnalysisDialog 布局与交互", () => {
   it("长预算内容时 Modal Body 可滚动且 Footer 始终存在", async () => {
@@ -317,17 +202,8 @@ describe("StartAnalysisDialog 布局与交互", () => {
     expect(screen.getByTestId("start-analysis-submit")).toBeVisible();
   });
 
-  it("Provider诊断展开后仍可滚动", async () => {
-    vi.mocked(analysisApi.preflight).mockResolvedValue(longPreflight);
-    renderDialog();
-    await openCloudPlusWithConsent();
-    await screen.findByTestId("stage1-budget-preview");
-    fireEvent.click(screen.getByText("技术详情"));
-    expect(await screen.findByText(/手动边界资格/)).toBeInTheDocument();
-    const body = screen.getByTestId("start-analysis-modal-body");
-    expect(body).toBeInTheDocument();
-    expect(screen.getByTestId("start-analysis-modal-footer")).toBeInTheDocument();
-  });
+  // 「Provider诊断展开后仍可滚动」删除：它展开的是「技术详情」折叠，那是开发者模式
+  // 独有的界面，随该模式一并删除。弹窗本身的滚动与页脚可见由下面几条覆盖。
 
   it("1366×768 视口下按钮可见", async () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1366 });
@@ -365,7 +241,11 @@ describe("StartAnalysisDialog 布局与交互", () => {
     await openCloudPlusWithConsent();
     await screen.findByTestId("stage1-budget-preview");
     fireEvent.click(screen.getByTestId("start-analysis-submit"));
-    await waitFor(() => expect(screen.getByText(/健康检查失败|PROVIDER_UNHEALTHY/)).toBeInTheDocument());
+    // 弹窗把 PROVIDER_UNHEALTHY 换成人话再显示——原来这里钉的是后端那句原文和错误码，
+    // 而那两样恰恰是不该出现在用户眼前的东西。钉「失败了会说出来」，不钉说的是哪一串。
+    await waitFor(() =>
+      expect(screen.getByText(/AI服务连接失败/)).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("start-analysis-modal-footer")).toBeInTheDocument();
     expect(screen.getByTestId("start-analysis-submit")).toBeVisible();
   });
@@ -406,7 +286,6 @@ describe("StartAnalysisDialog 布局与交互", () => {
         </QueryClientProvider>
       </MemoryRouter>,
     );
-    await screen.findByLabelText("执行方式");
     expect(screen.queryByTestId("start-analysis-front-matter-gate")).not.toBeInTheDocument();
   });
 
@@ -487,6 +366,9 @@ describe("StartAnalysisDialog 布局与交互", () => {
 
   it("Tab 焦点可到达创建按钮", async () => {
     renderDialog();
+    // 开发者模式下同意框不是必经之路，所以这条以前不用勾。现在它是——按钮在没勾之前
+    // 本来就该是灰的。这条测的是焦点能不能到达按钮，不是按钮该不该亮。
+    await openCloudPlusWithConsent();
     const dialog = await screen.findByRole("dialog");
     const submit = await waitFor(() => {
       const button = screen.getByTestId("start-analysis-submit");
@@ -533,14 +415,15 @@ describe("StartAnalysisDialog 布局与交互", () => {
       capability_schema_version: "1c-a-2",
     } as any);
     renderDialog();
-    fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
-    expect(await screen.findByTestId("start-analysis-no-provider")).toHaveTextContent(
-      /尚未配置 API Key|当前没有可用/,
+    // 「没有可用 Provider」以前是开发者模式专有的提示块。正常模式说的是同一件事：
+    // 服务没连上，并且按钮下面写清楚为什么——原因由后端给（INV-P4），不由客户端另编一句。
+    expect(await screen.findByTestId("start-analysis-ai-disconnected")).toHaveTextContent(
+      /尚未配置 API Key|AI 服务尚未连接/,
     );
     const submit = screen.getByTestId("start-analysis-submit");
     expect(submit).toBeDisabled();
     expect(screen.getByTestId("start-analysis-disabled-reason")).toHaveTextContent(
-      /尚未配置 API Key|当前没有可用/,
+      /尚未配置 API Key|AI 服务尚未连接/,
     );
     fireEvent.click(submit);
     expect(analysisApi.start).not.toHaveBeenCalled();
@@ -554,24 +437,21 @@ describe("StartAnalysisDialog 布局与交互", () => {
     expect(label).not.toHaveTextContent("（推荐）（推荐）");
   });
 
-  it("Provider 主视图不展示模型 ID", async () => {
+  it("服务一栏给的是服务名，不是内部标识", async () => {
+    // 原来这条测的是开发者模式的 Provider 下拉。那个下拉已随开发者模式删除，
+    // 但它守的东西还在：界面上该出现「阿里云百炼」，不该出现 `aliyun_qwen_plus`
+    // 这类只有我们自己看得懂的键——用户拿它既搜不到也说不出。
     vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
     renderDialog();
-    fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
-    const select = await screen.findByTestId("start-analysis-provider-select");
-    expect(select).toHaveTextContent("阿里云百炼");
-    expect(select).not.toHaveTextContent("configured-plus");
-    expect(select).not.toHaveTextContent("aliyun_qwen_plus");
-    expect(await screen.findByTestId("start-analysis-provider-hint")).toHaveTextContent(
-      /已连接.*需要人工确认场景边界/,
-    );
+    const summary = await screen.findByTestId("start-analysis-ai-summary");
+    expect(summary).not.toHaveTextContent("aliyun_qwen_plus");
+    expect(summary).not.toHaveTextContent("configured-plus");
+    expect(summary).toHaveTextContent("连接状态");
   });
 });
 
 describe("普通模式开始分析弹窗", () => {
   beforeEach(() => {
-    localStorage.removeItem("storylens.developerMode");
-    useDeveloperModeStore.setState({ developerMode: false });
   });
 
   it("无Provider下拉框", async () => {
@@ -750,8 +630,6 @@ describe("普通模式开始分析弹窗", () => {
   });
 
   it("本阶段预计足够时允许创建，即使完整分析最坏请求更高", async () => {
-    localStorage.removeItem("storylens.developerMode");
-    useDeveloperModeStore.setState({ developerMode: false });
     vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
     vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
     vi.mocked(providersApi.configuration).mockResolvedValue({

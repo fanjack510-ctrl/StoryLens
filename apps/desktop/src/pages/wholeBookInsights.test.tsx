@@ -162,25 +162,15 @@ describe("Whole-Book Insights desktop entry", () => {
     stubEntitlements(false);
   });
 
+  // 原来这里是两条：开发者模式开、开发者模式关，各断言一次入口不出现。开发者模式删掉之后，
+  // 那两条问的是同一个问题——入口在书页面上永远不出现，没有「除非…」。
   it("book workspace never shows chapter aggregation entry (1.1.0 release scope)", async () => {
-    const { useDeveloperModeStore } = await import("../stores/developerModeStore");
-    useDeveloperModeStore.getState().setDeveloperMode(true);
     renderWithRouter(<BookRoutePage />);
     await screen.findByTestId("shell-start-analysis");
     expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
     expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
     expect(screen.queryByText("章节聚合洞察")).not.toBeInTheDocument();
     expect(screen.queryByText("章节聚合洞察 Pro")).not.toBeInTheDocument();
-    useDeveloperModeStore.getState().setDeveloperMode(false);
-  });
-
-  it("standard workspace hides chapter aggregation entry", async () => {
-    const { useDeveloperModeStore } = await import("../stores/developerModeStore");
-    useDeveloperModeStore.getState().setDeveloperMode(false);
-    renderWithRouter(<BookRoutePage />);
-    await screen.findByTestId("shell-start-analysis");
-    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
   });
 
   it("pro page uses chapter aggregation title and coverage copy", async () => {

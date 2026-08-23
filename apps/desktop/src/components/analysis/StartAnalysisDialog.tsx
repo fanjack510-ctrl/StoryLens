@@ -12,7 +12,6 @@ import {
 import { ApiError } from "../../services/apiClient";
 import { profileHref } from "../../features/bookProfile/origin";
 import { existingRunDetailsFromError } from "../../services/runLifecycle";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import {
   DEFAULT_AI_SERVICE_ID,
   buildAiServiceViewModel,
@@ -491,9 +490,12 @@ export function StartAnalysisDialog({
     meta?: { existing?: boolean; status?: string; taskType?: string },
   ) => void;
 }) {
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
-  const [mode, setMode] = useState(developerMode ? "local" : "cloud");
-  const [provider, setProvider] = useState(developerMode ? "" : "");
+  // 「开发者模式」已经整个删除——没有入口，也没有任何界面能把它打开。这个文件里有三十处
+  // 按它分叉的分支，夜里一次性拆掉风险太大，所以先钉死成 false：那些分支从此不可达。
+  // 拆掉它们是一件独立的事，已单独记为待办。
+  const developerMode = false;
+  const [mode, setMode] = useState("cloud");
+  const [provider, setProvider] = useState("");
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -533,7 +535,7 @@ export function StartAnalysisDialog({
   const activeCloud = useQuery({
     queryKey: ["active-cloud-provider"],
     queryFn: settingsApi.activeCloudProvider,
-    enabled: !developerMode,
+    enabled: true,
     refetchOnMount: "always",
     staleTime: 0,
   });
@@ -545,7 +547,7 @@ export function StartAnalysisDialog({
   const cloud = useQuery({
     queryKey: ["cloud"],
     queryFn: providersApi.cloud,
-    enabled: !developerMode,
+    enabled: true,
   });
   const budgetSettings = useQuery({
     queryKey: ["cloud-budget"],
@@ -833,7 +835,7 @@ export function StartAnalysisDialog({
 
   const createBlockers = useMemo((): CreateBudgetBlocker[] => {
     const list: CreateBudgetBlocker[] = [];
-    if (!developerMode && !aiView.apiKeyConfigured) {
+    if (!aiView.apiKeyConfigured) {
       list.push({
         dimension: "api_key",
         title: "尚未配置 API Key",
@@ -845,7 +847,7 @@ export function StartAnalysisDialog({
         worstCase: null,
       });
     }
-    if (!developerMode && !planAllowsStart) {
+    if (!planAllowsStart) {
       list.push({
         dimension: "provider",
         title: "Qwen 尚未连接",
@@ -915,21 +917,19 @@ export function StartAnalysisDialog({
   const requestOnly = requestOnlyShortfall(createBlockers);
   const busy = submitState === "checking" || submitState === "creating" || providers.isFetching || executionPlanQuery.isFetching;
 
-  // Ordinary: hard-disable only when Stage-1 estimated path cannot start.
-  // Request-only shortfall shows recovery panel (temp auth); token/cost remain hard.
-  // Developer: prefer eligible list, but do not ignore a backend plan that says can_start
-  // (stale cached_failure must not strand a verified Settings configuration).
-  const providerUnavailable = developerMode
-    ? ((eligible.length === 0 && !planAllowsStart) || !provider)
-    : !planAllowsStart || !provider;
+  // 只在后端说这条路跑不起来时才硬禁用。额度不够走恢复面板（临时授权），token / 费用仍是硬门。
+  //
+  // 「服务不可用」不包含「还没勾同意」。两者以前挤在同一个布尔里，于是一个只是没勾框的人
+  // 会被告知「AI 服务尚未连接」——他去查服务，而真正要做的是勾一下上面那个框。
+  const providerUnavailable = !planAllowsStart || !provider;
   const hardCreateBlocked = tokenBlocked || costBlocked
     || (budgetBlocked && !requestOnly)
-    || (!developerMode && (!planAllowsStart || !consent));
+    || !planAllowsStart
+    || !consent;
   const profileGateClosed = profileConfirmed === false;
   const frontMatterBlocked = chapterSectionType === "front_matter";
-  const effectiveSubmitDisabled = developerMode
-    ? busy || (budgetBlocked && !requestOnly) || providerUnavailable || profileGateClosed || frontMatterBlocked
-    : busy || hardCreateBlocked || providerUnavailable || profileGateClosed || frontMatterBlocked;
+  const effectiveSubmitDisabled =
+    busy || hardCreateBlocked || providerUnavailable || profileGateClosed || frontMatterBlocked;
 
   const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && costAndTokenOk);
 
@@ -937,7 +937,7 @@ export function StartAnalysisDialog({
   const ready = !effectiveSubmitDisabled && !budgetBlocked;
 
   const submitLabel = providers.isFetching && (submitState === "idle" || submitState === "failed")
-    ? (developerMode ? "正在刷新 Provider……" : "正在刷新服务状态……")
+    ? "正在刷新服务状态……"
     : submitState === "checking"
       ? "正在检查预算……"
       : submitState === "creating"
@@ -949,16 +949,16 @@ export function StartAnalysisDialog({
     if (frontMatterBlocked) return "前置内容不参与分析，请选择正文章节";
     if (profileGateClosed) return "需要先确认作品画像";
     if (providerUnavailable) {
-      return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
+      return unavailableReason || "AI 服务尚未连接";
     }
-    if (!developerMode && !planAllowsStart) {
+    if (!planAllowsStart) {
       return unavailableReason || "AI 服务尚未连接";
     }
     if ((mode === "cloud" || mode === "hybrid") && !consent) {
       return "请先确认正文发送说明";
     }
     if (!provider) {
-      return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
+      return unavailableReason || "AI 服务尚未连接";
     }
     if (costBlocked) return "当前费用额度不足";
     return null;
@@ -994,7 +994,7 @@ export function StartAnalysisDialog({
     if (providerUnavailable) {
       return setMessage(unavailableReason || "当前没有可用的 AI 服务，请前往设置配置。");
     }
-    if (!developerMode && !planAllowsStart) {
+    if (!planAllowsStart) {
       return setMessage(unavailableReason || "AI服务尚未连接，请前往设置完成配置。");
     }
     if ((mode === "cloud" || mode === "hybrid") && !consent) return setMessage("请先确认云端传输同意。");
@@ -1352,50 +1352,9 @@ export function StartAnalysisDialog({
               </div>
             )}
 
-            {developerMode && (
-              <>
-                {eligible.length === 0 && !planAllowsStart ? (
-                  <div data-testid="start-analysis-no-provider">
-                    <p>{unavailableReason || "当前没有可用 Provider"}</p>
-                    <Link to="/settings?tab=ai&focus=api_key" onClick={onClose}>
-                      去配置 AI 服务
-                    </Link>
-                  </div>
-                ) : (
-                  <label className="start-analysis-field">
-                    <span className="sr-only">Provider</span>
-                    <select
-                      aria-label="Provider"
-                      value={provider}
-                      onChange={(event) => setProvider(event.target.value)}
-                      data-testid="start-analysis-provider-select"
-                    >
-                      {(eligible.length > 1 || (eligible.length === 0 && planAllowsStart)) && (
-                        <option value="">请选择</option>
-                      )}
-                      {(eligible.length > 0
-                        ? eligible
-                        : (providers.data || []).filter((p) => p.name === defaultCloudProviderId)
-                      ).map((item) => (
-                        <option key={item.name} value={item.name}>
-                          {formatProviderOptionLabel(item, eligible.length ? eligible : [item])}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {selected && (
-                  <p className="hint" data-testid="start-analysis-provider-hint">
-                    {formatProviderStatusHint(selected)}
-                  </p>
-                )}
-                {selected?.requires_boundary_review && (
-                  <p className="notice">
-                    本次会先识别场景边界。确认边界后，StoryLens 会继续完成场景分析。
-                  </p>
-                )}
-              </>
-            )}
+            {/* 开发者模式那一整块（执行方式下拉、Provider 下拉、无可用 Provider 提示）
+                已随开发者模式删除。它此前挂在 `developerMode &&` 下，而那个值已经恒为 false——
+                留着的不是一段功能，是一段永远不会执行、却仍然要被读懂和维护的代码。 */}
           </section>
 
           <section className="start-analysis-section" data-testid="start-analysis-mode-section">

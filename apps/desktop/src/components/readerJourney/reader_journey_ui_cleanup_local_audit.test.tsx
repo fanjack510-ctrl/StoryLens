@@ -30,8 +30,11 @@ describe("Reader Journey UI cleanup local audit", () => {
     expect(modeSwitcherSource).toMatch(/旅程视图/);
     expect(modeSwitcherSource).toMatch(/仅看正文/);
     expect(toolbarSource).not.toMatch(/收起正文|展开正文/);
-    expect(shellSource).toMatch(/小说叙事洞察与创作平台/);
+    // 这一条原本钉的是顶栏那句标语。标语已经去掉——它是一句介绍，而介绍只需要说一次，
+    // 不必在每个页面最上方常驻；腾出来的位置给了从左侧竖栏搬上来的导航。
+    // 它真正守的东西是「不要回到旧名字」，那一条保留。
     expect(shellSource).not.toMatch(/小说拆解工作台/);
+    expect(shellSource).not.toMatch(/小说叙事洞察与创作平台/);
   });
 
   it("unified topbar: lenses left, 收起详情 + 对比分析 right; no more menu", () => {
