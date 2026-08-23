@@ -252,8 +252,14 @@ def derive_connection_ui_state(
     provider_eligible: bool,
     snapshot: dict[str, Any] | None,
     current: dict[str, Any],
+    provider_display_name: str = "云端模型服务",
 ) -> tuple[ConnectionUiState, str, str]:
-    """Return (state, label, reason)."""
+    """Return (state, label, reason).
+
+    `provider_display_name` 是调用方传进来的当前服务商名字。这两句话原本写死「阿里云百炼」，
+    于是一个用 DeepSeek 的人会读到「当前配置可以连接阿里云百炼（deepseek-v4-flash）」——
+    一句话里两家厂商，而他一家阿里云都没配。
+    """
     if not credential_configured:
         return (
             "NOT_CONFIGURED",
@@ -310,13 +316,13 @@ def derive_connection_ui_state(
         return (
             "READY",
             UI_LABELS["READY"],
-            f"当前配置可以连接阿里云百炼（{model}）。{recent}",
+            f"当前配置可以连接{provider_display_name}（{model}）。{recent}",
         )
 
     return (
         "VERIFIED",
         UI_LABELS["VERIFIED"],
-        f"当前配置可以连接阿里云百炼（{model}）。{recent}",
+        f"当前配置可以连接{provider_display_name}（{model}）。{recent}",
     )
 
 

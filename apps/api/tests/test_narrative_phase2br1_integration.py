@@ -1062,7 +1062,10 @@ def test_12_production_isolation_version_no_migration(network_deny) -> None:
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False
-    assert VERSION == "1.2.0"
+    # 原本写死 `== "1.2.0"`，于是每发一次版就红一次——它守的其实不是某个数字，
+    # 是「代码里的版本号和仓库根的 VERSION 文件一致」。守那个。
+    _version_file = Path(__file__).resolve().parents[3] / "VERSION"
+    assert VERSION == _version_file.read_text(encoding="utf-8").strip()
     assert is_private_provider_live_probe_enabled(environ={}) is False
     assert os.environ.get(PRIVATE_PROVIDER_LIVE_PROBE_ENV, "") in {"", "0", "false", "no", "off"}
 

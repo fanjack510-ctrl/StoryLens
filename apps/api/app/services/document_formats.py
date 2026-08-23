@@ -292,6 +292,7 @@ def outline_from_bytes(filename: str, content: bytes) -> BookOutline:
         if det.sections:
             outline = BookOutline(source="inferred")
             outline.rules.extend(det.rules)
+            outline.missing.extend(det.missing)
             for sec in det.sections:
                 outline.nodes.append(
                     OutlineNode(
@@ -300,6 +301,7 @@ def outline_from_bytes(filename: str, content: bytes) -> BookOutline:
                         title=sec.title,
                         paragraphs=list(sec.paragraphs),
                         chapter=f"第{sec.chapter_no}章" if sec.chapter_no is not None else "",
+                        chapter_title=sec.chapter_title or "",
                     )
                 )
             return outline

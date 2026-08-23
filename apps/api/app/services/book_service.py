@@ -99,6 +99,11 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
         # Which pipeline this file looks like it wants. Offered as the import panel's default
         # answer, not as the decision — the person holding the file overrides it with one
         # click, and their answer is what gets stored. Computed here so the rule has one home.
+        # 这看起来是什么书。同样只是面板的默认答案，不是决定——唯一够硬的证据是解析时
+        # 有没有走「章首目录 + 逐节定位」那条路（只有专著/工具书会留下这个标记）。
+        "suggested_material_kind": (
+            "reference" if any(FROM_BOOK_TOC in rule for rule in detection.rules) else "fiction"
+        ),
         "suggested_analysis_form": (
             "short"
             if is_short_form(character_count=total_chars, chapter_count=len(chapters))

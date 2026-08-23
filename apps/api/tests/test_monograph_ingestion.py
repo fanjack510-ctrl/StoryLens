@@ -164,3 +164,42 @@ def test_pdf_keeps_its_page_boundaries() -> None:
     except Exception:
         return  # 空白 PDF 会被判为扫描件，这条只在有文字时有意义
     assert doc.pages is not None and len(doc.pages) == 4
+
+
+def _long_chapter(n_sections: int, *, drop: set[int] | None = None) -> list[str]:
+    """造一章有 n 节的书。`drop` 里的节只出现在目录里，正文里没有。"""
+    drop = drop or set()
+    toc = ["CHAPTER 1", "Title", "A. Author"]
+    for s in range(1, n_sections + 1):
+        toc.append(f"{s} Topic Number {s} {s + 10}")
+    pages = ["HANDBOOK\n" + "\n".join(toc) + "\n1"]
+    for s in range(1, n_sections + 1):
+        if s in drop:
+            continue
+        body = " ".join(f"word{s}x{k}" for k in range(60))
+        pages.append(f"HANDBOOK\n{s} Topic Number {s}\n{body}\n{s + 1}")
+    return pages
+
+
+def test_chapter_with_more_than_99_sections_is_not_truncated():
+    """一章 150 节要全认出来。
+
+    这里原本有一句 `if int(num) > 99: continue`——按数值上限挡页眉噪声。它在一章 500 节的
+    书上把第 100 节起全丢了，而且覆盖率照样报 100%，因为分子分母一起少。
+    """
+    det = detect_monograph(_long_chapter(150))
+    assert len(det.sections) == 150
+    assert det.sections[-1].number == "150"
+    assert det.missing == []
+
+
+def test_toc_entry_without_body_is_reported_not_dropped():
+    """目录里有、正文里定位不到的节，必须留痕。
+
+    静默丢掉它，读者会拿到一份自称完整的残缺摘要——而他正是用它替代原文的。
+    """
+    det = detect_monograph(_long_chapter(12, drop={5, 9}))
+    assert len(det.sections) == 10
+    assert len(det.missing) == 2
+    assert any("Topic Number 5" in m for m in det.missing)
+    assert any(" 2 节" in r for r in det.rules)

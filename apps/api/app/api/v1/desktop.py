@@ -39,9 +39,6 @@ from app.schemas.settings import (
     ProviderConnectionTestPreflight,
     ProviderConnectionTestResponse,
     ProviderTestRequest,
-    RecommendedQwenRepairRequest,
-    RecommendedQwenSetupRequest,
-    RecommendedQwenSetupResponse,
 )
 from app.services.config_runtime_profile import build_config_runtime_profile
 from app.services.credentials.base import CredentialStore
@@ -50,9 +47,6 @@ from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
 from app.services.recommended_ai_setup import (
     CLOUD_BODY_CONSENT_KEY,
-    configure_recommended_qwen,
-    get_recommended_qwen_status,
-    repair_recommended_qwen,
 )
 from app.services.runtime_info import build_runtime_payload
 
@@ -141,6 +135,20 @@ def put_cloud_settings(value: CloudSettingsUpdate, session: Session = Depends(ge
     return get_cloud_settings(session)
 
 
+class ModelTier(BaseModel):
+    """一个可选的模型档位，以及它能不能真的用。
+
+    `pricing_known=False` 的档位选了会让服务商变成不合格（`pricing_unavailable`），
+    所以这件事必须随档位一起送到界面上——一个用不了的选项不该看起来可用。
+    """
+
+    id: str
+    label: str
+    hint: str = ""
+    pricing_known: bool = True
+    recommended: bool = False
+
+
 class CloudProviderOption(BaseModel):
     """One switchable cloud vendor, with everything the picker needs to render it."""
 
@@ -148,6 +156,9 @@ class CloudProviderOption(BaseModel):
     display_name: str
     base_url: str = ""
     models: list[str] = []
+    #: 档位目录。`models` 是「这一行当前存了哪几个模型」，去重之后常常只剩一个；
+    #: 它回答不了「这家还能选什么」，所以选择器要读这一条。
+    model_tiers: list[ModelTier] = []
 
 
 class ActiveCloudProviderSettings(BaseModel):
@@ -156,6 +167,50 @@ class ActiveCloudProviderSettings(BaseModel):
     #: it had 阿里云 and DeepSeek as two named constants and a boolean toggle between them,
     #: which is why a third vendor could not appear in the UI at all.
     options: list[CloudProviderOption] = []
+
+
+#: 各家提供的模型档位。放在后端，是因为「有哪些档位、哪个推荐、贵不贵」是展示决策，
+#: 而展示归后端（INV-P4）。以前这份知识散在两个前端表单的常量里，两处还对不上。
+_MODEL_TIERS: dict[str, list[dict[str, object]]] = {
+    "deepseek": [
+        {"id": "deepseek-v4-flash", "label": "V4 Flash", "hint": "性价比优先", "recommended": True},
+        {"id": "deepseek-v4-pro", "label": "V4 Pro", "hint": "质量更高，成本更高"},
+    ],
+    "aliyun_qwen_plus": [
+        {"id": "qwen3.6-flash", "label": "Flash", "hint": "最快最省"},
+        {"id": "qwen3.7-plus", "label": "Plus", "hint": "均衡", "recommended": True},
+        {"id": "qwen3.7-max", "label": "Max", "hint": "质量最高，成本最高"},
+    ],
+}
+
+
+def _model_tiers_for(name: str, saved: list[str]) -> list[ModelTier]:
+    from pathlib import Path
+
+    from app.services.cloud_pricing import model_pricing_available, resolve_cloud_pricing_path
+
+    pricing_path = resolve_cloud_pricing_path(Path("config/cloud_pricing.json"))
+    entries = list(_MODEL_TIERS.get(name) or [])
+    known = {str(e["id"]) for e in entries}
+    # 目录里没有、但这一行确实存着的模型也要列出来——否则用户会发现自己正在用的档位
+    # 在选择器里不存在。
+    for model in saved:
+        if model and model not in known:
+            entries.append({"id": model, "label": model})
+            known.add(model)
+    tiers: list[ModelTier] = []
+    for entry in entries:
+        model_id = str(entry["id"])
+        tiers.append(
+            ModelTier(
+                id=model_id,
+                label=str(entry.get("label") or model_id),
+                hint=str(entry.get("hint") or ""),
+                pricing_known=bool(model_pricing_available(model_id, pricing_path)),
+                recommended=bool(entry.get("recommended")),
+            )
+        )
+    return tiers
 
 
 def _cloud_provider_options(session: Session) -> list[CloudProviderOption]:
@@ -189,6 +244,7 @@ def _cloud_provider_options(session: Session) -> list[CloudProviderOption]:
                 display_name=str(getattr(row, "display_name", "") or "") or name,
                 base_url=str(getattr(row, "base_url", "") or ""),
                 models=models,
+                model_tiers=_model_tiers_for(name, models),
             )
         )
     return options
@@ -336,64 +392,38 @@ def _bootstrap_provider_row(session: Session, provider_name: str) -> ProviderCon
 
 # Back-compat alias for older call sites / tests.
 _bootstrap_aliyun_row = _bootstrap_provider_row
+class CloudBodyConsentUpdate(BaseModel):
+    accepted: bool
 
 
-def _recommended_setup_response(
-    result,
-    *,
-    session: Session,
-    store: CredentialStore,
-) -> RecommendedQwenSetupResponse:
-    consent = setting(session, CLOUD_BODY_CONSENT_KEY, False)
-    profile = ConfigRuntimeProfile.model_validate(build_config_runtime_profile(store))
-    return RecommendedQwenSetupResponse(
-        ok=result.ok,
-        user_message=result.user_message,
-        persisted=result.persisted,
-        credential_configured=result.credential_configured,
-        provider_enabled=result.provider_enabled,
-        cloud_enabled=result.cloud_enabled,
-        provider_eligible=result.provider_eligible,
-        selected_provider_id=result.selected_provider_id,
-        connection_status=result.connection_status,
-        analysis_mode=result.analysis_mode,
-        blockers=list(result.blockers),
-        needs_cloud_consent=result.needs_cloud_consent,
-        error_code=result.error_code,
-        model_service_validated=bool(getattr(result, "model_validated", False)),
-        analysis_ready=bool(getattr(result, "analysis_ready", False)),
-        readiness_reasons=list(getattr(result, "readiness_reasons", []) or []),
-        http_status=getattr(result, "http_status", None),
-        error_category=getattr(result, "error_category", None),
-        retryable=getattr(result, "retryable", None),
-        config_profile=profile,
-        cloud_body_consent=bool(getattr(result, "cloud_body_consent", consent)),
-        connection_ui_state=getattr(result, "connection_ui_state", None),
-        connection_ui_label=getattr(result, "connection_ui_label", None),
-        connection_ui_reason=getattr(result, "connection_ui_reason", None),
-        validated_at=getattr(result, "validated_at", None),
-        validated_at_display=getattr(result, "validated_at_display", None),
-        validated_model=getattr(result, "validated_model", None),
-        validation_snapshot=getattr(result, "validation_snapshot", None),
-    )
+@router.put("/desktop/ai-connection/consent")
+def put_cloud_body_consent(
+    value: CloudBodyConsentUpdate,
+    session: Session = Depends(get_db),
+):
+    """与服务商无关的「正文发送同意」写入口。"""
+    from app.services.ai_connection_status import set_cloud_body_consent
+
+    accepted = set_cloud_body_consent(session, value.accepted)
+    session.commit()
+    return {"accepted": accepted}
 
 
-@router.get(
-    "/desktop/ai-setup/recommended-qwen",
-    response_model=RecommendedQwenSetupResponse,
-)
-def get_recommended_qwen_setup(
+@router.get("/desktop/ai-connection")
+def get_ai_connection(
     session: Session = Depends(get_db),
     store: CredentialStore = Depends(get_credential_store),
     gateway: ModelGateway = Depends(get_model_gateway),
 ):
-    return _recommended_setup_response(
-        get_recommended_qwen_status(session, store, gateway),
-        session=session,
-        store=store,
-    )
+    """设置页那张状态卡的数据源，按用户实际选中的服务商算。
 
+    取代 `/desktop/ai-setup/recommended-qwen`：那一支把服务商写死成阿里云，于是用
+    DeepSeek 的人会看到一张混着两家的卡——状态和「需要重新验证」来自阿里云，模型名却是
+    DeepSeek 的。这里只有一个来源：当前活跃服务商。
+    """
+    from app.services.ai_connection_status import get_ai_connection_status
 
+    return get_ai_connection_status(session, store, gateway).to_dict()
 @router.get("/settings/config-profile", response_model=ConfigRuntimeProfile)
 def get_config_runtime_profile(
     store: CredentialStore = Depends(get_credential_store),
@@ -451,49 +481,6 @@ def open_data_directory() -> dict[str, object]:
     except OSError as exc:
         raise error(500, "OPEN_DATA_DIR_FAILED", f"无法打开数据目录：{exc}") from exc
     return {"ok": True, "path": str(root)}
-
-
-@router.post(
-    "/desktop/ai-setup/recommended-qwen",
-    response_model=RecommendedQwenSetupResponse,
-)
-def post_recommended_qwen_setup(
-    value: RecommendedQwenSetupRequest,
-    session: Session = Depends(get_db),
-    store: CredentialStore = Depends(get_credential_store),
-    gateway: ModelGateway = Depends(get_model_gateway),
-):
-    result = configure_recommended_qwen(
-        session=session,
-        store=store,
-        gateway=gateway,
-        api_key=value.api_key,
-        analysis_mode=value.analysis_mode,
-        cloud_body_consent=value.cloud_body_consent,
-        persist=value.persist,
-    )
-    return _recommended_setup_response(result, session=session, store=store)
-
-
-@router.post(
-    "/desktop/ai-setup/recommended-qwen/repair",
-    response_model=RecommendedQwenSetupResponse,
-)
-def post_recommended_qwen_repair(
-    value: RecommendedQwenRepairRequest,
-    session: Session = Depends(get_db),
-    store: CredentialStore = Depends(get_credential_store),
-    gateway: ModelGateway = Depends(get_model_gateway),
-):
-    result = repair_recommended_qwen(
-        session=session,
-        store=store,
-        gateway=gateway,
-        cloud_body_consent=value.cloud_body_consent,
-    )
-    return _recommended_setup_response(result, session=session, store=store)
-
-
 @router.get(
     "/model-providers/{provider_name}/configuration", response_model=ProviderConfigurationResponse
 )

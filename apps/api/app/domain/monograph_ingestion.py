@@ -169,6 +169,9 @@ class MonographDetection:
     sections: list[MonographSection] = field(default_factory=list)
     chapter_titles: dict[int, str] = field(default_factory=dict)
     rules: list[str] = field(default_factory=list)
+    #: 章首目录里列出、但正文里没能定位的节。**必须留下来**：静默丢掉，覆盖率会拿
+    #: 「找到的」当分母，把一份残缺的摘要报成 100%，而读者正是拿它替代原文的。
+    missing: list[str] = field(default_factory=list)
 
     @property
     def exact_count(self) -> int:
@@ -201,6 +204,34 @@ def _paragraphs_of(text: str) -> list[str]:
     return out
 
 
+
+def _ascending(cands: list[tuple[str, str, int]]) -> list[tuple[str, str, int]]:
+    """从候选目录项里挑出最长的一条递增编号链。
+
+    这里原本是一句 `if int(num) > 99: continue`——用一个数值上限挡页眉混进来的假编号。
+    实测下来它挡错了东西：一章 500 节的书，第 100 节起全被丢掉，而且**丢得无声无息**，
+    覆盖率照样报 100%。上限是错的抽象：目录的特征不是「编号小」，是「编号递增」。
+
+    所以按序挑，而不是按大小挑。孤立的噪声项（页眉里的年份、页码）不合这条链，自然落选；
+    一章有多少节，则完全不设限。
+    """
+    if not cands:
+        return []
+    keys = [tuple(int(x) for x in c[0].split(".")) for c in cands]
+    best = [1] * len(keys)
+    prev = [-1] * len(keys)
+    for i in range(len(keys)):
+        for j in range(i):
+            if keys[j] < keys[i] and best[j] + 1 > best[i]:
+                best[i], prev[i] = best[j] + 1, j
+    end = max(range(len(keys)), key=lambda i: best[i])
+    chain: list[int] = []
+    while end != -1:
+        chain.append(end)
+        end = prev[end]
+    return [cands[i] for i in reversed(chain)]
+
+
 def detect_monograph(pages: Sequence[str]) -> MonographDetection:
     """把 PDF 的逐页文本，识别成「章 → 节」。"""
     det = MonographDetection()
@@ -226,16 +257,27 @@ def detect_monograph(pages: Sequence[str]) -> MonographDetection:
         stop = chapters[ci + 1][0] if ci + 1 < len(chapters) else len(clean)
         det.chapter_titles[no] = ch_title
 
-        toc_src = "\n".join(clean[start: start + 2])
-        entries: list[tuple[str, str, int]] = []
+        # 目录窗口按证据长，不按固定页数。原本写死「章首 2 页」，那是照着手边这本手册的
+        # 版面定的；一章的目录排到第 3 页，第 3 页起的节就连「漏了」都报不出来——它们
+        # 根本没被看见，连 missing 都进不去。所以：只要下一页还在往下续目录，就接着看。
+        cands: list[tuple[str, str, int]] = []
         seen: set[str] = set()
-        for m in _TOC_ENTRY.finditer(toc_src):
-            num, title, page = m.group(1), re.sub(r"\s{2,}", " ", m.group(2).strip()), int(m.group(3))
-            # 三位数以上的「编号」是页眉混进来的，不是小节
-            if int(num.split(".")[0]) > 99 or num in seen:
-                continue
-            seen.add(num)
-            entries.append((num, title, page))
+        toc_last = start
+        for page_i in range(start, stop):
+            before = len(cands)
+            for m in _TOC_ENTRY.finditer(clean[page_i]):
+                num, title, page = m.group(1), re.sub(r"\s{2,}", " ", m.group(2).strip()), int(m.group(3))
+                if num in seen:
+                    continue
+                seen.add(num)
+                cands.append((num, title, page))
+            # 正文页只会零星撞上一两行「像目录」的行；连续两条以上才算目录还在往下排。
+            if page_i > start and len(cands) - before < 2:
+                break
+            toc_last = page_i
+        if toc_last > start:
+            det.rules.append(f"第{no}章目录跨 {toc_last - start + 1} 页")
+        entries = _ascending(cands)
 
         # 章首页要留下：目录之下就是正文开头，整页跳过会让每章的第 1 节永远找不到
         first = clean[start]
@@ -257,6 +299,11 @@ def detect_monograph(pages: Sequence[str]) -> MonographDetection:
                 before = " ".join([first[cut:] if cut else first] + list(clean[start + 1: pdf_i]))
                 marks.append((len(before), num, title, page, "approximate"))
 
+        found = {num for _, num, _, _, _ in marks}
+        for num, title, _page in entries:
+            if num not in found:
+                det.missing.append(f"第{no}章 {num} {title}")
+
         marks.sort(key=lambda x: x[0])
         for mi, (at, num, title, page, how) in enumerate(marks):
             end = marks[mi + 1][0] if mi + 1 < len(marks) else len(body)
@@ -272,4 +319,6 @@ def detect_monograph(pages: Sequence[str]) -> MonographDetection:
                 )
             )
     det.rules.append(f"小节 {len(det.sections)} 个，精确定位 {det.exact_count} 个")
+    if det.missing:
+        det.rules.append(f"目录列出但正文未定位 {len(det.missing)} 节")
     return det

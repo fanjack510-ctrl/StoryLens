@@ -395,8 +395,13 @@ def test_routing_preview_includes_whole_book_active_provider(tmp_path, monkeypat
         whole = next(r for r in rows if r["task"] == "全书分析")
         assert whole["provider"] == DEEPSEEK_PROVIDER
         assert whole["model"] == DEEPSEEK_MODEL_FLASH
+        # CHG-065 unified routing: scene_boundary follows the active default like
+        # whole_book does — it is no longer pinned to Aliyun. Assert the mode too, so a
+        # regression back to a hardcoded provider fails here instead of being absorbed.
         boundary = next(r for r in rows if r["task"] == "场景边界")
-        assert boundary["provider"] == ALIYUN
+        assert boundary["routing_mode"] == "FOLLOW_DEFAULT"
+        assert boundary["provider"] == DEEPSEEK_PROVIDER
+        assert boundary["model"] == DEEPSEEK_MODEL_FLASH
     finally:
         app.dependency_overrides.pop(get_db, None)
         engine.dispose()

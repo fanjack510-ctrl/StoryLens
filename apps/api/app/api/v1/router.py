@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -48,12 +49,20 @@ async def upload_book(
     #: "short" | "long", the reader's own answer from the import panel. Empty means they were
     #: not asked (an older client, or a scripted import), and the length inference stands in.
     analysis_form: str = Form(""),
+    #: "fiction" | "reference"。空表示没问过——老客户端或脚本导入，之后按结构推断。
+    material_kind: str = Form(""),
     session: Session = Depends(get_db),
 ) -> ImportResponse:
     filename = file.filename or ""
     try:
         book = import_book(session, filename, await file.read())
+        kind = str(material_kind or "").strip()
+        if kind in ("fiction", "reference"):
+            book.material_kind = kind
         chosen = str(analysis_form or "").strip()
+        # 工具书按节读，没有「短篇」这一说——读懂的分析单元是节，不是场景。
+        if kind == "reference":
+            chosen = "long"
         if chosen in ("short", "long"):
             # A `short` above the ceiling is dropped rather than stored, and the import still
             # succeeds: the panel disables that option already, so this only catches a client
@@ -106,6 +115,48 @@ async def chapter_detection_preview(file: UploadFile = File(...)) -> dict[str, o
 @router.get("/books", response_model=list[BookResponse])
 def list_books(session: Session = Depends(get_db)) -> list[Book]:
     return list(session.scalars(select(Book).order_by(Book.id)))
+
+
+@router.get("/books/library")
+def library_listing(session: Session = Depends(get_db)) -> list[dict]:
+    """书库列表要显示的东西：这是什么书、分析到哪一步了。
+
+    原来的 `/books` 只回 Book 行本身，于是最要紧的两件事都看不出来。文案在后端定
+    （INV-P4）——「已评测 / 读懂·进行中 / 未分析」怎么说，取决于引擎与运行状态的对应关系。
+    """
+    from app.services.library_listing import build_library_listing
+
+    return build_library_listing(session)
+
+
+class MaterialKindUpdate(BaseModel):
+    material_kind: str
+
+
+@router.put("/books/{book_id}/material-kind")
+def set_material_kind(
+    book_id: int, value: MaterialKindUpdate, session: Session = Depends(get_db)
+) -> dict:
+    """改这本书的类型。
+
+    导入时定死、之后没法改的值，就是永远错的——书名当年就是这么错的。所以类型和
+    `analysis_form` 一样：导入时问，之后随时能改，改了不动任何已有的分析结果。
+    """
+    from app.narrative_core.material_kind import REFERENCE, VALID_KINDS
+
+    kind = str(value.material_kind or "").strip()
+    if kind not in VALID_KINDS:
+        raise error(422, "INVALID_MATERIAL_KIND", "类型只能是 fiction 或 reference")
+    book = session.get(Book, book_id)
+    if book is None:
+        raise error(404, "BOOK_NOT_FOUND", "书籍不存在")
+    book.material_kind = kind
+    # 工具书按节读，没有短篇这一说。改成工具书时顺手把读法拨回长篇，否则会留下一个
+    # 「工具书 · 短篇」的组合——那个组合没有任何一条读法能执行。
+    if kind == REFERENCE and str(book.analysis_form or "") == "short":
+        book.analysis_form = "long"
+    session.commit()
+    return {"book_id": book_id, "material_kind": kind}
 
 
 @router.get("/books/{book_id}", response_model=BookResponse)

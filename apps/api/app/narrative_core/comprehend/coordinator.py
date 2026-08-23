@@ -133,6 +133,10 @@ class ComprehendCoordinator:
         units = plan_units(outline)
         covered, total = coverage_of(outline, units)
         result.sections_total = total
+        # 目录列了、正文没定位到的节，跟「读失败的节」是同一类事：读者都没拿到内容。
+        # 放进同一张清单里，他才会在报告上看见它们。
+        for label in outline.missing:
+            result.failures.append(f"{label}：目录里有这一节，正文里没能定位到")
         if not units:
             result.book.error = "这本书没有识别出任何内容"
             return result
@@ -202,7 +206,16 @@ class ComprehendCoordinator:
 
 
 def _chapter_title(outline: BookOutline, chapter: str) -> str:
+    """这一章叫什么。
+
+    先用解析时抽到的章标题；没有才退回「第一节的标题」。退回那一支曾经是唯一的一支，于是
+    57 章里 49 章都显示成「INTRODUCTION」——每章第一节的名字，而不是章的名字。
+    """
     for node in outline.nodes:
-        if node.chapter == chapter and node.level <= 1:
+        if node.chapter == chapter and node.chapter_title:
+            return node.chapter_title
+    for node in outline.nodes:
+        if node.chapter == chapter:
             return node.title
     return ""
+

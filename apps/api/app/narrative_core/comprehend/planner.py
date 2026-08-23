@@ -127,6 +127,11 @@ def plan_units(outline: BookOutline) -> list[DigestUnit]:
 
 
 def coverage_of(outline: BookOutline, units: list[DigestUnit]) -> tuple[int, int]:
-    """(被覆盖的节数, 大纲里的节数)。两者不等，就意味着有内容会静默消失。"""
+    """(被覆盖的节数, 全书应有的节数)。两者不等，就意味着有内容会静默消失。
+
+    分母是**目录承诺的节数**，不是解析出来的节数。这两者曾经是同一个数，直到实测发现
+    定位失败的节会被直接丢掉——分子分母一起少，覆盖率照样是 100%。那样这个指标就只是在
+    自证「我读完了我找到的东西」，而读者要问的是「这本书读完了没有」。
+    """
     covered = {i for u in units for i in u.source_indexes}
-    return len(covered), len(outline.nodes)
+    return len(covered), len(outline.nodes) + len(outline.missing)

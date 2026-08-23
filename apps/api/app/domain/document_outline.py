@@ -35,6 +35,9 @@ class OutlineNode:
     #: 这一节属于哪一章。四章里各有一个「1 INTRODUCTION」，不记章号就分不出是哪一个——
     #: 而分不出，覆盖率检查就会把四个节当成一个，把真正的遗漏藏起来。
     chapter: str = ""
+    #: 这一章叫什么。空着的话，读报告的人只会看到「第5章 INTRODUCTION」——那是**这一章第一节**
+    #: 的标题，不是章的标题。人因工程手册 57 章里有 49 章第一节都叫 Introduction。
+    chapter_title: str = ""
 
     @property
     def word_count(self) -> int:
@@ -58,6 +61,9 @@ class BookOutline:
     #: 结构是读来的还是猜的。读来的可信，猜的要在界面上说清楚。
     source: str = "inferred"
     rules: list[str] = field(default_factory=list)
+    #: 目录里列出、但正文里没能定位的节。它们没有内容可读，但**必须计入分母**——
+    #: 否则覆盖率会用「找到的」当总数，把残缺报成完整。
+    missing: list[str] = field(default_factory=list)
 
     @property
     def word_count(self) -> int:

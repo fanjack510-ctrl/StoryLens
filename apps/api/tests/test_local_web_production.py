@@ -190,7 +190,9 @@ def test_api_key_not_returned_on_runtime_and_setup(web_client: TestClient) -> No
     blob = json.dumps(runtime)
     assert '"api_key"' not in blob
     assert "sk-" not in blob
-    setup = web_client.get("/api/v1/desktop/ai-setup/recommended-qwen").json()
+    # 旧的 `/desktop/ai-setup/recommended-qwen` 已删（那条路径把服务商写死成阿里云）。
+    # 守的东西没变：连接状态这一口同样不许把密钥带出来。
+    setup = web_client.get("/api/v1/desktop/ai-connection").json()
     setup_blob = json.dumps(setup)
     assert '"api_key"' not in setup_blob
     assert "sk-" not in setup_blob
