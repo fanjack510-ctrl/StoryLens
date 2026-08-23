@@ -122,21 +122,41 @@ def test_an_older_licence_still_opens_what_it_was_sold_with(
         assert gate.get("enabled") is True, f"老授权打不开 {feature}：{gate}"
 
 
-def test_a_feature_added_after_a_licence_was_issued_is_reported_honestly(
+def test_an_older_licence_also_opens_features_added_after_it_was_issued(
     client, license_keypair
 ) -> None:
-    """老客户点新功能会发生什么——先把事实钉下来。
+    """在付费期内的人，点新功能不该被拒。
 
-    `common_patterns` 是共性视图做完之后才加进清单的。载荷里没有它的授权码，
-    按验证规则就该拒。这条测试不主张那样是对的，它只是不让这件事继续无人知晓：
-    要么发布前给老客户换一份授权，要么让验证在载荷缺键时回退到当前清单。
-    两条路都行，但必须是选的，不能是撞上的。
+    授权码里的 features 是**签发那一刻**的清单。按它判定的话，每加一个 Pro 功能，
+    所有已签发的码都打不开它——而持有者明明在付费期内。他不会来投诉，
+    只会觉得这软件坏了。
+
+    `common_patterns` 就是那个例子：它是共性视图做完之后才进清单的。
+    语义已定为「授权在有效期内，即享当期 Pro 全集」。
     """
     session = _session(client)
     _activate(session, license_keypair, features=FEATURES_BEFORE_COMMON_PATTERNS)
     gate = entitlement.can_use_feature(session, "common_patterns")
-    assert gate.get("enabled") is False
-    assert gate.get("reason") != "FEATURE_UNKNOWN"
+    assert gate.get("enabled") is True, f"付费期内却被拒：{gate}"
+
+
+def test_an_expired_licence_opens_nothing(client, license_keypair) -> None:
+    """并集只对**有效**的授权生效。
+
+    上一条把「载荷里没有」放行了。这一条守住另一边：过期或吊销之后，
+    并集不能把它变成永久授权——那会让「有效期」这三个字失去意义。
+    """
+    from app.db.models import LocalLicense
+
+    session = _session(client)
+    _activate(session, license_keypair)
+    row = session.query(LocalLicense).first()
+    assert row is not None
+    row.license_status = "expired"
+    session.flush()
+    for feature in PRO_FEATURES_SHIPPED_NOW:
+        gate = entitlement.can_use_feature(session, feature)
+        assert gate.get("enabled") is False, f"过期授权仍然打开了 {feature}"
 
 
 def test_the_canonical_list_covers_everything_we_actually_gate(client) -> None:

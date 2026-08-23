@@ -178,7 +178,20 @@ class DefaultCapabilityService:
                         return "expired", set()
                 raw_features = payload.get("features")
                 if isinstance(raw_features, list) and raw_features:
-                    features = {str(item) for item in raw_features}
+                    # 取**并集**，不是替换。
+                    #
+                    # 授权码里的 features 是**签发那一刻**的清单。替换的话，每加一个新的
+                    # Pro 功能，所有已经签发的授权码都打不开它——而持有者明明在付费期内。
+                    # 他不会来投诉，只会觉得这软件坏了。共性视图就撞上过这个：
+                    # `common_patterns` 是它做完之后才进清单的，在那之前签发的码全都拒。
+                    #
+                    # 语义因此定为「授权在有效期内，即享当期 Pro 全集」。月卡模式下这是
+                    # 用户本来就以为自己买到的东西。
+                    #
+                    # 这个写法有一个前提：**只有一档 Pro**。哪天出现了分档授权
+                    # （比如「基础版 Pro」只给导出），并集会把没买的也放开——那时候必须改回
+                    # 按载荷判定，并给老码做一次换发。
+                    features = {str(item) for item in raw_features} | set(CANONICAL_FEATURES)
             except LicenseError:
                 return "invalid", set()
             except Exception:  # noqa: BLE001 — treat verify failure as invalid
