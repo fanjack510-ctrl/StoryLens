@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "../../services/settingsApi";
 import { isLocalWebShell, useRuntimeInfo } from "../../services/runtimeCapabilities";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
-import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
 import { Loading } from "../common/States";
 import "./settings.css";
 
@@ -15,9 +13,7 @@ function truncatePath(path: string, max = 48): string {
 
 export function SettingsDataStorageTab() {
   const [message, setMessage] = useState("");
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
-  const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
-  const showTech = developerMode || showAdvanced;
+  const showTech = false;
   const diagnostics = useQuery({ queryKey: ["diagnostics"], queryFn: settingsApi.diagnostics });
   const runtime = useRuntimeInfo();
   const webShell = isLocalWebShell(runtime.data);

@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useAdvancedSettingsStore } from "../stores/advancedSettingsStore";
-import { useDeveloperModeStore } from "../stores/developerModeStore";
 import { SettingsAiServiceTab } from "../components/settings/SettingsAiServiceTab";
 import { SettingsUsageCostTab } from "../components/settings/SettingsUsageCostTab";
 import { SettingsDataStorageTab } from "../components/settings/SettingsDataStorageTab";
 import { SettingsPrivacyUpdateTab } from "../components/settings/SettingsPrivacyUpdateTab";
 import { SettingsAppearanceTab } from "../components/settings/SettingsAppearanceTab";
-import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
 import { SettingsLicenseTab } from "../components/settings/SettingsLicenseTab";
 import "../components/settings/settings.css";
 
@@ -32,10 +29,11 @@ const BASE_TABS: Array<{ id: TabId; label: string }> = [
 ];
 
 /** Map legacy / hidden tab ids without dropping deep-link compatibility. */
-export function normalizeSettingsTab(raw: string | null, showDeveloper: boolean): TabId {
+export function normalizeSettingsTab(raw: string | null): TabId {
   if (raw === "general") return "appearance";
   if (raw === "budget") return "cost";
-  if (raw === "advanced") return showDeveloper ? "advanced" : "ai";
+  // 「开发者设置」已经删除。老链接不该 404，落回 AI 与模型。
+  if (raw === "advanced") return "ai";
   if (
     raw === "ai" ||
     raw === "cost" ||
@@ -50,27 +48,21 @@ export function normalizeSettingsTab(raw: string | null, showDeveloper: boolean)
 }
 
 export function SettingsPage() {
-  const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
-  const showDeveloper = showAdvanced || developerMode;
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<TabId>(() =>
-    normalizeSettingsTab(searchParams.get("tab"), showDeveloper),
+    normalizeSettingsTab(searchParams.get("tab")),
   );
 
   useEffect(() => {
-    setTab(normalizeSettingsTab(searchParams.get("tab"), showDeveloper));
-  }, [searchParams, showDeveloper]);
+    setTab(normalizeSettingsTab(searchParams.get("tab")));
+  }, [searchParams]);
 
-  const tabs = showDeveloper
-    ? [...BASE_TABS, { id: "advanced" as const, label: "开发者设置" }]
-    : BASE_TABS;
-
-  const activeTab = tab === "advanced" && !showDeveloper ? "ai" : tab;
+  const tabs = BASE_TABS;
+  const activeTab = tab === "advanced" ? "ai" : tab;
   const focus = searchParams.get("focus");
 
   const selectTab = (id: TabId) => {
-    const next = normalizeSettingsTab(id, showDeveloper);
+    const next = normalizeSettingsTab(id);
     setTab(next);
     const params = new URLSearchParams(searchParams);
     params.set("tab", next);
@@ -114,7 +106,6 @@ export function SettingsPage() {
         {activeTab === "privacy" && <SettingsPrivacyUpdateTab />}
         {activeTab === "license" && <SettingsLicenseTab />}
         {activeTab === "appearance" && <SettingsAppearanceTab />}
-        {activeTab === "advanced" && showDeveloper && <SettingsAdvancedTab />}
       </div>
     </section>
   );

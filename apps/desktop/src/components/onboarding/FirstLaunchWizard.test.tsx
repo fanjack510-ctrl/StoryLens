@@ -5,7 +5,8 @@ import { FirstLaunchWizard } from "./FirstLaunchWizard";
 import { TelemetryInviteCard } from "./TelemetryInviteCard";
 import { useTelemetryStore } from "../../stores/telemetry";
 import { useOnboardingStore } from "../../stores/onboardingStore";
-import * as aiServiceConfig from "../../services/aiServiceConfig";
+import { providersApi } from "../../services/providersApi";
+import { settingsApi } from "../../services/settingsApi";
 
 const navigateMock = vi.fn();
 
@@ -36,9 +37,24 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 
-vi.mock("../../services/aiServiceConfig", () => ({
-  configureRecommendedQwenService: vi.fn(),
-  fetchRecommendedQwenStatus: vi.fn(),
+// 向导以前走的是一条只为通义千问写的一键路径，写死「阿里云百炼」。那条路径已经删除，
+// 它现在跟设置页走同一套：保存配置 → 设为当前服务商 → 开云端 → 记下同意 → 验证。
+vi.mock("../../services/providersApi", () => ({
+  providersApi: {
+    configuration: vi.fn(),
+    save: vi.fn(),
+    transportDiagnostic: vi.fn(),
+    testConnection: vi.fn(),
+  },
+}));
+
+vi.mock("../../services/settingsApi", () => ({
+  settingsApi: {
+    activeCloudProvider: vi.fn(),
+    setActiveCloudProvider: vi.fn(),
+    setCloud: vi.fn(),
+    setCloudBodyConsent: vi.fn(),
+  },
 }));
 
 function renderWizard() {
@@ -60,7 +76,19 @@ describe("FirstLaunchWizard two-step flow", () => {
     useTelemetryStore.setState({ consent: "UNKNOWN", installIdPreview: null });
     useOnboardingStore.setState({ status: "pending" });
     setupQueryState.data = undefined;
-    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockReset();
+    vi.mocked(providersApi.configuration).mockResolvedValue({
+      display_name: "深度求索/DeepSeek",
+      base_url: "https://api.deepseek.com/",
+      plus_model: "deepseek-v4-flash",
+      timeout_seconds: 300,
+      max_retries: 3,
+    } as never);
+    vi.mocked(providersApi.save).mockResolvedValue({} as never);
+    vi.mocked(providersApi.transportDiagnostic).mockResolvedValue({} as never);
+    vi.mocked(providersApi.testConnection).mockResolvedValue({} as never);
+    vi.mocked(settingsApi.setActiveCloudProvider).mockResolvedValue({} as never);
+    vi.mocked(settingsApi.setCloud).mockResolvedValue({} as never);
+    vi.mocked(settingsApi.setCloudBodyConsent).mockResolvedValue({ accepted: true } as never);
   });
 
   it("shows welcome with a single primary action", () => {
@@ -109,23 +137,6 @@ describe("FirstLaunchWizard two-step flow", () => {
   });
 
   it("enters library after successful verify", async () => {
-    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
-      ok: true,
-      persisted: true,
-      user_message: "配置完成",
-      credential_configured: true,
-      provider_enabled: true,
-      cloud_enabled: true,
-      provider_eligible: true,
-      selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "connected",
-      analysis_mode: "BALANCED",
-      blockers: [],
-      needs_cloud_consent: false,
-      model_service_validated: true,
-      analysis_ready: true,
-      readiness_reasons: [],
-    });
     renderWizard();
     fireEvent.click(screen.getByTestId("onboarding-start-setup"));
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
@@ -142,23 +153,11 @@ describe("FirstLaunchWizard two-step flow", () => {
   });
 
   it("stays on AI step when verify fails", async () => {
-    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
-      ok: false,
-      persisted: false,
-      user_message: "模型服务验证失败",
-      credential_configured: false,
-      provider_enabled: false,
-      cloud_enabled: false,
-      provider_eligible: false,
-      selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "disconnected",
-      analysis_mode: null,
-      blockers: ["connection_test_failed"],
-      needs_cloud_consent: false,
-      model_service_validated: false,
-      analysis_ready: false,
-      error_code: "CREDENTIAL_INVALID",
-    });
+    vi.mocked(providersApi.testConnection).mockRejectedValue(
+      Object.assign(new Error("API Key 无效，请检查后重试。"), {
+        code: "PROVIDER_AUTHENTICATION_FAILED",
+      }),
+    );
     renderWizard();
     fireEvent.click(screen.getByTestId("onboarding-start-setup"));
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
@@ -167,7 +166,7 @@ describe("FirstLaunchWizard two-step flow", () => {
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByTestId("onboarding-test"));
     await waitFor(() => {
-      expect(screen.getByTestId("onboarding-ai-message")).toHaveTextContent("模型服务验证失败");
+      expect(screen.getByTestId("onboarding-ai-message")).toHaveTextContent("API Key 无效");
     });
     expect(screen.getByTestId("onboarding-step-ai")).toBeInTheDocument();
     expect(screen.getByTestId("onboarding-test")).toHaveTextContent("重新验证");

@@ -38,7 +38,7 @@
   border: 1px solid var(--color-border-subtle, #d8d8d0);
   border-radius: var(--radius-md, 8px);
   padding: var(--space-3, 0.75rem);
-  background: var(--color-bg-app, #f5f5f1);
+  background: var(--color-bg-app, var(--color-bg-app));
 }
 
 .settings-stat dt {
@@ -69,13 +69,13 @@
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--color-border-subtle, #d8d8d0);
   border-radius: var(--radius-md, 8px);
-  background: var(--color-bg-surface, #fff);
+  background: var(--color-bg-surface, var(--color-bg-surface));
 }
 
 .settings-card {
   border: 1px solid var(--color-border-subtle, #d8d8d0);
   border-radius: var(--radius-lg, 10px);
-  background: var(--color-bg-surface, #fff);
+  background: var(--color-bg-surface, var(--color-bg-surface));
   padding: var(--space-4, 1rem) var(--space-5, 1.25rem);
   margin-bottom: var(--space-4, 1rem);
 }
@@ -104,9 +104,9 @@
 }
 
 .settings-status-pill[data-tone="success"] {
-  background: color-mix(in srgb, var(--color-brand, #2f6b57) 12%, transparent);
-  border-color: color-mix(in srgb, var(--color-brand, #2f6b57) 35%, transparent);
-  color: var(--color-brand, #2f6b57);
+  background: color-mix(in srgb, var(--color-brand, var(--color-brand)) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-brand, var(--color-brand)) 35%, transparent);
+  color: var(--color-brand, var(--color-brand));
 }
 
 .settings-status-pill[data-tone="warning"] {
@@ -116,7 +116,7 @@
 }
 
 .settings-status-pill[data-tone="neutral"] {
-  background: var(--color-bg-app, #f5f5f1);
+  background: var(--color-bg-app, var(--color-bg-app));
   color: var(--color-text-secondary, #4a4a44);
 }
 
@@ -130,7 +130,7 @@
   padding: var(--space-4, 1rem);
   border: 1px solid var(--color-border-subtle, #d8d8d0);
   border-radius: var(--radius-md, 8px);
-  background: var(--color-bg-app, #f5f5f1);
+  background: var(--color-bg-app, var(--color-bg-app));
 }
 
 .settings-appearance-preview[data-theme="dark"] {
@@ -159,7 +159,7 @@
   padding: var(--space-4, 1rem);
   border: 1px dashed var(--color-border-subtle, #c8c8c0);
   border-radius: var(--radius-md, 8px);
-  background: var(--color-bg-app, #f5f5f1);
+  background: var(--color-bg-app, var(--color-bg-app));
 }
 
 .settings-license-activate h3 {
@@ -178,7 +178,7 @@
   margin: 0 0 var(--space-4, 1rem);
   padding: var(--space-3, 0.75rem);
   border-radius: var(--radius-md, 8px);
-  background: var(--color-bg-app, #f5f5f1);
+  background: var(--color-bg-app, var(--color-bg-app));
   border: 1px solid var(--color-border-subtle, #d8d8d0);
   font-size: var(--font-size-sm, 0.875rem);
   color: var(--color-text-secondary, #4a4a44);
@@ -229,7 +229,7 @@
   font-size: var(--font-size-sm, 0.875rem);
   padding: 0.4rem 0.55rem;
   border-radius: var(--radius-sm, 6px);
-  background: var(--color-bg-app, #f5f5f1);
+  background: var(--color-bg-app, var(--color-bg-app));
 }
 
 /* CHG-20260721-013 — progressive disclosure layout */
@@ -378,3 +378,82 @@
 .settings-zoom-presets button {
   min-width: 3.25rem;
 }
+
+
+/* ---- AI 与模型：行式表单 -------------------------------------------------
+   一行一件事，左边标签、右边控件，行与行之间只有一条细线。设置页不是拿来通读的，
+   是拿来「找一件事改一件事」的——左边那列稳定的标签，正是让眼睛能沿着它往下扫。 */
+.ai-panel { padding: 4px 0 0; }
+.ai-panel-head { padding: 0 0 22px; }
+.ai-panel-head h2 { font-size: 20px; margin: 0 0 6px; }
+.ai-panel-head p { margin: 0; color: var(--color-text-secondary); font-size: 13.5px; }
+
+.ai-row { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 32px;
+  align-items: start; padding: 22px 0; border-top: 1px solid var(--color-bg-subtle); }
+.ai-row-label b { display: block; font-size: 14.5px; font-weight: 600; color: var(--color-text-primary); }
+.ai-row-label span { display: block; margin-top: 4px; font-size: 12.5px; color: var(--color-text-tertiary);
+  line-height: 1.6; }
+.ai-row-control { min-width: 0; }
+
+.ai-input { width: 100%; max-width: 580px; border: 1px solid var(--color-border); border-radius: 8px;
+  padding: 11px 14px; font-size: 14px; background: var(--color-bg-surface); color: var(--color-text-primary); font-family: inherit; }
+.ai-input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+
+.ai-key-line { display: flex; gap: 10px; align-items: center; max-width: 580px; }
+.ai-key-line .ai-input { flex: 1; min-width: 0; }
+
+.ai-tier-list { display: flex; flex-direction: column; gap: 16px; }
+.ai-tier { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.ai-tier input { margin-top: 3px; accent-color: var(--color-brand); width: 16px; height: 16px; }
+.ai-tier-body { display: block; }
+.ai-tier-name { display: block; font-size: 14.5px; font-weight: 600; color: var(--color-text-primary); }
+.ai-tier-hint { display: block; margin-top: 3px; font-size: 13px; color: var(--color-text-secondary); }
+.ai-pill { display: inline-block; font-style: normal; font-size: 11.5px; font-weight: 500;
+  padding: 1px 8px; border-radius: 4px; background: var(--color-brand-soft); color: var(--color-brand); margin-left: 8px;
+  vertical-align: 1px; }
+.ai-tier[data-disabled="true"] { opacity: .55; cursor: not-allowed; }
+
+.ai-status-line { display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px; max-width: 580px; }
+.ai-status-text { min-width: 0; }
+.ai-status-title { margin: 0; font-size: 14.5px; font-weight: 600; display: flex;
+  align-items: center; gap: 8px; }
+.ai-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-tertiary); flex: none; }
+.ai-status-line[data-tone="ok"] .ai-status-dot { background: var(--color-success); }
+.ai-status-line[data-tone="warn"] .ai-status-dot { background: var(--color-warning); }
+.ai-status-line[data-tone="warn"] .ai-status-title { color: var(--color-warning); }
+.ai-status-sub { margin: 4px 0 0; font-size: 13px; color: var(--color-text-secondary); }
+.ai-status-blockers { margin: 8px 0 0; padding-left: 18px; color: var(--color-warning); font-size: 13px; }
+.ai-status-blockers a { color: var(--color-warning); }
+
+.ai-message { font-size: 13px; margin: 16px 0 0; color: var(--color-brand); }
+.ai-message.bad { color: var(--color-danger); }
+
+.ai-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-bg-subtle); }
+.ai-btn-primary { border: 0; border-radius: 8px; padding: 12px 32px; font-size: 14.5px;
+  background: var(--color-brand); color: var(--color-text-inverse); cursor: pointer; font-family: inherit; }
+.ai-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.ai-btn-ghost { border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 18px; font-size: 14px;
+  background: var(--color-bg-surface); color: var(--color-text-primary); cursor: pointer; font-family: inherit; white-space: nowrap; }
+.ai-btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
+.ai-btn-danger { border: 1px solid var(--color-danger-soft); border-radius: 8px; padding: 10px 18px; font-size: 14px;
+  background: var(--color-bg-surface); color: var(--color-danger); cursor: pointer; font-family: inherit; }
+.ai-btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+.ai-advanced-toggle { background: none; border: 0; color: var(--color-text-secondary); font-size: 14px;
+  cursor: pointer; font-family: inherit; padding: 8px 4px; }
+
+.ai-advanced { margin-top: 4px; }
+.ai-switch-row { display: flex; justify-content: space-between; align-items: center; gap: 20px;
+  padding: 18px 0; border-top: 1px solid var(--color-bg-subtle); }
+.ai-switch-row b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.ai-switch-row p { margin: 0; font-size: 12.5px; color: var(--color-text-tertiary); max-width: 52ch; line-height: 1.6; }
+
+@media (max-width: 720px) {
+  .ai-row { grid-template-columns: 1fr; gap: 10px; }
+}
+.ai-adv-field { padding: 18px 0; border-top: 1px solid var(--color-bg-subtle); }
+.ai-adv-field b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.ai-adv-field p { margin: 0 0 10px; font-size: 12.5px; color: var(--color-text-tertiary); }
+.ai-adv-note { margin: 8px 0 0 !important; color: var(--color-warning) !important; }
+.ai-adv-actions { display: flex; gap: 8px; flex: none; }

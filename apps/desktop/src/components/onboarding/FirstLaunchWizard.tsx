@@ -6,11 +6,10 @@ import {
   ordinaryModeOptions,
   type AnalysisModePresetId,
 } from "../../services/analysisModePresets";
-import {
-  configureRecommendedQwenService,
-  fetchRecommendedQwenStatus,
-} from "../../services/aiServiceConfig";
-import { stripRawErrorCodes } from "../../services/setupErrorCopy";
+import { fetchAiConnection } from "../../services/aiConnection";
+import { providersApi } from "../../services/providersApi";
+import { settingsApi } from "../../services/settingsApi";
+import { writeStoredAnalysisMode } from "../../services/analysisModePresets";
 import { useOnboardingStore } from "../../stores/onboardingStore";
 import { Button } from "../ui/Button";
 
@@ -26,9 +25,15 @@ export function FirstLaunchWizard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const complete = useOnboardingStore((s) => s.complete);
+  // 这一步以前写死「阿里云百炼」，走的是只为通义千问准备的一键配置。新用户因此只有一条路，
+  // 而设置页里明明能选 DeepSeek。现在向导和设置页读同一份状态、走同一套保存与验证。
   const setupStatus = useQuery({
-    queryKey: ["recommended-qwen-setup"],
-    queryFn: fetchRecommendedQwenStatus,
+    queryKey: ["ai-connection"],
+    queryFn: fetchAiConnection,
+  });
+  const active = useQuery({
+    queryKey: ["active-cloud-provider"],
+    queryFn: settingsApi.activeCloudProvider,
   });
   const [step, setStep] = useState<Step>(1);
   const [apiKey, setApiKey] = useState("");
@@ -39,6 +44,9 @@ export function FirstLaunchWizard() {
   const [failed, setFailed] = useState(false);
 
   const hasExistingCredential = Boolean(setupStatus.data?.credential_configured);
+  const options = active.data?.options ?? [];
+  const [providerId, setProviderId] = useState("");
+  const selectedId = providerId || active.data?.provider_name || options[0]?.name || "";
 
   const enterLibrary = () => {
     complete();
@@ -71,26 +79,50 @@ export function FirstLaunchWizard() {
     setBusy(true);
     setMessage("");
     setFailed(false);
-    const result = await configureRecommendedQwenService({
-      apiKey,
-      analysisMode: mode,
-      cloudBodyConsent: consent,
-      persist: true,
-      qc,
-    });
-    const ready = Boolean(
-      result.analysis_ready ?? (result.ok && result.persisted && result.provider_eligible),
-    );
-    setBusy(false);
-    if (result.persisted) {
+    try {
+      const current = await providersApi.configuration(selectedId);
+      await providersApi.save(selectedId, {
+        display_name: current.display_name,
+        region: current.region || "",
+        workspace_id: current.workspace_id || "",
+        base_url: current.base_url || null,
+        plus_model: current.plus_model,
+        max_model: current.max_model || current.plus_model,
+        flash_model: current.flash_model || current.plus_model,
+        timeout_seconds: current.timeout_seconds ?? 300,
+        max_retries: current.max_retries ?? 3,
+        enabled: true,
+        disconnected: false,
+        allow_auto_route: Boolean(current.allow_auto_route),
+        raw_logging_enabled: Boolean(current.raw_logging_enabled),
+        api_key: apiKey || null,
+      });
+      await settingsApi.setActiveCloudProvider(selectedId);
+      await settingsApi.setCloud(true);
+      await settingsApi.setCloudBodyConsent(consent);
+      writeStoredAnalysisMode(mode);
+      // 传输诊断证明管子通，真实调用才写下分析预检要读的那份验证快照。少了后者，
+      // 24 小时后「分析本章」会永久变灰，而向导里看起来一切正常。
+      await providersApi.transportDiagnostic(selectedId);
+      await providersApi.testConnection(selectedId, 32);
       setApiKey("");
-    }
-    if (result.ok && ready && result.persisted) {
+      await qc.invalidateQueries({ queryKey: ["ai-connection"] });
       enterLibrary();
-      return;
+    } catch (error: unknown) {
+      setFailed(true);
+      const code = String((error as { code?: string })?.code || "");
+      setMessage(
+        code === "PROVIDER_AUTHENTICATION_FAILED" || code.includes("401")
+          ? "API Key 无效，请检查后重试。"
+          : code === "PROVIDER_INSUFFICIENT_BALANCE" || code.includes("402")
+            ? "服务商账户余额不足。"
+            : error instanceof Error
+              ? error.message
+              : "验证失败，请检查 API Key 后重试。",
+      );
+    } finally {
+      setBusy(false);
     }
-    setFailed(true);
-    setMessage(stripRawErrorCodes(result.user_message) || "验证失败，请检查 API Key 后重试。");
   };
 
   return (
@@ -127,10 +159,21 @@ export function FirstLaunchWizard() {
               <h2 className="onboarding-step-title">连接 AI 模型</h2>
             </header>
 
-            <div className="onboarding-field-row" data-testid="onboarding-current-service">
-              <span className="onboarding-field-label">当前服务</span>
-              <strong>阿里云百炼</strong>
-            </div>
+            <label className="settings-field" data-testid="onboarding-current-service">
+              <span>AI 服务商</span>
+              <select
+                value={selectedId}
+                aria-label="AI 服务商"
+                data-testid="onboarding-provider-select"
+                onChange={(e) => setProviderId(e.target.value)}
+              >
+                {options.map((o) => (
+                  <option key={o.name} value={o.name}>
+                    {o.display_name || o.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <label className="settings-field">
               <span>API Key</span>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAppVersion } from "../../lib/useAppVersion";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import {
   checkForAppUpdate,
   confirmInstall,
@@ -49,7 +48,6 @@ function updateStatusLabel(snap: UpdaterSnapshot, appVersion: string): string {
 
 export function SettingsPrivacyUpdateTab() {
   const appVersion = useAppVersion();
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
   const runtime = useRuntimeInfo();
   const nativeUpdater = canUseNativeUpdater(runtime.data);
   const [prefs, setPrefs] = useState(() => loadUpdaterPreferences());
@@ -83,7 +81,7 @@ export function SettingsPrivacyUpdateTab() {
   };
 
   const onChannelChange = async (channel: UpdateChannel) => {
-    if (!prefs.internal_test_mode && !developerMode) return;
+    if (!prefs.internal_test_mode) return;
     const next = patchUpdaterPreferences({ channel, internal_test_mode: true });
     setPrefs(next);
     try {
@@ -164,7 +162,7 @@ export function SettingsPrivacyUpdateTab() {
       snap.phase === "failed" ||
       snap.phase === "downloading");
 
-  const showChannelPicker = developerMode && (prefs.internal_test_mode || developerMode);
+  const showChannelPicker = Boolean(prefs.internal_test_mode);
   const statusText = updateStatusLabel(snap, appVersion);
 
   return (
@@ -313,54 +311,7 @@ export function SettingsPrivacyUpdateTab() {
             )}
 
             {message && <p role="status">{message}</p>}
-
-            {developerMode && (
-              <details className="settings-fold" data-testid="update-advanced-fold">
-                <summary>更新高级设置</summary>
-                <div className="settings-fold-body">
-                  <label className="settings-switch-row" data-testid="internal-test-mode-switch">
-                    <span>
-                      <b>内部测试模式</b>
-                      <small>仅开发者使用。</small>
-                    </span>
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      className="settings-switch"
-                      checked={prefs.internal_test_mode}
-                      aria-label="内部测试模式"
-                      onChange={(e) => onToggleInternalTest(e.target.checked)}
-                    />
-                  </label>
-                  {showChannelPicker && (
-                    <label className="settings-field" data-testid="update-channel-select">
-                      <span>更新通道</span>
-                      <select
-                        value={prefs.channel}
-                        aria-label="更新通道"
-                        onChange={(e) => void onChannelChange(e.target.value as UpdateChannel)}
-                      >
-                        <option value="stable">stable（正式）</option>
-                        <option value="staging">staging（内部测试）</option>
-                      </select>
-                      <small className="muted">{endpointForChannel(prefs.channel)}</small>
-                    </label>
-                  )}
-                  {!showChannelPicker && (
-                    <p className="muted" data-testid="update-channel-stable-only">
-                      更新通道：stable
-                    </p>
-                  )}
-                  {snap.technicalDetail && snap.phase === "failed" && (
-                    <details>
-                      <summary>技术详情</summary>
-                      <pre data-testid="settings-update-technical">{snap.technicalDetail}</pre>
-                    </details>
-                  )}
-                </div>
-              </details>
-            )}
-          </>
+                  </>
         )}
       </article>
 

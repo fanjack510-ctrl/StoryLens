@@ -29,6 +29,12 @@ export const settingsApi = {
   cloud: () => api<any>("/api/v1/settings/cloud"),
   setCloud: (enabled: boolean) =>
     api("/api/v1/settings/cloud", { method: "PUT", body: JSON.stringify({ enabled }) }),
+  /** 「分析时允许把正文发给当前服务商」。与服务商无关——以前只有通义千问那条路径能写。 */
+  setCloudBodyConsent: (accepted: boolean) =>
+    api<{ accepted: boolean }>("/api/v1/desktop/ai-connection/consent", {
+      method: "PUT",
+      body: JSON.stringify({ accepted }),
+    }),
   activeCloudProvider: () =>
     api<ActiveCloudProviderResponse>("/api/v1/settings/active-cloud-provider"),
   setActiveCloudProvider: (provider_name: string) =>

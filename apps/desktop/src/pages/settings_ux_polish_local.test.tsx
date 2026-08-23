@@ -7,8 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPage, normalizeSettingsTab } from "./SettingsPage";
-import { useAdvancedSettingsStore } from "../stores/advancedSettingsStore";
-import { useDeveloperModeStore } from "../stores/developerModeStore";
 import { settingsApi } from "../services/settingsApi";
 
 vi.mock("../services/settingsApi", () => ({
@@ -119,8 +117,6 @@ function renderPage(initial = "/settings") {
 
 describe("settings tab IA (CHG-013)", () => {
   beforeEach(() => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
-    useDeveloperModeStore.setState({ developerMode: false });
   });
 
   afterEach(() => cleanup());
@@ -133,41 +129,33 @@ describe("settings tab IA (CHG-013)", () => {
     expect(screen.getByTestId("settings-tab-license")).toBeInTheDocument();
   });
 
-  it("shows ordinary tabs including license and developer when enabled", async () => {
+  it("设置只有六个标签，没有开发者那一个", async () => {
+    // 「开发者设置」已经删除——它的开关、它的标签页、它背后的模式，一个都不剩。
     renderPage();
     expect(await screen.findByTestId("settings-tab-ai")).toHaveTextContent("AI与模型");
     expect(screen.getByTestId("settings-tab-data")).toHaveTextContent("数据与备份");
     expect(screen.getByTestId("settings-tab-license")).toHaveTextContent("授权与专业版");
     expect(screen.queryByTestId("settings-tab-advanced")).not.toBeInTheDocument();
-    useDeveloperModeStore.setState({ developerMode: true });
-    cleanup();
-    renderPage();
-    expect(await screen.findByTestId("settings-tab-advanced")).toHaveTextContent("开发者设置");
-    useDeveloperModeStore.setState({ developerMode: false });
   });
 });
 
 describe("AI service simplified page", () => {
   beforeEach(() => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
-    useDeveloperModeStore.setState({ developerMode: false });
   });
   afterEach(() => cleanup());
 
-  it("shows compact status and one primary save action", async () => {
+  it("一张状态卡、一个主按钮", async () => {
     renderPage("/settings?tab=ai");
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已配置，尚未验证",
-    );
-    expect(screen.getByTestId("ai-config-environment-banner")).toHaveTextContent("开发环境");
-    expect(screen.getByTestId("ai-service-save")).toBeInTheDocument();
-    expect(screen.getByTestId("cloud-body-consent")).toBeInTheDocument();
+    // 状态文案由后端给，这里只确认它渲染出来了；具体措辞的断言在 AiConnectionPanel.test.tsx。
+    expect(await screen.findByTestId("ai-connection-status")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-save")).toBeInTheDocument();
+    // 改版前这一页有两个 API Key 输入框、两组保存/验证按钮。现在只有一套。
+    expect(screen.queryByTestId("ai-service-save")).not.toBeInTheDocument();
   });
 });
 
 describe("usage remaining summary", () => {
   beforeEach(() => {
-    useDeveloperModeStore.setState({ developerMode: false });
   });
   afterEach(() => cleanup());
 
@@ -182,7 +170,6 @@ describe("usage remaining summary", () => {
 
 describe("data & backup", () => {
   beforeEach(() => {
-    useDeveloperModeStore.setState({ developerMode: false });
   });
   afterEach(() => cleanup());
 
@@ -197,8 +184,6 @@ describe("data & backup", () => {
 
 describe("privacy & update", () => {
   beforeEach(() => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
-    useDeveloperModeStore.setState({ developerMode: false });
   });
   afterEach(() => cleanup());
 
