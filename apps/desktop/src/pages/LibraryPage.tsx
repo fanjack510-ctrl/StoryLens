@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
+import { collectionsApi } from "../services/collectionsApi";
 import { booksApi } from "../services/booksApi";
+import type { LibraryItem, MaterialKind } from "../services/booksApi";
 import type { AnalysisForm } from "../services/shortFormApi";
 import { ApiError } from "../services/apiClient";
 import { ErrorState, Loading } from "../components/common/States";
-import { QwenFirstLaunchBanner } from "../components/onboarding/QwenFirstLaunchBanner";
+import { AiSetupBanner } from "../components/onboarding/AiSetupBanner";
 import { FirstLaunchWizard } from "../components/onboarding/FirstLaunchWizard";
 import { TelemetryInviteCard } from "../components/onboarding/TelemetryInviteCard";
 import { useOnboardingStore } from "../stores/onboardingStore";
@@ -102,23 +104,53 @@ export function LibraryPage() {
   //: the preview lands, so the common case is still one click, and overridden by them freely —
   //: chapter count decides nothing here any more.
   const [form, setForm] = useState<AnalysisForm>("long");
+  const [kind, setKind] = useState<MaterialKind>("fiction");
   const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const qc = useQueryClient();
   const books = useQuery({ queryKey: ["books"], queryFn: booksApi.list });
+  // 类型、章节数、分析状态由后端算好（INV-P4）——「已评测 / 读懂·进行中」怎么说，
+  // 取决于引擎与运行状态的对应关系，那是后端的知识。
+  const library = useQuery({ queryKey: ["library"], queryFn: booksApi.library });
+  const [kindFilter, setKindFilter] = useState<"all" | "fiction" | "reference" | "idle">("all");
+  // 书单：一组可以被反复回到的书。扫榜是「一次过十几本、横着比」，那批书需要一个名字，
+  // 否则每次都要在书库里重新挑一遍，而「上次那批」这句话根本无法表达。
+  const collections = useQuery({ queryKey: ["collections"], queryFn: collectionsApi.list });
+  //: null = 不按书单筛。选中某个书单时，列表只剩它里面的书。
+  const [collectionFilter, setCollectionFilter] = useState<number | null>(null);
+  //: 勾中的书。选够了再一次性加进书单——一本一本加，十五本要点十五次。
+  const [selected, setSelected] = useState<Set<number>>(() => new Set());
+  const [collectionError, setCollectionError] = useState<string | null>(null);
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const activeCollection = useQuery({
+    queryKey: ["collection", collectionFilter],
+    queryFn: () => collectionsApi.read(collectionFilter as number),
+    enabled: collectionFilter != null,
+  });
   const upload = useMutation({
-    mutationFn: (input: { file: File; form: AnalysisForm }) =>
-      booksApi.importFile(input.file, input.form),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["books"] }),
+    mutationFn: (input: { file: File; form: AnalysisForm; kind: MaterialKind }) =>
+      booksApi.importFile(input.file, input.form, input.kind),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["books"] });
+      void qc.invalidateQueries({ queryKey: ["library"] });
+    },
   });
   const preview = useMutation({
     mutationFn: booksApi.preview,
-    onSuccess: (data) =>
+    onSuccess: (data) => {
+      const suggested: MaterialKind =
+        data.suggested_material_kind === "reference" ? "reference" : "fiction";
+      setKind(suggested);
+      // 工具书按节读，没有短篇这一说——直接落到长篇，第二步也不会出现。
       setForm(
-        data.suggested_analysis_form === "short" && data.short_form_allowed !== false
+        suggested === "fiction" &&
+          data.suggested_analysis_form === "short" &&
+          data.short_form_allowed !== false
           ? "short"
           : "long",
-      ),
+      );
+    },
   });
   const accept = (files: FileList | null) => {
     const file = files?.[0];
@@ -134,10 +166,25 @@ export function LibraryPage() {
     if (input.current) input.current.value = "";
   };
 
+  const libraryById = useMemo(
+    () => new Map((library.data || []).map((item) => [item.id, item])),
+    [library.data],
+  );
+
+  const collectionBookIds = useMemo(
+    () => new Set((activeCollection.data?.books || []).map((b) => b.id)),
+    [activeCollection.data],
+  );
+
   const visible = useMemo(() => {
     const list = (books.data || []).filter((book) => {
       const hay = book.title + book.source_file_name;
       if (search && !hay.includes(search)) return false;
+      const info = libraryById.get(book.id);
+      if (kindFilter === "fiction" && info?.material_kind !== "fiction") return false;
+      if (kindFilter === "reference" && info?.material_kind !== "reference") return false;
+      if (kindFilter === "idle" && info?.analysis_state !== "idle") return false;
+      if (collectionFilter != null && !collectionBookIds.has(book.id)) return false;
       const fmt = fileFormat(book.source_file_name);
       if (fmt === "OTHER") return true;
       return formats[fmt];
@@ -149,9 +196,28 @@ export function LibraryPage() {
       sorted.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
     }
     return sorted;
-  }, [books.data, search, formats, sort]);
+  }, [books.data, search, formats, sort, kindFilter, libraryById, collectionFilter, collectionBookIds]);
 
-  const hasActiveFilter = Boolean(search) || !FORMAT_OPTIONS.every((f) => formats[f]);
+  // 书库的一句话现状。没读到列表时退回旧的说明句，不显示一个假的「0 本」。
+  const librarySummary = useMemo(() => {
+    const rows = library.data;
+    if (!rows || rows.length === 0) return "管理已导入的书和分析项目";
+    const analysed = rows.filter((r) => r.analysis_state === "done").length;
+    const running = rows.filter((r) => r.analysis_state === "running").length;
+    return [
+      `${rows.length} 本`,
+      analysed > 0 ? `${analysed} 本已分析` : null,
+      running > 0 ? `${running} 本进行中` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }, [library.data]);
+
+  const hasActiveFilter =
+    Boolean(search) ||
+    kindFilter !== "all" ||
+    collectionFilter != null ||
+    !FORMAT_OPTIONS.every((f) => formats[f]);
   const isEmptyLibrary = !books.isLoading && !books.error && (books.data?.length ?? 0) === 0;
   const listHasRows = visible.length > 0;
 
@@ -169,11 +235,13 @@ export function LibraryPage() {
     <section className="page library-page-compact" data-testid="library-page">
       {onboardingStatus === "pending" && <FirstLaunchWizard />}
       {onboardingStatus !== "pending" && <TelemetryInviteCard />}
-      <QwenFirstLaunchBanner />
+      <AiSetupBanner />
       <PageHeader className="library-title-compact">
         <div>
           <PageTitle>我的书库</PageTitle>
-          <PageSubtitle>管理已导入的书和分析项目</PageSubtitle>
+          {/* 「管理已导入的书和分析项目」是一句说明书——它对每个人、每一天说的都一样。
+              换成当下真实的数字：有几本，跑过几本。 */}
+          <PageSubtitle data-testid="library-subtitle">{librarySummary}</PageSubtitle>
           {webShell ? (
             <p className="muted library-local-upload-hint" data-testid="library-local-upload-hint">
               文件仅发送到本机 StoryLens 服务，不会上传互联网。
@@ -237,7 +305,9 @@ export function LibraryPage() {
               {(preview.data.byte_count / 1024 / 1024).toFixed(2)} MB
             </span>
           </p>
-          {preview.data.warning === "CHAPTER_DETECTION_SUSPECT" ? (
+          {/* 这块提示是按小说的章号格式校准的。工具书按节读，识别不到「第几章」不是问题——
+              一本 1603 页的手册照样挨这套警告，只会让人以为文件有毛病。 */}
+          {preview.data.warning === "CHAPTER_DETECTION_SUSPECT" && kind === "fiction" ? (
             <div className="notice" role="status">
               <p>
                 <b>识别出 {preview.data.final_chapter_count} 个章节，但看起来不对：</b>
@@ -268,58 +338,93 @@ export function LibraryPage() {
             ))}
           </ol>
           {moreChapters > 0 && <p className="muted">还有 {moreChapters} 个章节</p>}
-          <fieldset className="import-form-choice">
-            <legend>这本书按哪种读法切？</legend>
-            <p className="muted">
-              决定它走「全书分析」还是「短篇精读」。识别到几章不参与这个判断——
-              你手里拿着文件，比程序清楚。导入后随时可以改。
-              专著、教材、工具书选「整本」——它们要的是逐节读懂，不是按场景切段。
-            </p>
-            <div className="import-form-options" role="radiogroup">
+          <fieldset className="import-choice" data-testid="import-material-kind">
+            <legend>这是什么书？</legend>
+            <p className="muted">它决定这本书能用哪几种读法。导入后随时可以改。</p>
+            <div className="import-choice-options" role="radiogroup">
               {(
                 [
-                  { value: "long", title: "整本", hint: "分章/分节读，出全书报告（长篇小说、专著、教材都走这条）" },
-                  { value: "short", title: "短篇", hint: "按场景切段，出逐段拆稿（只适合短篇小说）" },
+                  { value: "fiction", title: "小说", hint: "网文、出版书、同人都算。能做评测与拆文。" },
+                  {
+                    value: "reference",
+                    title: "工具书",
+                    hint: "专著、教材、手册、论文集。做「读懂」——逐节给出主张、依据与能照做的动作。",
+                  },
                 ] as const
-              ).map((option) => {
-                // 短篇 has a hard ceiling: segmentation sends the whole piece to the model in
-                // one call, and past it nothing fits. Shown disabled with the reason rather
-                // than hidden — an option that silently vanishes reads as a bug.
-                const blocked =
-                  option.value === "short" && preview.data?.short_form_allowed === false;
-                return (
-                  <label
-                    key={option.value}
-                    className={`import-form-option${form === option.value ? " is-chosen" : ""}${
-                      blocked ? " is-blocked" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="analysis-form"
-                      value={option.value}
-                      checked={form === option.value}
-                      disabled={blocked}
-                      onChange={() => setForm(option.value)}
-                    />
-                    <span className="import-form-option__title">{option.title}</span>
-                    <span className="import-form-option__hint">
-                      {blocked
-                        ? `超过 ${(preview.data?.hard_max_chars ?? 150000).toLocaleString()} 字，切段装不下`
-                        : option.hint}
-                    </span>
-                  </label>
-                );
-              })}
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className={`import-choice-option${kind === option.value ? " is-chosen" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="material-kind"
+                    value={option.value}
+                    checked={kind === option.value}
+                    onChange={() => {
+                      setKind(option.value);
+                      if (option.value === "reference") setForm("long");
+                    }}
+                  />
+                  <span className="import-choice-option__title">{option.title}</span>
+                  <span className="import-choice-option__hint">{option.hint}</span>
+                </label>
+              ))}
             </div>
           </fieldset>
+
+          {/* 长短篇只对小说才是个问题。工具书永远按节读——问它「要不要按场景切段」没有意义。 */}
+          {kind === "fiction" ? (
+            <fieldset className="import-choice" data-testid="import-analysis-form">
+              <legend>长篇还是短篇？</legend>
+              <p className="muted">
+                识别到几章不参与这个判断——你手里拿着文件，比程序清楚。导入后随时可以改。
+              </p>
+              <div className="import-choice-options" role="radiogroup">
+                {(
+                  [
+                    { value: "long", title: "长篇", hint: "分章读，出全书报告。" },
+                    { value: "short", title: "短篇", hint: "按场景切段，出逐段拆稿。" },
+                  ] as const
+                ).map((option) => {
+                  // 短篇有硬上限：切段要把全文一次发给模型，过了就装不下。变灰并说出原因，
+                  // 而不是让它消失——一个无声消失的选项读起来像 bug。
+                  const blocked =
+                    option.value === "short" && preview.data?.short_form_allowed === false;
+                  return (
+                    <label
+                      key={option.value}
+                      className={`import-choice-option${form === option.value ? " is-chosen" : ""}${
+                        blocked ? " is-blocked" : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="analysis-form"
+                        value={option.value}
+                        checked={form === option.value}
+                        disabled={blocked}
+                        onChange={() => setForm(option.value)}
+                      />
+                      <span className="import-choice-option__title">{option.title}</span>
+                      <span className="import-choice-option__hint">
+                        {blocked
+                          ? `超过 ${(preview.data?.hard_max_chars ?? 150000).toLocaleString()} 字，不能按短篇读——切段要把全文一次发给模型，装不下`
+                          : option.hint}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          ) : null}
           <div className="import-panel-actions">
             {preview.data.warning === "CHAPTER_DETECTION_SUSPECT" ? (
               <>
                 <Button
                   variant="primary"
                   onClick={() => {
-                    upload.mutate({ file: pendingFile, form });
+                    upload.mutate({ file: pendingFile, form, kind });
                     setPendingFile(undefined);
                     preview.reset();
                   }}
@@ -334,7 +439,7 @@ export function LibraryPage() {
               <Button
                 variant="primary"
                 onClick={() => {
-                  upload.mutate({ file: pendingFile, form });
+                  upload.mutate({ file: pendingFile, form, kind });
                   setPendingFile(undefined);
                   preview.reset();
                 }}
@@ -356,19 +461,150 @@ export function LibraryPage() {
             data-testid="library-search"
           />
         </label>
-        <div className="library-filter-types" role="group" aria-label="格式">
-          <span className="library-filter-label">格式：</span>
-          {FORMAT_OPTIONS.map((type) => (
-            <label key={type} className="library-format-chip">
-              <input
-                type="checkbox"
-                checked={formats[type]}
-                onChange={(e) => setFormats((prev) => ({ ...prev, [type]: e.target.checked }))}
-              />
-              <span>{type}</span>
-            </label>
+        {/* 八个格式勾选框原本独占一整行，而它们不是每次都要动的东西。真正每次都想筛的是
+            「小说还是工具书」「哪些还没跑」。格式筛选留在「更多筛选」里。 */}
+        <div className="library-kind-filter" role="group" aria-label="类型">
+          {(
+            [
+              { id: "all", label: "全部" },
+              { id: "fiction", label: "小说" },
+              { id: "reference", label: "工具书" },
+              { id: "idle", label: "未分析" },
+            ] as const
+          ).map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              className="library-kind-chip"
+              data-on={kindFilter === chip.id ? "1" : undefined}
+              data-testid={`library-kind-${chip.id}`}
+              onClick={() => setKindFilter(chip.id)}
+            >
+              {chip.label}
+            </button>
           ))}
         </div>
+        {/* 书单条。放在类型筛选旁边而不是另开一页：书单是看书库的一种取景方式，
+            不是一个独立的地方——分成两页，用户要在两处之间来回对照才知道哪本在哪个单子里。 */}
+        <div className="library-collections" role="group" aria-label="书单">
+          <button
+            type="button"
+            className="library-kind-chip"
+            data-on={collectionFilter == null ? "1" : undefined}
+            data-testid="library-collection-all"
+            onClick={() => setCollectionFilter(null)}
+          >
+            全部书
+          </button>
+          {(collections.data || []).map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="library-kind-chip"
+              data-on={collectionFilter === c.id ? "1" : undefined}
+              data-testid={`library-collection-${c.id}`}
+              title={c.note || undefined}
+              onClick={() => setCollectionFilter(collectionFilter === c.id ? null : c.id)}
+            >
+              {c.name}
+              <i className="library-collection-count">{c.book_count}</i>
+            </button>
+          ))}
+          {newCollectionOpen ? (
+            <form
+              className="library-collection-form"
+              data-testid="library-collection-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const name = newCollectionName.trim();
+                if (!name) return;
+                setCollectionError(null);
+                try {
+                  const created = await collectionsApi.create({ name });
+                  await qc.invalidateQueries({ queryKey: ["collections"] });
+                  setNewCollectionName("");
+                  setNewCollectionOpen(false);
+                  // 建完直接切进去：新建书单几乎总是为了马上往里放书。
+                  setCollectionFilter(created.id);
+                } catch (err) {
+                  setCollectionError(err instanceof ApiError ? err.message : "书单没能建起来。");
+                }
+              }}
+            >
+              <input
+                autoFocus
+                value={newCollectionName}
+                placeholder="书单名，比如「2026 秋·扫榜第一批」"
+                aria-label="书单名"
+                maxLength={120}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setNewCollectionOpen(false);
+                    setNewCollectionName("");
+                  }
+                }}
+              />
+              <button type="submit" disabled={!newCollectionName.trim()}>
+                建立
+              </button>
+              <button
+                type="button"
+                className="is-quiet"
+                onClick={() => {
+                  setNewCollectionOpen(false);
+                  setNewCollectionName("");
+                }}
+              >
+                取消
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="library-collection-new"
+              data-testid="library-collection-new"
+              onClick={() => setNewCollectionOpen(true)}
+            >
+              + 新建书单
+            </button>
+          )}
+        </div>
+        {/* 选中某个书单时才出现。共性视图比的是一组书——不先圈定是哪一组，这个入口没有意义。 */}
+        {collectionFilter != null ? (
+          <div className="library-collection-actions" data-testid="library-collection-actions">
+            <Link
+              className="secondary"
+              to={`/collections/${collectionFilter}/patterns`}
+              data-testid="library-open-patterns"
+            >
+              看这组书的共性 →
+            </Link>
+            <span className="muted">
+              把它们摆在一起，看共同做对了什么。
+            </span>
+          </div>
+        ) : null}
+        {collectionError ? (
+          <p className="notice" role="alert" data-testid="library-collection-error">
+            {collectionError}
+          </p>
+        ) : null}
+        <details className="library-format-fold">
+          <summary>更多筛选</summary>
+          <div className="library-filter-types" role="group" aria-label="格式">
+            {FORMAT_OPTIONS.map((type) => (
+              <label key={type} className="library-format-chip">
+                <input
+                  type="checkbox"
+                  checked={formats[type]}
+                  onChange={(e) => setFormats((prev) => ({ ...prev, [type]: e.target.checked }))}
+                />
+                <span>{type}</span>
+              </label>
+            ))}
+          </div>
+        </details>
         <label className="library-sort-field">
           排序
           <select
@@ -437,6 +673,83 @@ export function LibraryPage() {
             {toast}
           </p>
         ) : null}
+        {/* 选了书才出现。常驻一条空工具条，等于每次进书库都要先看懂一个当下用不上的东西。 */}
+        {selected.size > 0 ? (
+          <div className="library-selection-bar" data-testid="library-selection-bar">
+            <b>已选 {selected.size} 本</b>
+            {(collections.data || []).length > 0 ? (
+              <label className="library-selection-add">
+                加入书单
+                <select
+                  value=""
+                  data-testid="library-add-to-collection"
+                  onChange={async (e) => {
+                    const id = Number(e.target.value);
+                    e.currentTarget.value = "";
+                    if (!id) return;
+                    setCollectionError(null);
+                    try {
+                      const result = await collectionsApi.addBooks(id, [...selected]);
+                      const name =
+                        (collections.data || []).find((c) => c.id === id)?.name ?? "书单";
+                      // 说清楚「加了几本」而不是「成功」：勾了 5 本、实际加进去 2 本
+                      // （另外 3 本早就在里面）时，「成功」这句话解释不了数字为什么没变。
+                      setToast(
+                        result.added > 0
+                          ? `${result.added} 本已加入《${name}》，现在共 ${result.book_count} 本。`
+                          : `这些书都已经在《${name}》里了。`,
+                      );
+                      setSelected(new Set());
+                      await qc.invalidateQueries({ queryKey: ["collections"] });
+                      await qc.invalidateQueries({ queryKey: ["collection"] });
+                    } catch (err) {
+                      setCollectionError(
+                        err instanceof ApiError ? err.message : "没能加进书单。",
+                      );
+                    }
+                  }}
+                >
+                  <option value="">选一个书单…</option>
+                  {(collections.data || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}（{c.book_count}）
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <span className="muted">先在上面建一个书单，再把选中的书放进去。</span>
+            )}
+            {collectionFilter != null ? (
+              <button
+                type="button"
+                className="is-quiet"
+                data-testid="library-remove-from-collection"
+                onClick={async () => {
+                  setCollectionError(null);
+                  try {
+                    for (const id of selected) {
+                      await collectionsApi.removeBook(collectionFilter, id);
+                    }
+                    setToast(`${selected.size} 本已移出这个书单——书还在书库里。`);
+                    setSelected(new Set());
+                    await qc.invalidateQueries({ queryKey: ["collections"] });
+                    await qc.invalidateQueries({ queryKey: ["collection"] });
+                  } catch (err) {
+                    setCollectionError(
+                      err instanceof ApiError ? err.message : "没能从书单里移出。",
+                    );
+                  }
+                }}
+              >
+                移出当前书单
+              </button>
+            ) : null}
+            <button type="button" className="is-quiet" onClick={() => setSelected(new Set())}>
+              取消选择
+            </button>
+          </div>
+        ) : null}
         {books.isLoading ? (
           <Loading />
         ) : books.error ? (
@@ -446,6 +759,16 @@ export function LibraryPage() {
             <BookRow
               key={book.id}
               book={book}
+              info={libraryById.get(book.id)}
+              selected={selected.has(book.id)}
+              onSelectedChange={(next) =>
+                setSelected((prev) => {
+                  const copy = new Set(prev);
+                  if (next) copy.add(book.id);
+                  else copy.delete(book.id);
+                  return copy;
+                })
+              }
               onDeleted={(deleted) => {
                 setToast(`《${deleted.title}》已从书库删除。`);
                 qc.setQueryData<Book[]>(["books"], (prev) =>
@@ -455,6 +778,23 @@ export function LibraryPage() {
               }}
             />
           ))
+        ) : collectionFilter != null && collectionBookIds.size === 0 ? (
+          // 空书单不是「没找到」。搜索和筛选都没问题，这个单子就是还没放东西——
+          // 让人去「修改搜索内容」，是把一个正常状态说成了故障，而且指的方向还是错的。
+          <div className="library-empty-guide" data-testid="library-collection-empty">
+            <StateView
+              kind="empty"
+              title={`《${activeCollection.data?.name ?? "这个书单"}》还没有书`}
+              description="回到「全部书」，勾选几本，用工具条上的「加入书单」放进来。"
+              data-testid="library-collection-empty-state"
+              primaryAction={{
+                label: "去全部书里挑",
+                onClick: () => setCollectionFilter(null),
+                variant: "secondary",
+                testId: "library-collection-empty-back",
+              }}
+            />
+          </div>
         ) : books.data && books.data.length > 0 ? (
           <div className="library-empty-guide" data-testid="library-search-miss">
             <StateView
@@ -498,10 +838,62 @@ export function LibraryPage() {
             <div className="drop-hint">也可以将文件拖到这里</div>
           </div>
         )}
-        {visible.length > 0 && <div className="drop-hint">也可以将文件拖到这里导入</div>}
+        {/* 常驻的虚线拖放框去掉了：它是开发期的提示物。这句话只在真的拖着文件时出现——
+            那才是它有用的一刻，其余时间它只是占着位置。 */}
+        {dragOver && listHasRows ? (
+          <div className="library-drop-overlay" data-testid="library-drop-overlay">
+            <b>松手即可导入</b>
+            <span>支持 TXT、DOCX、EPUB</span>
+          </div>
+        ) : null}
       </div>
     </section>
   );
+}
+
+/** 书脊的颜色。
+ *
+ *  书库里原来每一行左边都是同一个「SL」灰方块——七本书七个一模一样的占位符，
+ *  眼睛沿着左边扫下去得不到任何区分，这正是「还没填真东西」的样子。
+ *
+ *  颜色由书名派生，所以同一本书永远是同一个颜色，导入即有、不用管、换机器也一样。
+ *  色相在整个圆周上取，饱和度和明度固定在一档能压住白字的区间——不追求好看，
+ *  追求的是七本书摆在一起时七种颜色互相分得开。
+ */
+function spineColor(title: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < title.length; i += 1) {
+    hash = Math.imul(hash ^ title.charCodeAt(i), 16777619) >>> 0;
+  }
+  // 雪崩一下再取色相。少了这几步，两本书名只差几个字的书会拿到几乎一样的颜色——
+  // 实测「人因评估－gavriel salvendy…」和「gavriel salvendy…」出来是两块同样的品红，
+  // 而书脊存在的全部理由就是让人一眼把它们分开。
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 2246822507) >>> 0;
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 3266489909) >>> 0;
+  // `>>> 0` 不能省：`^=` 的结果是有符号 32 位数，可能为负，负数取模会索引到数组外面，
+  // 拿回一个 undefined 颜色——React 见到 undefined 会把整个 style 属性丢掉，
+  // 于是六个书脊一起变成透明。丢的不是颜色，是这一整个功能。
+  hash = (hash ^ (hash >>> 16)) >>> 0;
+  // 落到固定的色格上，而不是 360 度里随便取一个。
+  //
+  // 连续取色时，六本书实测挤成 162°/166° 和 304°/311°/314°/325° 两簇——差三度的两块颜色
+  // 不像「两本不同的书」，像同一个颜色渲染坏了。分格之后，两本书要么明显不同色，
+  // 要么就是同一个色；后者是可以接受的（书脊上还压着不同的字），前者才是要避免的。
+  const HUES = [8, 32, 46, 88, 132, 168, 196, 214, 250, 278, 312, 338];
+  const hue = HUES[hash % HUES.length];
+  // 再分两档明度，把可分辨的组合从 12 个抬到 24 个。
+  const dark = (hash >>> 8) % 2 === 0;
+  return `hsl(${hue} ${dark ? 44 : 34}% ${dark ? 38 : 50}%)`;
+}
+
+/** 压在书脊上的那个字。中文取第一个字，英文取首字母；书名以标点开头时跳过它——
+ *  《余罪》的书脊上应该是「余」，不是「《」。 */
+function spineGlyph(title: string): string {
+  const cleaned = (title || "").replace(/^[\s《「『（([【"'`~!@#$%^&*\-—_=+.,:;?]+/, "");
+  const ch = (cleaned || title || "?").trim().charAt(0);
+  return /[a-z]/i.test(ch) ? ch.toUpperCase() : ch || "?";
 }
 
 function deleteErrorMessage(error: unknown): string {
@@ -519,10 +911,18 @@ function deleteErrorMessage(error: unknown): string {
 
 function BookRow({
   book,
+  info,
   onDeleted,
+  selected,
+  onSelectedChange,
 }: {
   book: Book;
+  /** 后端算好的类型与分析状态。取不到时行会退回只显示格式与日期。 */
+  info?: LibraryItem;
   onDeleted: (book: Book) => void;
+  /** 勾中的书会一次性加进书单——一本一本加，十五本要点十五次。 */
+  selected: boolean;
+  onSelectedChange: (next: boolean) => void;
 }) {
   const fmt = fileFormat(book.source_file_name);
   const moreTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -568,27 +968,69 @@ function BookRow({
   };
 
   return (
-    <div className="book-row" data-testid={`book-row-${book.id}`}>
-      <span className="cover" aria-hidden="true">
-        SL
+    <div
+      className="book-row"
+      data-testid={`book-row-${book.id}`}
+      data-selected={selected ? "1" : undefined}
+    >
+      <label className="book-row-pick" title="选中，用于加入书单">
+        <input
+          type="checkbox"
+          checked={selected}
+          aria-label={`选择《${book.title}》`}
+          data-testid={`book-pick-${book.id}`}
+          onChange={(e) => onSelectedChange(e.target.checked)}
+        />
+      </label>
+      <span
+        className="book-spine"
+        aria-hidden="true"
+        style={{ background: spineColor(book.title) }}
+      >
+        {spineGlyph(book.title)}
       </span>
       <span className="book-row-main">
-        <b className="book-row-title" title={book.title}>
+        {/* 整行可点。原来这里只有右边一个「打开」按钮，等于告诉用户
+            「这一行的其他地方是死的」。 */}
+        <Link className="book-row-title" to={`/books/${book.id}`} title={book.title}>
           {book.title}
-        </b>
-        <small className="book-row-filename" title={book.source_file_name}>
-          {book.source_file_name}
-        </small>
-        <small className="book-row-meta" title={book.source_file_hash}>
-          {fmt !== "OTHER" ? `${fmt} · ` : ""}
-          导入于 {new Date(book.created_at).toLocaleDateString()}
+        </Link>
+        {/* 文件名只在和书名不同的时候才出现——同名时重复一遍是同一句话说两次。 */}
+        {info?.source_file_name ? (
+          <small className="book-row-filename" title={info.source_file_name}>
+            {info.source_file_name}
+          </small>
+        ) : null}
+        <small className="book-row-meta">
+          {info ? (
+            <>
+              <span className={`book-kind book-kind--${info.material_kind}`}>
+                {info.kind_label}
+                {info.material_kind_confirmed ? "" : " · 待确认"}
+              </span>
+              {info.chapter_count > 0 ? `${info.chapter_count} 章 · ` : ""}
+              <span className={`book-state book-state--${info.analysis_state}`}>
+                {info.analysis_state_label}
+              </span>
+            </>
+          ) : (
+            <>
+              {fmt !== "OTHER" ? `${fmt} · ` : ""}
+              导入于 {new Date(book.created_at).toLocaleDateString()}
+            </>
+          )}
         </small>
       </span>
       <div className="book-row-actions">
+        {/* 「打开」按钮去掉了——书名本身就是那个链接。这个隐藏的链接留给验收脚本和
+            键盘用户：它们都按 book-open-<id> 找入口，拿掉会把「少一个按钮」变成
+            「这一行没有可聚焦的出口」。 */}
         <Link
-          className="row-actions secondary book-row-open"
+          className="book-row-open-sr"
           to={`/books/${book.id}`}
           data-testid={`book-open-${book.id}`}
+          tabIndex={-1}
+          aria-hidden="true"
         >
           打开
         </Link>

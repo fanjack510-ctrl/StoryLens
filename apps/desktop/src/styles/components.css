@@ -718,7 +718,7 @@ button:disabled.primary {
   margin: 0 0 var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  background: var(--color-bg-subtle, #f5f5f1);
+  background: var(--color-bg-subtle, var(--color-bg-app));
   border: 1px solid var(--color-border-subtle, #d8d8d0);
 }
 
@@ -1333,3 +1333,228 @@ button:disabled.primary {
 .analysis-form-switch__blocked {
   color: var(--color-text-tertiary);
 }
+
+/* ---- 导入：先问这是什么书 ------------------------------------------------
+   原来问的是「整本 / 短篇」——关于怎么切的工程问题，提示里还写着「专著、教材选整本」，
+   等于让用户自己把书的类型翻译成切法。现在第一步问内容，第二步只对小说出现。 */
+.import-choice { border: 0; padding: 0; margin: 20px 0 0; }
+.import-choice legend { font-size: 15px; font-weight: 600; padding: 0; }
+.import-choice > .muted { margin: 4px 0 12px; font-size: 13px; }
+.import-choice-options { display: grid; gap: 10px; }
+.import-choice-option { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;
+  align-items: start; border: 1px solid var(--color-border); border-radius: 8px; padding: 14px 16px;
+  cursor: pointer; }
+.import-choice-option.is-chosen { border-color: var(--color-brand); background: var(--color-brand-soft); }
+.import-choice-option.is-blocked { opacity: .55; cursor: not-allowed; }
+.import-choice-option input { grid-row: 1 / span 2; margin-top: 3px; accent-color: var(--color-brand); }
+.import-choice-option__title { font-size: 15px; font-weight: 600; }
+.import-choice-option__hint { grid-column: 2; font-size: 13px; color: var(--color-text-secondary); line-height: 1.65; }
+
+/* ---- 书库：这是什么书、跑完没有 ---- */
+.library-kind-filter { display: flex; gap: 8px; flex-wrap: wrap; }
+.library-kind-chip { border: 1px solid var(--color-border); border-radius: 999px; padding: 6px 16px;
+  font-size: 13px; background: var(--color-bg-surface); color: var(--color-text-secondary); cursor: pointer; font-family: inherit; }
+.library-kind-chip[data-on="1"] { border-color: var(--color-brand); background: var(--color-brand-soft); color: var(--color-brand); }
+.library-format-fold > summary { cursor: pointer; font-size: 13px; color: var(--color-text-secondary); }
+.library-format-fold[open] > summary { margin-bottom: 8px; }
+
+.book-kind { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 4px;
+  margin-right: 8px; vertical-align: 1px; }
+.book-kind--fiction { background: var(--color-brand-soft); color: var(--color-brand); }
+.book-kind--reference { background: var(--color-info-soft); color: var(--color-info); }
+.book-state--running { color: var(--color-warning); }
+.book-state--done { color: var(--color-brand); }
+.book-state--idle { color: var(--color-text-tertiary); }
+
+/* ---- 书单：一组可以被反复回到的书 ----
+   书单条和类型筛选长一样，是有意的：两者都是「怎么看这个书库」的取景方式，
+   不是两种不同层级的东西。 */
+.library-collections { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.library-collection-count { font-style: normal; margin-left: 6px; font-size: 12px; opacity: .7;
+  font-variant-numeric: tabular-nums; }
+.library-collection-new { border: 1px dashed var(--color-border); border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; background: transparent; color: var(--color-text-secondary);
+  cursor: pointer; font-family: inherit; }
+.library-collection-new:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.library-collection-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.library-collection-form input { border: 1px solid var(--color-border); border-radius: 6px;
+  padding: 6px 12px; font-size: 13px; font-family: inherit; min-width: 260px;
+  background: var(--color-bg-surface); color: var(--color-text-primary); }
+.library-collection-form input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+.library-collection-form button { border-radius: 6px; padding: 6px 14px; font-size: 13px;
+  font-family: inherit; cursor: pointer; border: 1px solid var(--color-brand);
+  background: var(--color-brand); color: var(--color-text-inverse); }
+.library-collection-form button:disabled { border-color: var(--color-disabled-bg);
+  background: var(--color-disabled-bg); color: var(--color-disabled-text); cursor: not-allowed; }
+.library-collection-form button.is-quiet { border-color: transparent; background: transparent;
+  color: var(--color-text-secondary); }
+
+/* 选了书才出现。常驻一条空工具条，等于每次进书库都要先看懂一个当下用不上的东西。 */
+.library-selection-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  padding: 10px 16px; margin-bottom: 12px; border-radius: 8px;
+  background: var(--color-brand-soft); border: 1px solid var(--color-brand); font-size: 13px; }
+.library-selection-bar b { color: var(--color-brand); font-variant-numeric: tabular-nums; }
+.library-selection-add { display: flex; gap: 8px; align-items: center;
+  color: var(--color-text-secondary); }
+.library-selection-add select { border: 1px solid var(--color-border); border-radius: 6px;
+  padding: 5px 10px; font-size: 13px; font-family: inherit;
+  background: var(--color-bg-surface); color: var(--color-text-primary); }
+.library-selection-bar button.is-quiet { border: 0; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: var(--color-text-secondary);
+  text-decoration: underline; text-underline-offset: 3px; }
+.library-selection-bar button.is-quiet:hover { color: var(--color-brand); }
+
+/* 勾选框平时安静地待着，选中后整行有个底色——一眼看出这一批里有哪些。 */
+.book-row-pick { display: flex; align-items: center; padding-right: 4px; }
+.book-row[data-selected="1"] { background: var(--color-brand-soft); }
+
+/* ---- 书脊 ----
+   代替原来那个「SL」灰方块。七本书七个一模一样的占位符，眼睛沿着左边扫下去
+   得不到任何区分——那正是「还没填真东西」的样子。颜色由书名派生，同一本书永远同一个色。 */
+.book-spine {
+  width: 44px; height: 58px; border-radius: 3px 5px 5px 3px;
+  display: grid; place-items: center; position: relative;
+  color: #fff; font-size: 19px; font-weight: 600; line-height: 1;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 22%);
+  user-select: none;
+}
+/* 书脊上那道压痕——让它读起来是一本书的侧面，而不是一个色块。 */
+.book-spine::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 5px;
+  background: rgb(0 0 0 / 16%); border-radius: 3px 0 0 3px;
+}
+
+/* 勾选框平时隐身：不选书的时候，书库看起来该是书库，不是一张待办清单。 */
+.book-row-pick { display: flex; align-items: center; justify-content: center; }
+.book-row-pick input { opacity: 0; transition: opacity .12s ease; }
+.book-row:hover .book-row-pick input,
+.book-row-pick input:focus-visible,
+.book-row[data-selected="1"] .book-row-pick input { opacity: 1; }
+.book-row[data-selected="1"] { background: var(--color-brand-soft); }
+
+/* 「⋯」同理，悬停才出现。一行里少两个常驻按钮，列表立刻安静下来。 */
+.book-row .book-row-more { opacity: 0; transition: opacity .12s ease; }
+.book-row:hover .book-row-more,
+.book-row .book-row-more:focus-within { opacity: 1; }
+
+/* 状态用带色圆点，一眼分出跑过没跑过：绿=已分析，灰=没跑过，橙=正在跑。 */
+.book-row-meta .book-state {
+  display: inline-flex; align-items: center; gap: 6px; font-weight: 500;
+}
+.book-row-meta .book-state::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+}
+.book-state--done { color: var(--color-brand); }
+.book-state--running { color: var(--color-warning); }
+.book-state--idle { color: var(--color-text-tertiary); opacity: .8; }
+.book-row-meta { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.book-row-meta .book-kind {
+  background: var(--color-bg-muted); color: var(--color-text-secondary);
+  padding: 2px 9px; border-radius: 5px; font-size: 12px;
+}
+.book-row-meta .book-kind--reference {
+  background: var(--color-warning-soft); color: var(--color-warning);
+}
+
+/* 拖文件进来时才出现的提示。原来这句话是一个常驻的虚线框挂在列表底部——
+   那是开发期的提示物：它 99% 的时间里没有用，却一直占着位置。 */
+.library-drop-overlay {
+  position: absolute; inset: 8px; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border-radius: 10px; pointer-events: none;
+  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
+  backdrop-filter: blur(1.5px);
+}
+.library-drop-overlay b { font-size: 17px; color: var(--color-brand); }
+.library-drop-overlay span { font-size: 13px; color: var(--color-text-secondary); }
+.library-main { position: relative; }
+
+/* ---- 共性视图 ---- */
+.library-collection-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 10px; font-size: 13px; }
+.library-collection-actions a { display: inline-flex; align-items: center; padding: 6px 14px;
+  border: 1px solid var(--color-brand); border-radius: 7px; color: var(--color-brand);
+  background: var(--color-brand-soft); text-decoration: none; font-weight: 600; }
+.library-collection-actions a:hover { background: var(--color-brand); color: var(--color-text-inverse); }
+
+.common-patterns .panel + .panel { margin-top: 20px; }
+.common-patterns h2 { font-size: 18px; font-weight: 650; margin: 0 0 4px; }
+/* 「这是数出来的」和「这是归纳出来的」必须一眼分得开——它们的可信度不一样。 */
+.cp-source { font-size: 13px; margin: 0 0 16px; line-height: 1.7; }
+
+.cp-genres { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.cp-genre { display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px;
+  border-radius: 999px; background: var(--color-bg-muted); color: var(--color-text-secondary);
+  font-size: 13px; }
+.cp-genre i { font-style: normal; font-weight: 650; color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums; }
+
+.cp-mixed { margin-bottom: 14px; }
+.cp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.cp-table th { text-align: left; font-weight: 600; color: var(--color-text-tertiary);
+  font-size: 12.5px; padding: 6px 10px; border-bottom: 1px solid var(--color-border); }
+.cp-table td { padding: 9px 10px; border-bottom: 1px solid var(--color-bg-muted);
+  vertical-align: baseline; }
+.cp-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.cp-table tr[data-usable="false"] td { color: var(--color-text-tertiary); }
+.cp-table td[data-scope="opening"] { color: var(--color-warning); }
+.cp-excluded { font-size: 13px; }
+
+.cp-patterns { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.cp-pattern { border: 1px solid var(--color-border); border-radius: 9px; padding: 14px 16px;
+  background: var(--color-bg-surface); }
+.cp-pattern-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;
+  flex-wrap: wrap; }
+.cp-pattern-head b { font-size: 16px; font-weight: 650; }
+.cp-support { font-size: 12.5px; color: var(--color-brand); background: var(--color-brand-soft);
+  padding: 2px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cp-pattern p { margin: 0 0 8px; font-size: 14px; line-height: 1.75; }
+
+/* 引用不是脚注，是这条结论能不能信的全部依据——所以它和结论同屏，不折叠。 */
+.cp-instances { list-style: none; margin: 10px 0 0; padding: 10px 0 0;
+  border-top: 1px dashed var(--color-border); display: grid; gap: 7px; font-size: 13px; }
+.cp-instances li { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;
+  color: var(--color-text-secondary); }
+.cp-instance-book { font-weight: 600; color: var(--color-text-primary); white-space: nowrap; }
+.cp-instance-tech { background: var(--color-bg-muted); padding: 1px 9px; border-radius: 5px;
+  color: var(--color-text-secondary); }
+
+.cp-unique { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.cp-unique h3 { font-size: 14px; font-weight: 650; margin: 0 0 10px; }
+.cp-unique ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 13.5px;
+  color: var(--color-text-secondary); line-height: 1.7; }
+.cp-unique b { color: var(--color-text-primary); margin-right: 6px; }
+
+.cp-pro { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.cp-pro a { color: var(--color-brand); font-weight: 600; }
+
+/* ---- 跨书检索 ---- */
+.cross-book .panel + .panel { margin-top: 20px; }
+.cross-book h2 { font-size: 18px; font-weight: 650; margin: 0 0 4px; }
+.cb-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cb-form input { flex: 1 1 380px; border: 1px solid var(--color-border); border-radius: 8px;
+  padding: 10px 14px; font-size: 14px; font-family: inherit;
+  background: var(--color-bg-surface); color: var(--color-text-primary); }
+.cb-form input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+/* 覆盖面的差别不能藏起来：以为搜过了全部、其实只搜了写法层，「没找到」会被读成
+   「这些书里没有」——那是一个错的结论。 */
+.cb-hint { font-size: 12.5px; margin: 12px 0 0; line-height: 1.7; }
+.cb-source { font-size: 13px; margin: 0 0 14px; line-height: 1.7; }
+
+.cb-hits, .cb-matches { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cb-hit, .cb-match { border: 1px solid var(--color-border); border-radius: 8px;
+  padding: 11px 14px; background: var(--color-bg-surface); }
+.cb-hit-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cb-hit-head b { font-size: 14.5px; font-weight: 600; }
+.cb-where { font-size: 12.5px; color: var(--color-text-tertiary); margin-left: auto;
+  white-space: nowrap; }
+.cb-hit p, .cb-match p { margin: 7px 0 0; font-size: 13px; line-height: 1.7;
+  color: var(--color-text-secondary); }
+/* 「为什么符合」是这条结果和一次随机命中的全部区别，所以它不是灰的。 */
+.cb-why { color: var(--color-text-primary) !important; }
+
+.cb-kind { font-size: 11.5px; padding: 2px 8px; border-radius: 5px; white-space: nowrap;
+  background: var(--color-bg-muted); color: var(--color-text-secondary); }
+.cb-kind--technique { background: var(--color-brand-soft); color: var(--color-brand); }
+.cb-kind--moment { background: var(--color-warning-soft); color: var(--color-warning); }
+.cb-kind--character, .cb-kind--cast { background: var(--color-info-soft); color: var(--color-info); }

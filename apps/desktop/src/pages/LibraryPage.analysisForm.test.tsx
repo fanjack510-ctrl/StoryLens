@@ -15,8 +15,8 @@ vi.mock("../services/booksApi", () => ({
     importFile: (...args: unknown[]) => importFile(...args),
   },
 }));
-vi.mock("../components/onboarding/QwenFirstLaunchBanner", () => ({
-  QwenFirstLaunchBanner: () => null,
+vi.mock("../components/onboarding/AiSetupBanner", () => ({
+  AiSetupBanner: () => null,
 }));
 vi.mock("../components/onboarding/FirstLaunchWizard", () => ({
   FirstLaunchWizard: () => null,
@@ -82,14 +82,16 @@ describe("导入时选长篇还是短篇", () => {
     fireEvent.click(screen.getByRole("radio", { name: /长篇/ }));
     fireEvent.click(screen.getByRole("button", { name: "完成导入" }));
     await waitFor(() => expect(importFile).toHaveBeenCalled());
-    expect(importFile).toHaveBeenCalledWith(file, "long");
+    // 导入现在同时带上「这是什么书」——切法由类型推出来，不再让用户自己翻译。
+    expect(importFile).toHaveBeenCalledWith(file, "long", "fiction");
   });
 
   it("不动它就按建议导入", async () => {
     const file = await dropFile("long", 40);
     fireEvent.click(screen.getByRole("button", { name: "完成导入" }));
     await waitFor(() => expect(importFile).toHaveBeenCalled());
-    expect(importFile).toHaveBeenCalledWith(file, "long");
+    // 导入现在同时带上「这是什么书」——切法由类型推出来，不再让用户自己翻译。
+    expect(importFile).toHaveBeenCalledWith(file, "long", "fiction");
   });
 
   it("服务端没给建议时不至于没有选中项", async () => {
@@ -122,7 +124,7 @@ describe("导入时选长篇还是短篇", () => {
     const short = screen.getByRole("radio", { name: /短篇/ }) as HTMLInputElement;
     expect(short.disabled).toBe(true);
     expect(short.checked).toBe(false);
-    expect(screen.getByText(/超过 150,000 字，切段装不下/)).toBeTruthy();
+    expect(screen.getByText(/超过 150,000 字，不能按短篇读/)).toBeTruthy();
     const long = screen.getByRole("radio", { name: /长篇/ }) as HTMLInputElement;
     expect(long.disabled).toBe(false);
     expect(long.checked).toBe(true);

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 export function PageHeader({
   children,
@@ -17,11 +17,16 @@ export function PageTitle({ children, className = "" }: { children: ReactNode; c
 export function PageSubtitle({
   children,
   className = "",
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
-}) {
-  return <p className={`sl-page-subtitle ${className}`.trim()}>{children}</p>;
+} & Omit<ComponentPropsWithoutRef<"p">, "children" | "className">) {
+  return (
+    <p className={`sl-page-subtitle ${className}`.trim()} {...rest}>
+      {children}
+    </p>
+  );
 }
 
 export function SectionHeader({

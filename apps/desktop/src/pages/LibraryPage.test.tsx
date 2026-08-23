@@ -20,8 +20,8 @@ vi.mock("../services/booksApi", () => ({
   },
 }));
 
-vi.mock("../components/onboarding/QwenFirstLaunchBanner", () => ({
-  QwenFirstLaunchBanner: () => null,
+vi.mock("../components/onboarding/AiSetupBanner", () => ({
+  AiSetupBanner: () => null,
 }));
 
 vi.mock("../components/onboarding/FirstLaunchWizard", () => ({

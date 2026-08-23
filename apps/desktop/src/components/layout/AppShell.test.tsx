@@ -96,7 +96,6 @@ describe("UI shell navigation", () => {
 
   beforeEach(() => {
     localStorage.removeItem("storylens.nav.devExpanded");
-    localStorage.removeItem("storylens.developerMode");
     localStorage.removeItem("storylens.onboarding.v1");
     localStorage.removeItem("storylens.appearance.theme");
     useOnboardingStore.setState({ status: "completed" });
@@ -105,8 +104,12 @@ describe("UI shell navigation", () => {
 
   it("shows only library and settings in primary nav", () => {
     renderShell("/library");
-    expect(screen.getByText("小说叙事洞察与创作平台")).toBeInTheDocument();
+    // 标语「小说叙事洞察与创作平台」已从顶栏去掉：它是一句介绍，而介绍只需要说一次，
+    // 不必在每个页面最上方常驻。它腾出来的位置给了导航——导航从左边那条 200px 竖栏搬了上来。
+    expect(screen.queryByText("小说叙事洞察与创作平台")).not.toBeInTheDocument();
     const nav = screen.getByTestId("primary-nav");
+    // 导航现在在顶栏里，不再是一条独立的侧栏。
+    expect(nav.closest(".app-topbar")).not.toBeNull();
     expect(within(nav).getByTestId("nav-library")).toBeInTheDocument();
     expect(within(nav).getByTestId("nav-settings")).toBeInTheDocument();
     expect(within(nav).queryByText("任务中心")).not.toBeInTheDocument();
@@ -118,16 +121,8 @@ describe("UI shell navigation", () => {
     expect(within(nav).queryByText("开发工具")).not.toBeInTheDocument();
   });
 
-  it("enables developer mode and keeps old routes reachable", () => {
-    renderShell("/library");
-    expect(screen.queryByTestId("dev-nav-panel")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("开发者模式"));
-    expect(screen.getByTestId("dev-nav-panel")).toBeInTheDocument();
-    expect(within(screen.getByTestId("dev-nav-panel")).getByText("开发工具")).toBeInTheDocument();
-    expect(within(screen.getByTestId("dev-nav-panel")).queryByText("系统状态")).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId("dev-nav-panel")).getByText("任务中心"));
-    expect(screen.getByTestId("tasks-route")).toBeInTheDocument();
-  });
+  // 「enables developer mode and keeps old routes reachable」删除：开发者模式已整个删除，没有开关也没有入口。
+
 
   it("theme menu switches real theme state and persists", () => {
     renderShell("/library");

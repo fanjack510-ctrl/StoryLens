@@ -37,7 +37,7 @@ a {
   --accent2: var(--color-brand-soft);
 }
 .app > header {
-  grid-column: 1/3;
+  grid-column: 1 / -1;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   display: flex;
@@ -214,7 +214,7 @@ a {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-bg-surface));
   color: var(--text);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   display: grid;
@@ -508,14 +508,19 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 }
 .book-row {
   display: grid;
-  grid-template-columns: 48px 1fr auto;
+  /* 勾选框那一列常驻宽度但平时透明——悬停才显形。宽度不随悬停变化，
+     否则鼠标扫过一行会把整列书脊推一下，整个列表跟着抖。 */
+  grid-template-columns: 20px 44px 1fr auto;
   align-items: center;
-  min-height: 76px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
+  min-height: 78px;
+  padding: 13px 16px;
+  /* 分隔线去掉。七条横线把列表切成七格，读起来像表格；靠间距和悬停底色分行就够。 */
+  border-bottom: 0;
+  border-radius: 9px;
   text-decoration: none;
   color: var(--text);
-  gap: 12px;
+  gap: 14px;
+  position: relative;
 }
 .book-row:hover {
   background: var(--color-bg-subtle);
@@ -526,13 +531,38 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   min-width: 0;
 }
 .book-row-title {
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  /* 书名是人扫书库时唯一在找的东西，把它抬起来：原来它 14px，
+     和旁边的「630 章 · 未分析」几乎一样显眼，于是一行里没有一处有重量。 */
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+  color: var(--text);
+  text-decoration: none;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.35;
+  line-height: 1.4;
+}
+.book-row-title:hover {
+  color: var(--color-brand);
+}
+.book-row-title:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* 整行可点：书名的热区铺满整行，但「…」和勾选框浮在它上面。 */
+.book-row-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.book-row-pick,
+.book-row-actions {
+  position: relative;
+  z-index: 1;
 }
 .book-row-filename {
   color: var(--color-text-secondary);
@@ -551,11 +581,15 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   flex-shrink: 0;
 }
 
-.book-row-actions .book-row-open {
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 14px;
+/* 「打开」按钮已从界面去掉——书名本身就是那个链接。这个链接只留给验收脚本，
+   不占位、不可见、不参与 Tab。 */
+.book-row-open-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .book-row-more .overflow-menu-trigger {
@@ -1516,7 +1550,7 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   }
 }
 .boundary-review {
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-bg-surface));
   border: 1px solid var(--line, #d9d4c8);
   border-radius: 12px;
   padding: 18px;
@@ -1639,7 +1673,7 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   border-color: var(--accent);
   box-shadow: inset 3px 0 0 var(--accent);
 }
-.review-candidate { border: 1px solid var(--line, #ded8cc); border-radius: 10px; margin: 14px 0; padding: 14px; background: var(--surface, #fff); }
+.review-candidate { border: 1px solid var(--line, #ded8cc); border-radius: 10px; margin: 14px 0; padding: 14px; background: var(--surface, var(--color-bg-surface)); }
 .review-context { border-left: 3px solid #ddd3c2; padding-left: 14px; margin: 12px 0; }
 .review-context p { margin: 5px 0 14px; }
 .boundary-divider {
@@ -1658,7 +1692,7 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-bg-surface));
   padding: 12px 0 0;
   border-top: 1px solid var(--line, #ddd);
   margin-top: auto;
@@ -1725,7 +1759,9 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 
 /* ===== Phase 1C-C.2.3A UI Shell Simplification ===== */
 .app-shell-simplified {
-  grid-template: 52px 1fr / 200px 1fr;
+  /* 单列。导航搬进顶栏之后，左边那条 200px 没有理由继续占着——尤其是打开一本书时，
+     它会和书籍面板并排，两条竖栏一共 450px，而那一屏本来是用来读小说的。 */
+  grid-template: 52px 1fr / 1fr;
   /* Definite height so the 1fr main row fills the viewport (min-height alone
      leaves 1fr content-sized, and nested height:100% then collapses). */
   height: 100vh;
@@ -1753,8 +1789,9 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 }
 .app-shell-simplified .primary-nav-links {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
 }
 .app-shell-simplified .nav-spacer {
   flex: 1;
@@ -3562,3 +3599,82 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
     max-width: min(300px, calc(100vw - 32px));
   }
 }
+
+/* ===== 顶栏导航 =====
+   两个入口从左侧竖栏搬到这里。顶栏原本只有 logo 和一句标语，右边整片空着——
+   导航放进来不挤，反而让「你在哪个页面」和「这是什么软件」处在同一条视线上。 */
+.app-topbar .primary-nav-links a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.app-topbar .primary-nav-links a:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+.app-topbar .primary-nav-links a.active {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 600;
+}
+.app-topbar .primary-nav-links a:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 1px;
+}
+.app-topbar .primary-nav-links i {
+  font-style: normal;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+/* 服务状态与版本标识也进顶栏。原来它们占着侧栏底部一整块；
+   「本地服务正常」本质上是一个圆点加四个字。 */
+.app-topbar .nav-service-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.app-topbar .nav-service-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex: none;
+}
+.app-topbar .nav-service-status--warn .nav-service-dot { background: var(--color-warning); }
+.app-topbar .nav-service-status--bad .nav-service-dot { background: var(--color-danger); }
+.app-topbar .nav-edition-identity {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.app-topbar .nav-edition-identity:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+.app-topbar .nav-edition-identity--pro {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 600;
+}
+
+/* 标语「小说叙事洞察与创作平台」一并去掉：它是一句介绍，而介绍只需要说一次，
+   不必在每一个页面的最上方常驻。腾出来的位置给导航。 */

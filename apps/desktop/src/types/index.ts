@@ -53,6 +53,8 @@ export type ImportDiagnostics = {
   /** Which pipeline this file looks like it wants, computed server-side so the rule has one
    *  home. The import panel offers it as the default answer; the reader overrides it with one
    *  click and their answer is what gets stored. */
+  /** 「这看起来是什么书」——面板的默认答案，不是决定。 */
+  suggested_material_kind?: "fiction" | "reference";
   suggested_analysis_form?: "short" | "long";
   /** Whether 短篇 may be picked for this file at all. False above the length ceiling, where
    *  segmentation cannot fit the whole piece into one call. */

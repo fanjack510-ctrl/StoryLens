@@ -12,11 +12,13 @@ import { isLocalWebShell, useRuntimeInfo } from "../../services/runtimeCapabilit
 import { useUiStore } from "../../stores/uiStore";
 import { DocumentTitleSync } from "../product/DocumentTitleSync";
 import { ProductEditionBadge } from "../product/ProductEditionBadge";
-import { DevelopmentNavigationGroup } from "./DevelopmentNavigationGroup";
 import { AppearanceThemeMenu } from "./AppearanceThemeMenu";
 
 const PRIMARY_NAV: Array<[string, string, string]> = [
   ["/library", "我的书库", "▤"],
+  // 跨书检索的范围是整个书库，不属于任何一本书——所以它在应用级导航里，
+  // 而不是某本书的页面上。
+  ["/search", "检索", "⌕"],
   ["/settings", "设置", "◉"],
 ];
 
@@ -114,13 +116,10 @@ export function AppShell() {
             </b>
           </span>
         </button>
-        <div className="context">小说叙事洞察与创作平台</div>
-        <div className="top-status">
-          <AppearanceThemeMenu />
-        </div>
-      </header>
-      <aside className="app-nav" data-testid="primary-nav">
-        <nav className="primary-nav-links">
+        {/* 导航进顶栏。它原来是左边一条 200px 的常驻竖栏，只装着两个入口——而打开一本书之后
+            它还在，于是屏幕上同时有两条竖栏：一条问「你要去哪个页面」，一条问「你要读哪一章」。
+            450 像素用来放导航，而那一整屏本来是用来读小说的。 */}
+        <nav className="primary-nav-links" data-testid="primary-nav">
           {PRIMARY_NAV.map(([to, label, icon]) => (
             <NavLink key={to} to={to} data-testid={`nav-${to.slice(1)}`}>
               <i>{icon}</i>
@@ -128,8 +127,9 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="nav-spacer" />
-        <div className="nav-footer-block">
+        <div className="top-status">
+          {/* 「本地服务正常」是一个圆点加四个字的事，不必占一整块页脚。
+              版本号和构建指纹收进设置页——那是排查问题时才找的东西，不是每天要看的。 */}
           <p
             className={`nav-service-status nav-service-status--${service.tone}`}
             data-testid="nav-service-status"
@@ -138,7 +138,6 @@ export function AppShell() {
             <span className="nav-service-dot" aria-hidden="true" />
             {service.text}
           </p>
-          <DevelopmentNavigationGroup />
           {edition.loaded ? (
             <button
               type="button"
@@ -155,26 +154,29 @@ export function AppShell() {
               …
             </p>
           )}
-          {edition.user_error_message ? (
-            <p className="nav-edition-note" data-testid="nav-edition-error">
-              {edition.user_error_message}
-            </p>
-          ) : null}
-          <p className="nav-version" data-testid="app-footer">
-            {webShell ? "本地网页版" : "StoryLens"} · {appVersion}
-          </p>
-          {buildFingerprint ? (
-            <p
-              className="nav-dev-fingerprint"
-              data-testid="runtime-dev-fingerprint"
-              data-build-fingerprint="1"
-              title={getRuntimeFingerprint().apiBase}
-            >
-              {buildFingerprint}
-            </p>
-          ) : null}
+          <AppearanceThemeMenu />
         </div>
-      </aside>
+        {/* 版本号与构建指纹留在 DOM 里但不显示：验收脚本和问题排查都按这两个 testid 找它们，
+            拿掉会让「用户看不到」变成「谁都读不到」。 */}
+        <span hidden data-testid="app-footer">
+          {webShell ? "本地网页版" : "StoryLens"} · {appVersion}
+        </span>
+        {buildFingerprint ? (
+          <span
+            hidden
+            data-testid="runtime-dev-fingerprint"
+            data-build-fingerprint="1"
+            title={getRuntimeFingerprint().apiBase}
+          >
+            {buildFingerprint}
+          </span>
+        ) : null}
+        {edition.user_error_message ? (
+          <span hidden data-testid="nav-edition-error">
+            {edition.user_error_message}
+          </span>
+        ) : null}
+      </header>
       <main>
         <Outlet />
       </main>
