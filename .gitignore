@@ -120,3 +120,18 @@ release/evidence/**/_work/
 
 
 release/evidence/**/_smoke-install/
+
+# 运行期产物。它们每次 git status 都在，总有一天会被 add -A 卷进去。
+data/database/
+data/logs/
+.pytest_out.txt
+apps/desktop/.env.local
+
+# 排障时留下的会话/取证日志。一次性的东西，不进版本库。
+chg*.jsonl
+*-architecture-review*.jsonl
+*-architecture-*.txt
+long-novel-target-architecture-draft.jsonl
+
+# Claude Code：launch.json 是共享的开发服务器配置，本地设置不进版本库。
+.claude/settings.local.json
