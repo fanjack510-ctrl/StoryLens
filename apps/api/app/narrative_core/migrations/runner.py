@@ -36,6 +36,7 @@ from app.narrative_core.migrations import (
     MIGRATION_BOOK_MATERIAL_KIND,
     MIGRATION_RUN_CHAPTER_LIMIT,
     MIGRATION_COLLECTIONS,
+    MIGRATION_MATERIAL_LAB,
     MIGRATION_SHORT_FORM_RESULTS,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
@@ -1161,6 +1162,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260823_022_book_material_kind(engine)
     migrate_narrative_20260823_023_run_chapter_limit(engine)
     migrate_narrative_20260823_024_collections(engine)
+    migrate_narrative_20260823_025_material_lab(engine)
 
 
 SQL_012 = """
@@ -2816,3 +2818,135 @@ def migrate_narrative_20260823_024_collections(engine: Engine) -> None:
             if statement.strip():
                 connection.execute(text(statement))
     _record_applied(engine, MIGRATION_COLLECTIONS, checksum)
+
+
+SQL_025 = """
+CREATE TABLE material_lab_runs (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    status VARCHAR(32) NOT NULL DEFAULT 'running',
+    genre_slug VARCHAR(32) NOT NULL DEFAULT '',
+    genre_source VARCHAR(16) NOT NULL DEFAULT 'auto',
+    genre_confidence FLOAT NOT NULL DEFAULT 0,
+    chapter_count INTEGER NOT NULL DEFAULT 0,
+    scene_count INTEGER NOT NULL DEFAULT 0,
+    material_count INTEGER NOT NULL DEFAULT 0,
+    duplicate_chapters INTEGER NOT NULL DEFAULT 0,
+    skipped_short_scenes INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    created_at DATETIME NOT NULL,
+    finished_at DATETIME
+);
+CREATE INDEX ix_material_lab_runs_book_id ON material_lab_runs(book_id);
+CREATE TABLE material_lab_patterns (
+    id INTEGER PRIMARY KEY,
+    genre_slug VARCHAR(32) NOT NULL,
+    category_key VARCHAR(64) NOT NULL,
+    core_pattern VARCHAR(500) NOT NULL,
+    mechanism VARCHAR(200) NOT NULL DEFAULT '',
+    signature VARCHAR(16) NOT NULL,
+    variant_count INTEGER NOT NULL DEFAULT 0,
+    book_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+CREATE INDEX ix_material_lab_patterns_genre_signature
+    ON material_lab_patterns(genre_slug, signature);
+CREATE INDEX ix_material_lab_patterns_genre_category
+    ON material_lab_patterns(genre_slug, category_key);
+CREATE TABLE material_lab_atoms (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    run_id INTEGER NOT NULL REFERENCES material_lab_runs(id) ON DELETE CASCADE,
+    scene_seq INTEGER NOT NULL DEFAULT 0,
+    atom_type VARCHAR(16) NOT NULL,
+    value VARCHAR(200) NOT NULL,
+    norm_value VARCHAR(120) NOT NULL,
+    salience FLOAT NOT NULL DEFAULT 0,
+    char_pos INTEGER NOT NULL DEFAULT 0,
+    meta_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX ix_material_lab_atoms_book_id ON material_lab_atoms(book_id);
+CREATE INDEX ix_material_lab_atoms_chapter_id ON material_lab_atoms(chapter_id);
+CREATE INDEX ix_material_lab_atoms_run_id ON material_lab_atoms(run_id);
+CREATE INDEX ix_material_lab_atoms_book_chapter ON material_lab_atoms(book_id, chapter_id);
+CREATE TABLE material_lab_evidence (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    run_id INTEGER NOT NULL REFERENCES material_lab_runs(id) ON DELETE CASCADE,
+    scene_seq INTEGER NOT NULL DEFAULT 0,
+    char_start INTEGER NOT NULL DEFAULT 0,
+    char_end INTEGER NOT NULL DEFAULT 0,
+    snippet VARCHAR(200) NOT NULL DEFAULT '',
+    note VARCHAR(100) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL
+);
+CREATE INDEX ix_material_lab_evidence_book_id ON material_lab_evidence(book_id);
+CREATE INDEX ix_material_lab_evidence_chapter_id ON material_lab_evidence(chapter_id);
+CREATE INDEX ix_material_lab_evidence_run_id ON material_lab_evidence(run_id);
+CREATE TABLE material_lab_materials (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    run_id INTEGER NOT NULL REFERENCES material_lab_runs(id) ON DELETE CASCADE,
+    pattern_id INTEGER REFERENCES material_lab_patterns(id) ON DELETE SET NULL,
+    evidence_id INTEGER REFERENCES material_lab_evidence(id) ON DELETE SET NULL,
+    scene_seq INTEGER NOT NULL DEFAULT 0,
+    char_start INTEGER NOT NULL DEFAULT 0,
+    char_end INTEGER NOT NULL DEFAULT 0,
+    place VARCHAR(32) NOT NULL DEFAULT '',
+    time_cue VARCHAR(64) NOT NULL DEFAULT '',
+    genre_slug VARCHAR(32) NOT NULL DEFAULT '',
+    material_type VARCHAR(16) NOT NULL,
+    category_key VARCHAR(64) NOT NULL,
+    subcategory_key VARCHAR(64) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    concise_example TEXT NOT NULL,
+    core_pattern VARCHAR(500) NOT NULL,
+    mechanism VARCHAR(200) NOT NULL,
+    suspense_question VARCHAR(500) NOT NULL,
+    applicable_stage VARCHAR(32) NOT NULL DEFAULT '',
+    applicable_scene VARCHAR(64) NOT NULL DEFAULT '',
+    emotion VARCHAR(32) NOT NULL DEFAULT '',
+    tags_json TEXT NOT NULL DEFAULT '[]',
+    signals_json TEXT NOT NULL DEFAULT '{}',
+    quality_score INTEGER NOT NULL DEFAULT 0,
+    score_json TEXT NOT NULL DEFAULT '{}',
+    confidence FLOAT NOT NULL DEFAULT 0,
+    pattern_similarity FLOAT NOT NULL DEFAULT 1,
+    is_primary_variant INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL
+);
+CREATE INDEX ix_material_lab_materials_book_id ON material_lab_materials(book_id);
+CREATE INDEX ix_material_lab_materials_chapter_id ON material_lab_materials(chapter_id);
+CREATE INDEX ix_material_lab_materials_run_id ON material_lab_materials(run_id);
+CREATE INDEX ix_material_lab_materials_pattern_id ON material_lab_materials(pattern_id);
+CREATE INDEX ix_material_lab_materials_book_chapter
+    ON material_lab_materials(book_id, chapter_id);
+CREATE INDEX ix_material_lab_materials_type ON material_lab_materials(material_type);
+CREATE INDEX ix_material_lab_materials_category ON material_lab_materials(category_key);
+CREATE INDEX ix_material_lab_materials_score ON material_lab_materials(quality_score);
+"""
+
+
+def migrate_narrative_20260823_025_material_lab(engine: Engine) -> None:
+    """素材库：本地确定性引擎（provider='local'）的五张表。
+
+    原子、资料、模式簇、证据、任务——不是源项目的 31 张：书库、平台、类型、
+    收藏、导出那些，StoryLens 已有对应概念。刻意不引用 scenes 表（它绑
+    created_by_run_id，是分析产物）；素材库的场景是解析产物，以
+    chapter_id + 章内偏移的形式活在行上。
+
+    幂等按 _table_names 判（create_all 可能先建了表）。
+    """
+    checksum = migration_checksum(SQL_025)
+    if "material_lab_materials" in _table_names(engine):
+        _record_applied(engine, MIGRATION_MATERIAL_LAB, checksum)
+        return
+    with engine.begin() as connection:
+        for statement in SQL_025.strip().split(";"):
+            if statement.strip():
+                connection.execute(text(statement))
+    _record_applied(engine, MIGRATION_MATERIAL_LAB, checksum)
