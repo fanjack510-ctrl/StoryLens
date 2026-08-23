@@ -412,7 +412,7 @@ describe("印刷版全书报告", () => {
   it("写出 HTML 供人工渲染核对", () => {
     const out = process.env.STORYLENS_PRINT_OUT;
     if (!out) return;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     require("node:fs").writeFileSync(out, buildPrintHtml(book(800)), "utf-8");
     expect(require("node:fs").existsSync(out)).toBe(true);
   });
@@ -424,7 +424,7 @@ it("真实文档也在预算内", () => {
   const src = process.env.STORYLENS_PRINT_DOC;
   const out = process.env.STORYLENS_PRINT_REAL_OUT;
   if (!src || !out) return;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const fs = require("node:fs");
   const doc = JSON.parse(fs.readFileSync(src, "utf-8")) as WholeBookAnalysisV2;
   const html = buildPrintHtml(doc);

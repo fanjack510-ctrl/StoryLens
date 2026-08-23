@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Loading, ErrorState } from "../../components/common/States";
+import { Loading } from "../../components/common/States";
 import { ApiError } from "../../services/apiClient";
 import { getWholeBookV2, getWholeBookV2Progress } from "./api";
 import { V2_PROGRESS_LABELS } from "./contracts";

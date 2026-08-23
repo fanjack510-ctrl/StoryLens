@@ -1494,8 +1494,27 @@ export function BookRoutePage() {
   // 没建过画像的书，`getBookProfile` 返回 null——那是**最**未确认的状态，不是「不确定」。
   // 写成 `data != null && ...` 会让 null 静默放行，于是新导入的书一道门都没有。
   // 只有查询还没回来（isPending）才算不确定。
+  // 这本是小说还是工具书。用书库那条查询（react-query 会和书库页共用同一份缓存）。
+  const libraryRows = useQuery({
+    queryKey: ["library"],
+    queryFn: booksApi.library,
+    retry: false,
+  });
+  // 取不到就当「不是工具书」——那样画像门照常生效，是保守的一边。
+  // 不写 `data?.find(...)`：这条查询失败或被 mock 掉时 `data` 不是数组，
+  // `.find` 直接抛，整个书页白屏。一个附加信息的查询不该有这种权力。
+  const isReference =
+    (Array.isArray(libraryRows.data) ? libraryRows.data : []).find((r) => r.id === bookId)
+      ?.material_kind === "reference";
+
+  // 工具书不过画像门。
+  //
+  // 画像的五根轴是付费模式 / 读者 / 爽感引擎 / 人称 / 篇幅——全是网文的东西。让人去确认
+  // 一本人因工程手册的「爽感引擎」，是在问一个没有答案的问题，而这道门还会把「分析本章」
+  // 一起锁死。后端早就让「读懂」绕过这道门了（`create_free_analysis` 里的
+  // `analysis_mode == "comprehend"`），工具条这一层一直没跟上。
   const profileUnconfirmed =
-    !bookProfile.isPending && bookProfile.data?.status !== "confirmed";
+    !isReference && !bookProfile.isPending && bookProfile.data?.status !== "confirmed";
 
   const primaryAction = resolveChapterPrimaryAction({
     hasChapter: Boolean(chapterId) && !noChapters && !bootstrappingChapter,
@@ -1552,6 +1571,19 @@ export function BookRoutePage() {
                   testId: "shell-view-reading-journey",
                 }
               : primaryAction;
+
+  // 画像没确认时，「开始」开不了——那这就是当下唯一该做的事，主按钮让给它。
+  // 但任务已经在跑、或者已经有结果时，主按钮仍属于那件事：都跑起来了，
+  // 再把人拽去确认画像没有意义。
+  //
+  // 抽成一个值是因为它有两个用处：决定主按钮是什么，以及决定次要栏里那个画像入口
+  // 要不要出现。两处各写一遍的时候，它们不同步过一次——于是画像未确认时，
+  // 「确认作品画像」和「作品画像 · 待确认」两个按钮并排站着，指向同一个页面。
+  const showConfirmProfilePrimary =
+    profileUnconfirmed &&
+    (effectivePrimaryAction.kind === "none" ||
+      effectivePrimaryAction.kind === "start" ||
+      effectivePrimaryAction.kind === "reanalyze");
 
   const onPrimaryAction = () => {
     if (effectivePrimaryAction.kind === "start" || effectivePrimaryAction.kind === "reanalyze") {
@@ -1696,10 +1728,7 @@ export function BookRoutePage() {
           )
         }
         primary={
-          noChapters || bootstrappingChapter ? null : profileUnconfirmed &&
-            (effectivePrimaryAction.kind === "none" ||
-              effectivePrimaryAction.kind === "start" ||
-              effectivePrimaryAction.kind === "reanalyze") ? (
+          noChapters || bootstrappingChapter ? null : showConfirmProfilePrimary ? (
             // 没确认画像，「开始」开不了——那这就是当下唯一该做的事。
             // 但任务已经在跑、或者已经有结果时，主按钮仍属于那件事：都跑起来了，
             // 再把人拽去确认画像没有意义。
@@ -1735,7 +1764,9 @@ export function BookRoutePage() {
                 人也还需要能回去改（一本书的类型判断不是一次就永远对）。
                 改版时我把它从这一排删掉了，只留主按钮上的「确认作品画像」——于是一旦查询
                 失败或状态未知，画像就彻底没有入口，只能靠点分析撞 409 才知道它存在。 */}
-            {!noChapters && !bootstrappingChapter ? (
+            {/* 主按钮已经是「确认作品画像」时不再重复：那两个是同一个页面的两个入口，
+                并排放着让人以为是两件事。工具书也不显示——它根本没有这道门。 */}
+            {!noChapters && !bootstrappingChapter && !isReference && !showConfirmProfilePrimary ? (
               <BookProfileEntry bookId={bookId} chapterId={chapterId} />
             ) : null}
             {/* 「分析本章」和「全书分析」是并列的选择——它们回答不同的问题，没有哪个更主。

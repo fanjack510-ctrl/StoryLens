@@ -9,7 +9,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildFixture13Scenes } from "./mockVisualizationFixtures";
-import { OBSERVATION_LENSES, getObservationLensHint } from "./observationLenses";
+import { OBSERVATION_LENSES } from "./observationLenses";
 
 const toolbarSource = readFileSync(resolve(__dirname, "./JourneyChartToolbar.tsx"), "utf8");
 const css = readFileSync(resolve(__dirname, "./readerJourney.css"), "utf8");

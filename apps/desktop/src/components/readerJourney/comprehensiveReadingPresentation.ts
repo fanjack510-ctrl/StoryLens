@@ -251,7 +251,7 @@ export function deriveComprehensiveReadingFactors(
     return list[0].text;
   };
 
-  let driver = pick(drivers);
+  const driver = pick(drivers);
   let drag = pick(drags);
   if (driver && drag && driver === drag) {
     drag = pick(drags.filter((d) => d.text !== driver)) ?? null;

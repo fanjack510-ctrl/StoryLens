@@ -1640,3 +1640,52 @@ button:disabled.primary {
   font-variant-numeric: tabular-nums; margin-right: 4px;
 }
 @media (max-width: 900px) { .book-row-when { display: none; } }
+
+/* 筛选条里每一块自己不断词。断词是上一版最刺眼的问题：
+   「更多筛选」变成「更多筛 / 选」，「排序」变成「排 / 序」。 */
+.library-filter-bar > * { white-space: nowrap; }
+.library-kind-filter, .library-collections { flex-wrap: nowrap; }
+.library-format-fold > summary { white-space: nowrap; }
+.library-sort-field { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* 排序推到最右，让左边的筛选块连成一片而不是散在中间。 */
+.library-sort-field { margin-left: auto; }
+
+/* 专业版入口：常驻但安静。它要一直在（看不见的功能等于不存在），
+   但不该抢筛选控件的注意力——所以是一条文字链，不是按钮。 */
+.library-pro-link {
+  font-size: 12.5px; color: var(--color-text-tertiary); text-decoration: none;
+  white-space: nowrap; padding: 4px 0; border-bottom: 1px dashed var(--color-border);
+}
+.library-pro-link:hover { color: var(--color-brand); border-bottom-color: var(--color-brand); }
+
+/* ---- 专业版说明页 ---- */
+.pro-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.pro-item {
+  border: 1px solid var(--color-border); border-radius: 10px; padding: 16px 18px;
+  background: var(--color-bg-surface);
+}
+.pro-item-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.pro-item-head b { font-size: 16px; font-weight: 650; }
+.pro-badge.on {
+  font-size: 11.5px; padding: 2px 9px; border-radius: 999px;
+  background: var(--color-brand-soft); color: var(--color-brand); font-weight: 600;
+}
+.pro-item p { margin: 0 0 8px; font-size: 14px; line-height: 1.75; color: var(--color-text-secondary); }
+.pro-item p:last-child { margin-bottom: 0; }
+/* 「免费」和「专业版」两个前缀用不同的底色，让分界一眼可见——
+   这一页存在的全部意义就是说清那条线在哪儿。 */
+.pro-free > span, .pro-paid > span {
+  display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 4px;
+  margin-right: 9px; font-weight: 600; vertical-align: 1px;
+}
+.pro-free > span { background: var(--color-bg-muted); color: var(--color-text-secondary); }
+.pro-paid > span { background: var(--color-brand-soft); color: var(--color-brand); }
+.pro-where { font-size: 12.5px !important; color: var(--color-text-tertiary) !important; }
+.pro-where a { color: var(--color-brand); }
+.pro-note { margin-top: 16px; font-size: 13px; }
+.pro-cta { display: flex; gap: 16px; align-items: center; margin-top: 22px; flex-wrap: wrap; }
+.pro-cta .primary {
+  padding: 9px 20px; border-radius: 8px; background: var(--color-brand);
+  color: var(--color-text-inverse); text-decoration: none; font-weight: 600; font-size: 14px;
+}
+.pro-cta a:not(.primary) { color: var(--color-text-secondary); font-size: 13.5px; }

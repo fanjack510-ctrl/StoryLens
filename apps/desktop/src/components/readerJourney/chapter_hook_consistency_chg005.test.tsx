@@ -1,7 +1,7 @@
 /**
  * CHG-20260729-005 hook consistency — chapter gate + respond hard gate + Fixture A/B.
  */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
 import { JourneyDiagnosisBand } from "./JourneyDiagnosisBand";

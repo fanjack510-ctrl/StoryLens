@@ -4,6 +4,7 @@ import { HomePage } from "../pages/HomePage";
 import { LibraryPage } from "../pages/LibraryPage";
 import { CommonPatternsPage } from "../pages/CommonPatternsPage";
 import { CrossBookSearchPage } from "../pages/CrossBookSearchPage";
+import { ProCapabilitiesPage } from "../pages/ProCapabilitiesPage";
 import { BookRoutePage } from "../pages/BookRoutePage";
 import { WorkspaceLandingPage } from "../pages/WorkspaceLandingPage";
 import { TasksPage } from "../pages/TasksPage";
@@ -64,6 +65,11 @@ export const router = createBrowserRouter([
       {
         // 跨书检索不挂在书或书单下面：它的默认问题是「有没有哪本书……」，
         // 范围是整个书库。
+        path: "/pro",
+        element: <ProCapabilitiesPage />,
+        errorElement: routeErrorElement,
+      },
+      {
         path: "/search",
         element: <CrossBookSearchPage />,
         errorElement: routeErrorElement,

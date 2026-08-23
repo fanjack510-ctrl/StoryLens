@@ -1,7 +1,7 @@
 /**
  * CHG-20260729-005 complete — sections 11–19 coverage + 6-scene fixture.
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";

@@ -19,7 +19,7 @@ import {
   resolveHookMainStatus,
   type HookMainStatus,
 } from "./hookResolutionModel";
-import { formatJourneySceneLabel, roleLabelZh } from "./journeyUiLabels";
+import { formatJourneySceneLabel } from "./journeyUiLabels";
 
 export const CHAPTER_HOOK_TAB_LABEL = "钩子回收";
 

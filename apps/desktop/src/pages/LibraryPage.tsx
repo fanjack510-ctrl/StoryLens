@@ -711,6 +711,13 @@ export function LibraryPage() {
             ))}
           </div>
         </details>
+        {/* 专业版的常驻入口。不弹窗、不打断，但必须**一直在**——
+            四个付费功能原来全藏在流程内部（共性视图要先选书单、按意思找要先搜一次、
+            PDF 在报告页右上角），装好之后连着两次被问「为啥没有 pro 的功能」。
+            一个看不见的功能和不存在没有区别。 */}
+        <Link className="library-pro-link" to="/pro" data-testid="library-pro-link">
+          专业版能做什么
+        </Link>
         <label className="library-sort-field">
           排序
           <select

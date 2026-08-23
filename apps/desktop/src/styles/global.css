@@ -2663,8 +2663,12 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 }
 .library-filter-bar {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 10px;
+  /* 允许换行。原来是 `nowrap` ——挤不下的时候子元素在**内部**折行，
+     于是「更多筛选」被劈成「更多筛」「选」，「排序」劈成「排」「序」，
+     几个筛选块各自掉到第二行、彼此对不齐。一整条读起来是坏的。
+     换行由这一层控制，每个块自己 `white-space: nowrap`，就不会再断词。 */
+  flex-wrap: wrap;
+  gap: 10px 14px;
   align-items: center;
   /* 卡片要立起来：原来它贴在页面底色上、四周几乎没有留白，读起来是页面的一部分，
      而不是一组可以动的控件。 */
