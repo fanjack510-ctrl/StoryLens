@@ -53,8 +53,14 @@ def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=
 
     Returns ``None`` on any failure rather than raising: the caller falls back to the CLI, and
     a report without page numbers is still a report.
+
+    但那次回落必须留下一行日志。`websockets` 曾经根本没装（它不在 spec 的 hiddenimports 里，
+    项目也没有 requirements），于是这个函数每次都在第一行 ImportError、返回 None，
+    每一份付费导出的 PDF 都没有页码——而整整一个版本里没有任何人发现，
+    因为回落是完全静默的。一条无声的降级路径，等于没有这条路径。
     """
-    import asyncio,base64,json,shutil
+    import asyncio,base64,json,logging,shutil
+    _log=logging.getLogger(__name__)
     async def run()->bytes|None:
         import httpx,websockets
         port_file=os.path.join(profile,"DevToolsActivePort")
@@ -117,9 +123,13 @@ def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=
             except Exception: pass
             shutil.rmtree(profile,ignore_errors=True)
     try:
-        return asyncio.run(run())
+        pdf=asyncio.run(run())
     except Exception:
+        _log.warning("pdf_devtools_path_failed 回落到无页码的 --print-to-pdf",exc_info=True)
         return None
+    if pdf is None:
+        _log.warning("pdf_devtools_path_returned_nothing 回落到无页码的 --print-to-pdf")
+    return pdf
 def render_report_pdf(db:Session,html:str)->Response:
     """把客户端渲染好的报告 HTML 打成 PDF。全书和单章共用这一条。
 

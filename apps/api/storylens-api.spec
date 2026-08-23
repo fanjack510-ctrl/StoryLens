@@ -49,6 +49,10 @@ hiddenimports = [
     "ebooklib",
     "bs4",
     "httpx",
+    # 成品 PDF 的页码走 DevTools 协议（Page.printToPDF 才能传页脚模板），那条路径要用它。
+    # 少了它不会报错——`_print_via_devtools` 直接 ImportError 返回 None，静默回落到
+    # `--print-to-pdf`，于是每一份付费导出的 PDF 都没有页码，而没人会发现。
+    "websockets",
     "anyio",
     "app",
     "app.main",
