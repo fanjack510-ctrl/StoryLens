@@ -6,7 +6,11 @@ lexicon / genre_templates / atoms / materials / textseg 五个模块是从
 「搬过来的还是原来那个引擎」这个前提失效。StoryLens 侧的适配全部放在
 bridge.py 里。
 
-本包零数据库依赖：不 import SQLAlchemy、不 import app.db。
+引擎模块零数据库依赖。唯一例外是 service.py——它是 StoryLens 侧的落库
+适配层（对应源项目 pipeline/dedup 绑 db 的那半边，用 SQLAlchemy 重写），
+不从本 __init__ 导出，路由直接 import。quality.py 里的
+rescore_with_final_counts 绑源项目的 db 模块，调用会 ImportError——
+它的重写版是 service.rescore_library。
 """
 
 from .bridge import (

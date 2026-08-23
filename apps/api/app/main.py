@@ -31,6 +31,7 @@ from app.routers.whole_book_foundation_router import router as whole_book_founda
 from app.routers.collections_router import router as collections_router
 from app.routers.common_patterns_router import router as common_patterns_router
 from app.routers.cross_book_router import router as cross_book_router
+from app.routers.material_lab_router import router as material_lab_router
 from app.routers.whole_book_free_product_router import router as whole_book_free_product_router
 from app.routers.whole_book_product_capability_router import router as whole_book_product_capability_router
 from app.routers import whole_book_mock_lab_runs as mock_lab_runs
@@ -244,6 +245,7 @@ def _configure_middleware_and_routers(app: FastAPI) -> None:
     app.include_router(collections_router)
     app.include_router(common_patterns_router)
     app.include_router(cross_book_router)
+    app.include_router(material_lab_router)
     app.include_router(whole_book_free_product_router)
     app.include_router(whole_book_preflight_router)
     app.include_router(whole_book_native_overview_router)
