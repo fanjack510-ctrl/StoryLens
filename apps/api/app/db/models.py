@@ -42,6 +42,8 @@ class Book(Base):
     #: not been asked, and the length/chapter inference stands in, so every book imported
     #: before the question existed behaves exactly as it did.
     analysis_form: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    #: fiction | reference。NULL = 没人回答过，按结构与长度推断。
+    material_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
     revision_of_book_id: Mapped[int | None] = mapped_column(ForeignKey("books.id"), nullable=True)
     revision_number: Mapped[int] = mapped_column(Integer, default=1)
     fixture_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -1351,6 +1353,9 @@ class WholeBookRun(Base):
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
     engine_id: Mapped[str] = mapped_column(String(128), nullable=False, default="")
     engine_version: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    #: 只跑前 N 章。扫榜要的是开篇——十五本书按整本拆是 ¥45／六小时，按前五章拆是 ¥1／十几分钟。
+    #: NULL = 整本。
+    chapter_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     contract_version: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     prompt_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
     result_origin: Mapped[str] = mapped_column(String(32), nullable=False, default="formal")
@@ -1594,3 +1599,45 @@ class WholeBookOverviewResult(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+
+class Collection(Base):
+    """一组书。
+
+    扫榜的做法是「一次过十几本新书，看它们怎么开头」，然后横着比。那个「十几本」需要一个
+    名字才能被反复回到——否则每次都要在书库里重新挑一遍，而后面的共性视图和跨书检索要的
+    第一件事就是「哪些书」。
+
+    书单本身免费：它不调用模型，是个文件夹。对整理收钱等于对文件夹收钱。付费的是**在
+    一组书上做的事**（共性视图、跨书检索），那些各自把门。
+    """
+
+    __tablename__ = "collections"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    #: 建这个书单是为了看什么。空着也行——但写了以后，几周后回来才知道当初圈这批书的理由。
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class CollectionBook(Base):
+    """书单里的一本书。
+
+    删书单不删书：书是导入进来的资产，书单只是一种看法。所以这里对 collection 级联，
+    对 book 不级联。
+    """
+
+    __tablename__ = "collection_books"
+    __table_args__ = (UniqueConstraint("collection_id", "book_id", name="uq_collection_book"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    collection_id: Mapped[int] = mapped_column(
+        ForeignKey("collections.id", ondelete="CASCADE"), index=True
+    )
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    #: 手动排序用。同值时按加入时间——扫榜排出来的顺序本身是结论的一部分。
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -33,6 +33,9 @@ from app.narrative_core.migrations import (
     MIGRATION_LONG_NOVEL_FOUNDATION,
     MIGRATION_BOOK_PROFILE,
     MIGRATION_BOOK_ANALYSIS_FORM,
+    MIGRATION_BOOK_MATERIAL_KIND,
+    MIGRATION_RUN_CHAPTER_LIMIT,
+    MIGRATION_COLLECTIONS,
     MIGRATION_SHORT_FORM_RESULTS,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
@@ -1155,6 +1158,9 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260813_019_book_profile(engine)
     migrate_narrative_20260818_020_short_form_results(engine)
     migrate_narrative_20260819_021_book_analysis_form(engine)
+    migrate_narrative_20260823_022_book_material_kind(engine)
+    migrate_narrative_20260823_023_run_chapter_limit(engine)
+    migrate_narrative_20260823_024_collections(engine)
 
 
 SQL_012 = """
@@ -2725,3 +2731,88 @@ def migrate_narrative_20260819_021_book_analysis_form(engine: Engine) -> None:
     with engine.begin() as connection:
         connection.execute(text("ALTER TABLE books ADD COLUMN analysis_form VARCHAR(16)"))
     _record_applied(engine, MIGRATION_BOOK_ANALYSIS_FORM, checksum)
+
+
+SQL_022 = """
+ALTER TABLE books ADD COLUMN material_kind VARCHAR(16);
+"""
+
+
+def migrate_narrative_20260823_022_book_material_kind(engine: Engine) -> None:
+    """这是小说，还是工具书。
+
+    导入时问的一直是「整本 / 短篇」，那是关于**怎么切**的工程问题；提示里甚至写着
+    「专著、教材、工具书选整本」——让用户自己把书的类型翻译成切法。而类型才是那本书最要紧的
+    属性：它决定能用哪几种读法（小说走评测/拆文，工具书走读懂），也决定章节识别该不该按
+    小说的章号格式去校准。
+
+    `fiction` / `reference`。NULL 表示没人回答过——老书照旧按长度和结构推断，行为不变。
+    """
+    checksum = migration_checksum(SQL_022)
+    if "material_kind" in _column_names(engine, "books"):
+        _record_applied(engine, MIGRATION_BOOK_MATERIAL_KIND, checksum)
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE books ADD COLUMN material_kind VARCHAR(16)"))
+    _record_applied(engine, MIGRATION_BOOK_MATERIAL_KIND, checksum)
+
+
+SQL_023 = """
+ALTER TABLE whole_book_runs ADD COLUMN chapter_limit INTEGER;
+"""
+
+
+def migrate_narrative_20260823_023_run_chapter_limit(engine: Engine) -> None:
+    """开篇拆解：一次运行可以只跑前 N 章。
+
+    扫榜要的是开篇，不是整本。按整本跑，十五本书是 ¥45／六小时；按前五章跑是 ¥1／十几分钟。
+    NULL = 整本，所以已有的运行行为一个字都不变。
+    """
+    checksum = migration_checksum(SQL_023)
+    if "chapter_limit" in _column_names(engine, "whole_book_runs"):
+        _record_applied(engine, MIGRATION_RUN_CHAPTER_LIMIT, checksum)
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE whole_book_runs ADD COLUMN chapter_limit INTEGER"))
+    _record_applied(engine, MIGRATION_RUN_CHAPTER_LIMIT, checksum)
+
+
+SQL_024 = """
+CREATE TABLE collections (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+CREATE TABLE collection_books (
+    id INTEGER PRIMARY KEY,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL DEFAULT 0,
+    added_at DATETIME NOT NULL,
+    CONSTRAINT uq_collection_book UNIQUE (collection_id, book_id)
+);
+CREATE INDEX ix_collection_books_collection_id ON collection_books(collection_id);
+CREATE INDEX ix_collection_books_book_id ON collection_books(book_id);
+"""
+
+
+def migrate_narrative_20260823_024_collections(engine: Engine) -> None:
+    """书单：一组可以被反复回到的书。
+
+    共性视图和跨书检索要的第一件事是「哪些书」。没有这张表，那个范围每次都要重新挑一遍，
+    而「上次那批」根本无法表达。
+
+    删书单不删书——外键对 collection 级联，对 book 不级联：书是导入进来的资产，
+    书单只是一种看法。
+    """
+    checksum = migration_checksum(SQL_024)
+    if "collections" in _table_names(engine):
+        _record_applied(engine, MIGRATION_COLLECTIONS, checksum)
+        return
+    with engine.begin() as connection:
+        for statement in SQL_024.strip().split(";"):
+            if statement.strip():
+                connection.execute(text(statement))
+    _record_applied(engine, MIGRATION_COLLECTIONS, checksum)

@@ -248,6 +248,10 @@ class RunReport:
     #: because the document was built from ``len(signals)`` — the chapters that survived — and
     #: so reported a book that had lost a third of itself as simply being shorter.
     chapters_planned: int = 0
+    #: 书本身有多少章。与 ``chapters_planned`` 分开：开篇拆解只计划读前 5 章，
+    #: 而书还是 542 章。把「计划读的」当成「书的长度」发出去，就等于对读者说这本书只有 5 章——
+    #: 和把丢失的章节报成书变短了，是同一个错误的两个入口。
+    book_chapters_total: int = 0
     #: Blocks that failed once and were tried again. Separate from ``blocks_failed``: a block
     #: that succeeded on the retry is not a failure, but it is worth being able to see that the
     #: run needed the retry at all.
@@ -352,12 +356,16 @@ class RunCoordinator:
         #: The book's confirmed profile axes. Decides which journey axis the report carries;
         #: absent means no journey is computed, and the report falls back to the stage list.
         profile_axes: Mapping[str, Any] | None = None,
+        #: 书本身的章数。只读开篇时，它和实际读到的章数不同，而文档必须报前者。
+        book_chapters_total: int | None = None,
     ) -> RunReport:
         report = RunReport(
             blocks_total=len(plan.blocks),
             partitions=len(plan.partitions),
             stages=len(plan.stages),
             chapters_planned=len(chapters_by_order),
+            # 调用方没说书有多长时，退回「读到的就是全部」——保持旧行为。
+            book_chapters_total=int(book_chapters_total or 0) or len(chapters_by_order),
         )
 
         assets = self._extract_all(plan, chapters_by_order, report)
@@ -2132,15 +2140,29 @@ class RunCoordinator:
             # The book's chapters, not the surviving ones. `len(signals)` is what the analysis
             # managed to read, and publishing it as the book's length is what turned a lost
             # block into an invisible one — the missing chapters simply stopped existing.
-            chapter_count=report.chapters_planned or len(signals),
+            #
+            # 开篇拆解从另一个门重犯了这个错：它只计划读 5 章，于是 `chapters_planned` 是 5，
+            # 文档就宣布这本 542 章的书只有 5 章、且已 100% 读完。所以这里认的是书的章数，
+            # 不是这次计划读的章数。
+            chapter_count=report.book_chapters_total or report.chapters_planned or len(signals),
             character_count=character_count,
             coverage={
-                "chapters_total": report.chapters_planned or len(signals),
+                "chapters_total": (
+                    report.book_chapters_total or report.chapters_planned or len(signals)
+                ),
                 "chapters_analysed": len(signals),
+                # 没读的那 537 章不进这里。`chapters_missing` 的意思是「本该读到却丢了」，
+                # 把有意跳过的章塞进来，会让一次正常的开篇拆解看起来像丢了 537 章。
                 "chapters_missing": sorted(set(report.chapters_lost)),
                 "blocks_total": report.blocks_total,
                 "blocks_failed": len(report.blocks_failed),
                 "failure_reasons": [reason for _, reason in report.blocks_failed],
+                "scope_kind": (
+                    "opening"
+                    if report.book_chapters_total > report.chapters_planned > 0
+                    else "full"
+                ),
+                "scope_chapters": report.chapters_planned or len(signals),
             },
             run_id=run_id,
             provider_name=provider_name,

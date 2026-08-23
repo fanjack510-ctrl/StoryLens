@@ -228,7 +228,13 @@ def _non_real_completed_v2_run(session: Session, book_id: int) -> WholeBookRun |
 
 
 def prepare_free_whole_book_analysis_v1(
-    session: Session, book_id: int, *, analysis_mode: str = "diagnostic"
+    session: Session,
+    book_id: int,
+    *,
+    analysis_mode: str = "diagnostic",
+    #: 只拆开篇时，报价要按开篇报。整本的价钱贴在一次只读 5 章的运行上，用户看到的每一个
+    #: 数字都是错的——时长、调用数、费用。而费用是他自己付给模型服务商的，不能猜。
+    chapter_limit: int | None = None,
 ) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
@@ -287,6 +293,8 @@ def prepare_free_whole_book_analysis_v1(
             f"当前服务商 {active_name} 尚未配置，无法准备全书分析",
         )
     # CHG-081: formal V2 start + reanalysis share Hierarchical planners (not legacy Free).
+    #: 一章过大时的说明。非 None 表示小说那两种读法不可用，「读懂」不受影响。
+    chapter_too_large: str | None = None
     try:
         estimate, hier_plan = estimate_hierarchical_whole_book_analysis_v1(
             session,
@@ -302,12 +310,18 @@ def prepare_free_whole_book_analysis_v1(
         # real cause is upstream of the analysis entirely: the chapters were never split.
         if "single chapter exceeds safe context capacity" not in str(exc):
             raise
-        raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_CHAPTER_TOO_LARGE,
+        # 这道闸门属于小说那两种读法：它们要把一章塞进一个窗口，一章过大就是真读不了。
+        #
+        # 但它原本让整个准备接口失败，于是整页打不开——而「读懂」根本不用窗口，超长的节由
+        # 规划器按段落切开。结果是一本专著（这本手册有一节 22.5 万字符）把唯一读得了它的
+        # 那种读法一起挡在门外，页面只留一句「无法读取数据」。
+        #
+        # 所以改成挡该挡的：页面照常打开，两种小说读法带着原因被禁用，读懂照走。
+        estimate, hier_plan = None, {}
+        chapter_too_large = (
             "这本书有单独一章超出了一次分析能读的长度，通常是章节没有被正确切分。"
-            "请用「重新识别章节」检查分章，或换一个能识别章号的文件重新导入。",
-            details={"planner_message": str(exc)},
-        ) from exc
+            "请用「重新识别章节」检查分章，或换一个能识别章号的文件重新导入。"
+        )
     latest = _latest_run_for_book(session, book_id)
     recoverable = _recoverable_run(session, book_id)
     live_now = live_run_for_book(session, book_id)
@@ -317,16 +331,25 @@ def prepare_free_whole_book_analysis_v1(
         and latest.snapshot_id is not None
         and snap_result["reused"] is False
     )
+    # 预估失败时给一份「说不出数」的壳，而不是让整页失败。字段照旧存在，值是 None——
+    # 界面因此会显示「暂无预估」，而不是显示一个编出来的数字。
+    if estimate is None:
+        # 预估算不出来时也要有一行真的：开跑要靠它绑定服务商配置。数值为空，价格标 unavailable。
+        estimate = _estimate_unavailable(session, book_id, provider, revision_hash)
     est = hierarchical_estimate_to_dict(estimate)
     real_on = real_provider_enabled()
     fixture_on = fixture_preview_enabled()
-    run_creation_enabled = bool(real_on and provider_available)
+    novel_blocked = chapter_too_large is not None and str(analysis_mode) != "comprehend"
+    if novel_blocked:
+        blockers = [*blockers, chapter_too_large]
+    run_creation_enabled = bool(real_on and provider_available and not novel_blocked)
     active_run = recoverable
     completed_v2 = _completed_v2_run(session, book_id)
     latest_failed = _latest_failed_run(session, book_id)
     non_real_completed = _non_real_completed_v2_run(session, book_id)
     model_name = str(est.get("model_name") or provider.plus_model or "")
-    context_safe = bool(hier_plan.get("context_safe", True))
+    # 预估没跑成时不能报 True——那正是「一章塞不进窗口」的情形，恰恰是最不安全的一种。
+    context_safe = bool(hier_plan.get("context_safe", chapter_too_large is None))
     # Which engine this book will actually get, and therefore which plan the panel should
     # describe. The estimate below priced the hierarchical planner's windows even for books
     # dispatched to the long-novel engine — the token total was close, because both engines
@@ -339,15 +362,36 @@ def prepare_free_whole_book_analysis_v1(
 
     long_novel = book_uses_long_novel_engine(session, book_id)
     planner = "long_novel_engine" if long_novel else "hierarchical_v2"
+    # 只读前 N 章，就按 N 章的量报价。字数按比例缩——章长在一本书里大致均匀，
+    # 而把整本的字数配上 5 章的调用数，比两个都错还糟：它看起来自洽。
+    est_chapters = int(est.get("chapter_count") or 0)
+    est_characters = int(est.get("character_count") or 0)
+    if chapter_limit and est_chapters > 0:
+        scoped = min(int(chapter_limit), est_chapters)
+        est_characters = round(est_characters * scoped / est_chapters)
+        est_chapters = scoped
     ln_plan = (
         estimate_long_novel_plan(
-            chapter_count=int(est.get("chapter_count") or 0),
-            character_count=int(est.get("character_count") or 0),
+            chapter_count=est_chapters,
+            character_count=est_characters,
             mode=analysis_mode,
         )
         if long_novel
         else {}
     )
+
+    if chapter_too_large is not None:
+        # 表里这几列不可为空，落行时只能写 0；但 0 在界面上读作「不用调用、不要钱」，
+        # 那比空白更误导。所以在给出去的这一层报 None，界面显示「—」。
+        ln_plan = {}
+        for key in (
+            "estimated_window_count",
+            "estimated_provider_call_count",
+            "estimated_input_tokens",
+            "estimated_output_tokens",
+        ):
+            est[key] = None
+        est["call_breakdown"] = None
 
     def _ln_costs() -> "tuple[float | None, float | None]":
         """Price the long-novel token counts with the estimator's own pricing function.
@@ -455,12 +499,102 @@ def prepare_free_whole_book_analysis_v1(
             "estimate_version": est.get("estimate_version"),
             "planner": planner,
         },
-        "recommended_limits": suggest_limits_from_estimate(estimate),
+        "recommended_limits": (
+            suggest_limits_from_estimate(estimate) if estimate is not None else None
+        ),
+        # 一章过大：说给界面听，让它禁用小说那两种读法并说出原因，而不是整页报错。
+        "chapter_too_large_reason": chapter_too_large,
         "blocking_reasons": blockers,
         "warnings": [],
         "resumable_checkpoint": _resumable_checkpoint_payload(session, latest_failed),
     }
 
+
+
+def _estimate_unavailable(
+    session: Session,
+    book_id: int,
+    provider: ProviderConfiguration,
+    revision_hash: str,
+) -> "WholeBookCostEstimate":
+    """预估算不出来时，仍然落一行真实的记录，只是数值为空。
+
+    第一版这里返回的是一个全 None 的字典。页面因此能打开了——然后按「开始分析」时报
+    `缺少或无效字段 estimate_id`：预估行不只是给人看的数字，它还承担着**服务商绑定**
+    （开跑时用它确认这次分析绑的是哪个服务商配置）。没有行，就没有绑定，也就开不了跑。
+
+    所以给一行真的：章数、段数、字数都是真的，价格是 unavailable。这跟「编一个价格」不同
+    ——`pricing_status` 明说算不出来，界面显示「—」。
+
+    复用同一行而不是每次插一行：这个页面在有任务跑时每 3 秒轮询一次，那正是之前把写锁
+    撑爆、日志里 84 次 `database is locked` 的来路。
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import func, select
+
+    from app.db.models import Chapter, Paragraph, WholeBookCostEstimate
+    from app.narrative_core.contracts.whole_book_contract_v1 import (
+        WHOLE_BOOK_CONTRACT_VERSION,
+    )
+
+    version = "hierarchical-unavailable-1"
+    model_name = str(provider.plus_model or "")
+    now = datetime.now(timezone.utc)
+
+    existing = session.scalars(
+        select(WholeBookCostEstimate)
+        .where(
+            WholeBookCostEstimate.book_id == int(book_id),
+            WholeBookCostEstimate.mode == WholeBookMode.whole_book_native.value,
+            WholeBookCostEstimate.provider_config_id == int(provider.id),
+            WholeBookCostEstimate.model_name == model_name,
+            WholeBookCostEstimate.estimate_version == version,
+        )
+        .order_by(WholeBookCostEstimate.id.desc())
+        .limit(1)
+    ).first()
+    if existing is not None and existing.book_revision_hash == revision_hash:
+        expires = existing.expires_at
+        if expires is not None and expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires is not None and now <= expires:
+            return existing
+
+    chapters = int(
+        session.query(func.count(Chapter.id)).filter(Chapter.book_id == int(book_id)).scalar() or 0
+    )
+    paragraphs, characters = session.query(
+        func.count(Paragraph.id),
+        func.coalesce(func.sum(func.length(Paragraph.normalized_text)), 0),
+    ).filter(Paragraph.book_id == int(book_id)).one()
+
+    row = WholeBookCostEstimate(
+        book_id=int(book_id),
+        book_revision_hash=revision_hash,
+        mode=WholeBookMode.whole_book_native.value,
+        provider_config_id=int(provider.id),
+        model_name=model_name,
+        chapter_count=chapters,
+        paragraph_count=int(paragraphs or 0),
+        character_count=int(characters or 0),
+        estimated_window_count=0,
+        estimated_provider_call_count=None,
+        estimated_input_tokens=None,
+        estimated_output_tokens=None,
+        estimated_cost_min_cny=None,
+        estimated_cost_max_cny=None,
+        currency="CNY",
+        pricing_status="unavailable",
+        pricing_reason_code="chapter_exceeds_window",
+        contract_version=WHOLE_BOOK_CONTRACT_VERSION,
+        estimate_version=version,
+        created_at=now,
+        expires_at=now + timedelta(hours=24),
+    )
+    session.add(row)
+    session.flush()
+    return row
 
 def _resumable_checkpoint_payload(
     session: Session, failed: WholeBookRun | None
@@ -551,6 +685,8 @@ def create_free_whole_book_analysis_v1(
     estimate_id: int,
     consent_id: int,
     client_request_id: str,
+    #: 只跑前 N 章。None = 整本。
+    chapter_limit: int | None = None,
     execute_pipeline: bool = True,
     defer_execution: bool = False,
     reanalyse: bool = False,
@@ -668,6 +804,11 @@ def create_free_whole_book_analysis_v1(
         request_id,
         ResultOrigin.formal.value,
     )
+    if chapter_limit:
+        # 只跑前 N 章。写在运行上而不是快照上：同一本书可以先拆开篇、之后再拆整本，
+        # 两次是不同的运行，各自记得自己看了多少。
+        run.chapter_limit = int(chapter_limit)
+        session.flush()
     if reanalyse:
         if previous_run_id is not None and int(run.id) == int(previous_run_id):
             raise WholeBookFoundationError(

@@ -256,6 +256,8 @@ class CapabilityKey(StrEnum):
     WHOLE_BOOK_NATIVE = "whole_book_native"
     WHOLE_BOOK_ENHANCED = "whole_book_enhanced"
     CHAPTER_AGGREGATE_INSIGHTS = "chapter_aggregate_insights"
+    #: 共性视图：把一组书摆在一起，看它们共同做对了什么。
+    COMMON_PATTERNS = "common_patterns"
 
 
 class CapabilityAvailability(StrEnum):

@@ -21,14 +21,42 @@ from cryptography.hazmat.primitives import serialization
 PRODUCT_CODE = "storylens_pro"
 EDITION = "pro"
 LICENSE_PREFIX = "SLP1"
+#: PRO 卖的东西。**只列真正属于 PRO 的**——全书分析是免费的核心功能，曾经也被签在这里，
+#: 那是一个错误的承诺：用户自己付模型费，再收一次等于收「允许你使用自己买的算力」的钱。
+#:
+#: 每一项的可用状态见 `FEATURE_STATUS`。清单不该只是名字，还得说清今天能不能用——
+#: 之前六项里只有一项真正有门，而买家看到的是六个名字。
 CANONICAL_FEATURES = (
-    "whole_book_analysis",
-    "narrative_asset_library",
-    "story_lab",
-    "cross_book_search",
     "advanced_export",
+    "common_patterns",
+    "cross_book_search",
+    "narrative_asset_library",
+    # 把它从清单里删掉，等于对已经买过的人收回一项已经发出去的能力——那是另一回事，
+    # 不是「这一轮不做」。它的门和接口都在，留着；清单不撒谎靠的是下面的状态，不是删除。
     "pro_whole_book_insights",
 )
+
+#: available = 今天就能用；planned = 已承诺、这一轮在做。
+#: 界面按这个标状态，不把没做的东西混在能用的里面卖。
+#: available = 今天就能用；planned = 已承诺、这一轮在做；
+#: engine_required = 门和接口都在，但要装了私有引擎才跑得起来，打包版没有它。
+#: 界面按这个标状态，不把跑不起来的东西混在能用的里面卖。
+FEATURE_STATUS: dict[str, str] = {
+    "advanced_export": "available",
+    "common_patterns": "planned",
+    "cross_book_search": "planned",
+    "narrative_asset_library": "planned",
+    "pro_whole_book_insights": "engine_required",
+}
+
+#: 人话名字。让授权页能列出「你买到了什么」，而不是一串英文键。
+FEATURE_LABELS: dict[str, str] = {
+    "advanced_export": "成品报告导出（PDF）",
+    "common_patterns": "共性视图：把一组书摆在一起看",
+    "cross_book_search": "跨书检索",
+    "narrative_asset_library": "素材库",
+    "pro_whole_book_insights": "章节素材聚合洞察（需私有引擎）",
+}
 
 
 class LicenseError(Exception):

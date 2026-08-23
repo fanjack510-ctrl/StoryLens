@@ -118,6 +118,12 @@ class CoverageReport(M):
     chapters_missing: list[int] = Field(default_factory=list)
     blocks_total: int = 0
     blocks_failed: int = 0
+    #: 这次阅读有意只覆盖了书的一段（开篇拆解），还是整本。
+    #: 与 ``chapters_missing`` 是两回事：那是「本该读到却丢了」，这是「本来就没打算读」。
+    #: 混成一件事，读者就分不清引擎出错和引擎照要求工作——而这两种情况该做的事正好相反。
+    scope_kind: str = "full"
+    #: 这次有意读了多少章。整本时等于 ``chapters_total``。
+    scope_chapters: int = 0
     #: Why each block failed, in the engine's own words — kept because diagnosing a failure
     #: afterwards otherwise means paying to reproduce it.
     failure_reasons: list[str] = Field(default_factory=list)

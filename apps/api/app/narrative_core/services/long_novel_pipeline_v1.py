@@ -28,7 +28,7 @@ from typing import Any, Callable
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.db.models import Book, WholeBookRun
+from app.db.models import Book, BookSnapshot, WholeBookRun
 from app.model_gateway.base import ModelRequest
 from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStatus
 from app.core.config import get_settings
@@ -492,7 +492,12 @@ def execute_long_novel_pipeline_v1(
             session.commit()
 
     repo = WholeBookV2Repository(session, on_persist=_persist_commit if commit_progress else None)
-    chapters, stats = load_chapters(session, int(run.snapshot_id))
+    # 只跑前 N 章时，`load_chapters` 的 limit 直接把后面的章节挡在引擎之外——不是分析完再截断，
+    # 是根本不发给模型。省下的是真金白银。
+    chapter_limit = getattr(run, "chapter_limit", None)
+    chapters, stats = load_chapters(
+        session, int(run.snapshot_id), limit=int(chapter_limit) if chapter_limit else None
+    )
     chapters = _one_based(chapters)
     planned = to_planned_chapters(chapters)
     resolved = joint_resolve(
@@ -679,10 +684,18 @@ def execute_long_novel_pipeline_v1(
     _persist_commit()
 
     snapshot_revision = str(chapters[0].content_hash or "") if chapters else ""
+    # 书有多长，问快照，不问这次读了多少。只读开篇时 `stats` 描述的是读到的那一段，
+    # 拿它当书的尺寸发出去，文档就会宣布这本 542 章的书只有 5 章——而且已经全部读完。
+    snapshot_row = session.get(BookSnapshot, int(run.snapshot_id))
+    book_chapters_total = int(getattr(snapshot_row, "chapter_count", 0) or 0) or stats.chapter_count
+    book_character_count = (
+        int(getattr(snapshot_row, "character_count", 0) or 0) or stats.character_count
+    )
     report = coordinator.run(
         plan=plan,
         chapters_by_order={c.chapter_order: c for c in chapters},
-        character_count=stats.character_count,
+        character_count=book_character_count,
+        book_chapters_total=book_chapters_total,
         book_id=int(run.book_id),
         snapshot_id=int(run.snapshot_id),
         revision_hash=snapshot_revision,

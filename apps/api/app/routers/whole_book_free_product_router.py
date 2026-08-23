@@ -61,6 +61,10 @@ class CreateFreeRunRequest(BaseModel):
     #: every existing caller keeps the behaviour it has. The two share a snapshot, a planner and
     #: an extraction pass and differ only in the four bounded units above L1.
     analysis_mode: Literal["diagnostic", "story_breakdown", "comprehend"] = "diagnostic"
+    #: 只跑前 N 章。扫榜要的是开篇——十五本书按整本拆是 ¥45／六小时，按前五章拆是 ¥1／十几分钟。
+    #: 省下的不是我们的钱，是用户付给模型服务商的钱，所以这件事值得单独有个参数。
+    #: None = 整本，已有调用方行为不变。
+    chapter_limit: int | None = Field(default=None, gt=0, le=200)
     # CHG-080 reanalysis
     reanalyse: bool = False
     force_full_reanalysis: bool = False
@@ -89,9 +93,16 @@ def _raise_foundation(exc: WholeBookFoundationError) -> None:
     )
 
 
-def _prepare(book_id: int, db: Session, analysis_mode: str = "diagnostic") -> dict:
+def _prepare(
+    book_id: int,
+    db: Session,
+    analysis_mode: str = "diagnostic",
+    chapter_limit: int | None = None,
+) -> dict:
     try:
-        result = prepare_free_whole_book_analysis_v1(db, book_id, analysis_mode=analysis_mode)
+        result = prepare_free_whole_book_analysis_v1(
+            db, book_id, analysis_mode=analysis_mode, chapter_limit=chapter_limit
+        )
         db.commit()
         return result
     except WholeBookFoundationError as exc:
@@ -120,21 +131,25 @@ def _create_fixture(book_id: int, body: CreateFixtureFreeRunRequest, db: Session
 def prepare_free_analysis(
     book_id: int,
     analysis_mode: Literal["diagnostic", "story_breakdown", "comprehend"] = "diagnostic",
+    chapter_limit: int | None = Query(default=None, gt=0, le=200),
     db: Session = Depends(get_db),
 ) -> dict:
     """The panel prices the run the caller is about to start, which is not always the
-    diagnostic: 拆文 makes four bounded calls where the diagnostic makes eight."""
-    return _prepare(book_id, db, analysis_mode)
+    diagnostic: 拆文 makes four bounded calls where the diagnostic makes eight.
+
+    只拆开篇也一样：报价要按真正要跑的范围算，否则面板上贴的是整本的价钱。"""
+    return _prepare(book_id, db, analysis_mode, chapter_limit)
 
 
 @router.get("/books/{book_id}/whole-book/prepare")
 def prepare_free_analysis_product_alias(
     book_id: int,
     analysis_mode: Literal["diagnostic", "story_breakdown", "comprehend"] = "diagnostic",
+    chapter_limit: int | None = Query(default=None, gt=0, le=200),
     db: Session = Depends(get_db),
 ) -> dict:
     """Product-facing alias used by Wave D desktop client."""
-    return _prepare(book_id, db, analysis_mode)
+    return _prepare(book_id, db, analysis_mode, chapter_limit)
 
 
 @router.post("/books/{book_id}/whole-book/free/create")
@@ -220,6 +235,7 @@ def create_free_analysis(
             estimate_id=body.estimate_id,
             consent_id=int(consent_id),
             client_request_id=body.client_request_id,
+            chapter_limit=body.chapter_limit,
             defer_execution=True,
             reanalyse=bool(body.reanalyse),
             force_full_reanalysis=bool(body.force_full_reanalysis),

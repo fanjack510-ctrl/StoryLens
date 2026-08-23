@@ -82,14 +82,19 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
     CapabilityKey.CROSS_BOOK_SEARCH: CapabilityMetadata(
         key=CapabilityKey.CROSS_BOOK_SEARCH,
         display_name="跨书检索",
-        description="跨作品叙事模式检索（Pro；未发货）。",
-        shipped=False,
+        description=(
+            "在所有分析过的书里找东西。关键词检索免费——它确定、即时、可核对，"
+            "而且覆盖全部条目；付费的是「按意思找」：用自己的话描述要找的写法，"
+            "由模型在写法层里挑出来并说明为什么符合。"
+        ),
+        shipped=True,
         requires_license=True,
-        availability=CapabilityAvailability.UNAVAILABLE,
-        preview_visible=False,
-        enabled=False,
-        entry_visible=False,
-        estimated_cost_class=CostClass.MEDIUM,
+        availability=CapabilityAvailability.AVAILABLE,
+        preview_visible=True,
+        enabled=True,
+        entry_visible=True,
+        # 一次调用，输入是写法层条目（实测三本书约四千 token）。
+        estimated_cost_class=CostClass.LOW,
     ),
     CapabilityKey.ADVANCED_EXPORT: CapabilityMetadata(
         key=CapabilityKey.ADVANCED_EXPORT,
@@ -101,6 +106,23 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         preview_visible=True,
         enabled=True,
         entry_visible=True,
+        estimated_cost_class=CostClass.LOW,
+    ),
+    CapabilityKey.COMMON_PATTERNS: CapabilityMetadata(
+        key=CapabilityKey.COMMON_PATTERNS,
+        display_name="共性视图",
+        description=(
+            "把一组书摆在一起，看它们共同做对了什么（Pro）。"
+            "数出来的那一屏——类型分布、每本读到第几章、哪几本还没拆过文——保持免费；"
+            "付费的是把这些书归纳成共同手法这一步。"
+        ),
+        shipped=True,
+        requires_license=True,
+        availability=CapabilityAvailability.AVAILABLE,
+        preview_visible=True,
+        enabled=True,
+        entry_visible=True,
+        # 一次调用，输入是十几本书的技法清单，几千 token。
         estimated_cost_class=CostClass.LOW,
     ),
     CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS: CapabilityMetadata(
