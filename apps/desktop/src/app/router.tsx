@@ -114,6 +114,14 @@ export const router = createBrowserRouter([
         errorElement: routeErrorElement,
       },
       {
+        // 素材库挂在书下面：它拆的是一本书。本地确定性引擎，免费，不联网。
+        path: "/books/:bookId/material-lab",
+        lazy: async () => ({
+          Component: (await import("../pages/MaterialLabPage")).MaterialLabPage,
+        }),
+        errorElement: routeErrorElement,
+      },
+      {
         path: "/books/:bookId/whole-book-v2",
         element: <WholeBookV2FormalPage />,
         errorElement: routeErrorElement,

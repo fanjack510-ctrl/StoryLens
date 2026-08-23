@@ -6,6 +6,15 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "apps/desktop"],
       "port": 1420
+    },
+    {
+      "name": "storylens-desktop-1421",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_API_BASE_URL=http://127.0.0.1:8000&& npm run dev --prefix apps/desktop -- --port 1421 --strictPort"
+      ],
+      "port": 1421
     }
   ]
 }
