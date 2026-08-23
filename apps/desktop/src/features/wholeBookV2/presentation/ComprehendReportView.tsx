@@ -79,13 +79,15 @@ export function ComprehendReportView({
         <h1>{title}</h1>
         {/* 可信度放在最前面，而不是报告末尾的小字。读者要先知道这份东西能不能替代原文。 */}
         <p
-          className={data.trustworthy ? "cmp-trust ok" : "cmp-trust warn"}
+          className={missed === 0 ? "cmp-trust ok" : data.trustworthy ? "cmp-trust partial" : "cmp-trust warn"}
           data-testid="comprehend-coverage"
         >
-          {data.trustworthy
-            ? `覆盖 ${data.sections_covered}/${data.sections_total} 节（${pct}%）——全书都读到了`
-            : `只覆盖了 ${data.sections_covered}/${data.sections_total} 节（${pct}%），有 ${missed} 节没读到。` +
-              "这份摘要不完整，涉及那几节的内容请回原文核对。"}
+          {missed === 0
+            ? `覆盖 ${data.sections_covered}/${data.sections_total} 节——全书都读到了`
+            : data.trustworthy
+              ? `覆盖 ${data.sections_covered}/${data.sections_total} 节（${pct}%）· 有 ${missed} 节没读到，涉及它们的内容请回原文核对`
+              : `只覆盖了 ${data.sections_covered}/${data.sections_total} 节（${pct}%），有 ${missed} 节没读到。` +
+                "这份摘要不完整，涉及那几节的内容请回原文核对。"}
         </p>
         {runId != null && (
           <div className="cmp-actions">

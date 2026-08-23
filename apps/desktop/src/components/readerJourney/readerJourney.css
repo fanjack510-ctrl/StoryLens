@@ -1377,7 +1377,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   left: -12000px;
   top: 0;
   width: max-content;
-  background: #fff;
+  background: var(--color-bg-surface);
   pointer-events: none;
 }
 
@@ -2263,7 +2263,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   font-size: 12px;
   line-height: 1.35;
   color: var(--text);
-  background: color-mix(in srgb, var(--panel, #fff) 92%, transparent);
+  background: color-mix(in srgb, var(--panel, var(--color-bg-surface)) 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
   border-radius: 6px;
   pointer-events: none;
@@ -3589,7 +3589,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   padding: 0 14px;
   border: 1.5px solid var(--color-brand, #2f6f4e);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-bg-surface);
   color: var(--text, #1a1f1c);
   font-size: 13px;
   font-weight: 600;
@@ -3795,7 +3795,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 }
 .hook-payoff-node-dot {
   fill: #3d6b58;
-  stroke: #fff;
+  stroke: var(--color-bg-surface);
   stroke-width: 1.5;
 }
 .hook-payoff-node--partial .hook-payoff-node-dot {
@@ -3855,7 +3855,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 }
 .journey-tool-btn {
   border: 1px solid var(--line, #d1d5db);
-  background: #fff;
+  background: var(--color-bg-surface);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 12px;
@@ -4449,7 +4449,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   gap: 6px;
   border-radius: 8px;
   border: 1px solid var(--border-subtle, rgba(127, 127, 127, 0.28));
-  background: var(--surface-raised, var(--surface, #fff));
+  background: var(--surface-raised, var(--surface, var(--color-bg-surface)));
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
 

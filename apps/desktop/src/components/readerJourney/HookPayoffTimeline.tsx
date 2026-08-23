@@ -13,7 +13,6 @@ import {
   computeStageBandPixelRanges,
   resolveSceneStageAssignment,
 } from "./journeyStageBands";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import "./hookPayoffTimeline.css";
 
 type Props = {
@@ -55,7 +54,6 @@ export function HookPayoffTimeline({
   onSelectLoop,
   onSelectScene,
 }: Props) {
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
   const model = useMemo(
     () => presentation ?? buildChapterHookSimplificationModel(visualization),
     [presentation, visualization],
@@ -305,63 +303,6 @@ export function HookPayoffTimeline({
           </>
         ) : null}
       </section>
-
-      {developerMode ? (
-        <details
-          className="hook-chapter-tech-details"
-          data-testid="hook-chapter-tech-details"
-        >
-          <summary>技术详情</summary>
-          <div className="hook-chapter-tech-table-wrap">
-            <table className="hook-chapter-tech-table" data-testid="hook-chapter-tech-table">
-              <thead>
-                <tr>
-                  <th>Hook ID</th>
-                  <th>问题</th>
-                  <th>状态</th>
-                  <th>提出</th>
-                  <th>强化</th>
-                  <th>回应</th>
-                  <th>冲突</th>
-                  <th>证据数</th>
-                  <th>source</th>
-                  <th>confidence</th>
-                  <th>未关联信号</th>
-                </tr>
-              </thead>
-              <tbody>
-                {model.tech_rows.map((row) => (
-                  <tr key={row.loop_id} data-testid="hook-chapter-tech-row">
-                    <td>{row.loop_id}</td>
-                    <td>{row.question}</td>
-                    <td>{row.status}</td>
-                    <td>S{row.open_scene}</td>
-                    <td>
-                      {row.development_scenes.length
-                        ? row.development_scenes.map((s) => `S${s}`).join(",")
-                        : "—"}
-                    </td>
-                    <td>
-                      {row.resolve_scene != null
-                        ? `S${row.resolve_scene} (${row.payoff_types.join("/") || "—"})`
-                        : "—"}
-                    </td>
-                    <td>{row.has_conflict ? "有" : "无"}</td>
-                    <td>{row.evidence_count}</td>
-                    <td>{row.source}</td>
-                    <td>{row.confidence}</td>
-                    <td>
-                      {row.unlinked_response_signal
-                        ? "存在响应信号，但未能可靠关联到前置钩子"
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
-      ) : null}
     </div>
   );
 }

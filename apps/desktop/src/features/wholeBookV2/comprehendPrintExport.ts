@@ -100,10 +100,16 @@ export function buildComprehendPrintHtml(data: ComprehendResult, title: string):
     })
     .join("");
 
-  const trust = data.trustworthy
-    ? `<p class="trust ok">覆盖 ${covered}/${total} 节（${pct}%）——全书都读到了。</p>`
-    : `<p class="trust warn">只覆盖了 ${covered}/${total} 节（${pct}%），有 ${missed} 节没读到。` +
-      `这份摘要不完整，涉及那几节的内容请回原文核对。</p>`;
+  // 「全书都读到了」只在一节不差时才说。96% 也印这句，等于让读者在不知情的情况下
+  // 拿一份缺了 44 节的东西当原文用——纸比屏幕更容易被当成定稿。
+  const trust =
+    missed === 0
+      ? `<p class="trust ok">覆盖 ${covered}/${total} 节——全书都读到了。</p>`
+      : data.trustworthy
+        ? `<p class="trust partial">覆盖 ${covered}/${total} 节（${pct}%）· 有 ${missed} 节没读到，` +
+          `涉及它们的内容请回原文核对。</p>`
+        : `<p class="trust warn">只覆盖了 ${covered}/${total} 节（${pct}%），有 ${missed} 节没读到。` +
+          `这份摘要不完整，涉及那几节的内容请回原文核对。</p>`;
 
   // 显式声明字符集。这份 HTML 会被写到磁盘、由无头 Chromium 以 file:/// 打开；不声明就走系统
   // 默认，中文 Windows 上是 GBK，整份报告会印成乱码。
@@ -130,6 +136,7 @@ h1 { font-size: 22pt; line-height: 1.3; margin: 0 0 2mm; }
 .trust { font-size: 10pt; padding: 3mm 4mm; margin: 4mm 0 7mm;
   border-left: 2pt solid var(--key); background: rgba(20,80,60,.05); }
 .trust.warn { border-left-color: var(--warn); color: var(--warn); background: rgba(168,85,31,.06); }
+.trust.partial { border-left-color: var(--warn); background: rgba(168,85,31,.04); }
 .card { border-left: 2pt solid var(--key); padding: 0 0 0 4mm; margin: 0 0 5mm; break-inside: avoid; }
 .card h3 { font-size: 11pt; color: var(--key); margin: 0 0 1.5mm; }
 .card p { margin: 0; }

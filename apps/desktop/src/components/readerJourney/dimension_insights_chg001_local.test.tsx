@@ -15,7 +15,6 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 const REQUIRED_LABELS = [
   "综合阅读",
@@ -138,7 +137,6 @@ function minimalViz(node: JourneySceneNode): ReaderJourneyVisualization {
 
 describe("CHG-20260729-001 dimension insights", () => {
   beforeEach(() => {
-    useDeveloperModeStore.setState({ developerMode: false });
   });
 
   it("keeps six Chinese dimension labels unchanged", () => {
@@ -196,21 +194,8 @@ describe("CHG-20260729-001 dimension insights", () => {
     expect(screen.queryByTestId("scene-detail-tech-details")).toBeNull();
   });
 
-  it("keeps developer details collapsed by default", () => {
-    useDeveloperModeStore.setState({ developerMode: true });
-    const node = buildNode();
-    render(
-      <JourneySceneDetailPanel
-        node={node}
-        visualization={minimalViz(node)}
-        observationLens="composite"
-        onLocateEvidence={() => undefined}
-      />,
-    );
-    const details = screen.getAllByTestId("scene-detail-tech-details")[0];
-    expect(details).toBeTruthy();
-    expect((details as HTMLDetailsElement).open).toBe(false);
-  });
+  // 「keeps developer details collapsed by default」删除：开发者折叠已随开发者模式删除。
+
 
   it("compositeRoleFitLabel maps null momentum to 无法判断", () => {
     expect(compositeRoleFitLabel(null, "setup")).toBe("无法判断");

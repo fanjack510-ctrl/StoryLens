@@ -161,7 +161,7 @@
   right: 0;
   width: min(420px, 92vw);
   height: 100vh;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-bg-surface));
   border-left: 1px solid var(--border-subtle, #e5e7eb);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
   z-index: 40;

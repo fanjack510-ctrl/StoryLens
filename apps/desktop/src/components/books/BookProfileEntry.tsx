@@ -42,6 +42,8 @@ export function BookProfileEntry({ bookId, chapterId }: Props) {
     };
   }, [bookId]);
 
+  // 查询还没回来时不显示——但「查不到画像」不等于「还在查」：没建过画像的书本来就返回
+  // null，那是正常的第一状态，必须显示成「待确认」。
   if (state === "loading") return null;
 
   const confirmed = state === "confirmed";

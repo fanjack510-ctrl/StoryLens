@@ -345,9 +345,13 @@ describe("WB-2.1 structure module shell", () => {
     prepareSpy.mockResolvedValue(basePrepare(baseRun("completed")));
     getStructureSpy.mockResolvedValue(STRUCTURE_UI_FIXTURES.A_available_multi);
     renderPage("/books/1/whole-book?module=structure");
-    expect(await screen.findByTestId("whole-book-free-structure")).toHaveAttribute(
-      "data-state",
-      "available",
+    // 等的是状态，不是元素。`findByTestId` 在元素一出现就返回，而那一刻它还是 loading——
+    // 断言紧跟着跑，于是这条测试在「数据还没到」和「数据到了」之间赛跑。
+    await waitFor(() =>
+      expect(screen.getByTestId("whole-book-free-structure")).toHaveAttribute(
+        "data-state",
+        "available",
+      ),
     );
     expect(screen.getByTestId("whole-book-free-module-structure")).toHaveAttribute(
       "data-active",

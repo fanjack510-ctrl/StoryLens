@@ -58,6 +58,16 @@ vi.mock("../services/analysisApi", async () => {
   };
 });
 
+// 「分析本章」现在是一道门后面的动作：画像没确认就点不动（以前点得动，然后在弹窗里
+// 撞 409）。这些用例测的是 URL 行为，不是那道门，所以把它们一直隐含依赖的前提写出来。
+vi.mock("../features/bookProfile/api", () => ({
+  getBookProfile: vi.fn(async () => ({ status: "confirmed" })),
+}));
+
+vi.mock("../services/shortFormApi", () => ({
+  shortFormApi: { prepare: vi.fn(async () => ({ is_short_form: false })) },
+}));
+
 vi.mock("../components/chapterResult/AnalysisResultRouteAdapter", () => ({
   AnalysisResultRouteAdapter: ({ runId }: { runId: number }) => (
     <div data-testid="mock-embedded-results">embedded-run:{runId}</div>

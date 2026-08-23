@@ -16,12 +16,10 @@ import {
   chg005FixtureBReliableHooks,
 } from "./chg005HookConsistencyFixtures";
 import { getNarrativeLoops, type NarrativeLoopView } from "./narrativeLoopView";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { vi } from "vitest";
 
 afterEach(() => {
   cleanup();
-  useDeveloperModeStore.setState({ developerMode: false });
 });
 
 describe("CHG-005 hook consistency gates", () => {

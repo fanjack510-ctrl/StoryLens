@@ -84,7 +84,7 @@
   align-items: center;
   padding: 0.85rem 1.25rem;
   border-top: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
-  background: color-mix(in srgb, var(--surface, #f7f4ef) 92%, #fff);
+  background: color-mix(in srgb, var(--surface, #f7f4ef) 92%, var(--color-bg-surface));
 }
 
 .confirm-boundary-actions-left {

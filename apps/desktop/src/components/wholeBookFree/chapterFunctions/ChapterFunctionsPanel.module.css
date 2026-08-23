@@ -173,7 +173,7 @@
 .detailDrawerInner {
   width: min(420px, 100%);
   height: 100%;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-bg-surface));
   padding: 1rem;
   overflow: auto;
   display: flex;

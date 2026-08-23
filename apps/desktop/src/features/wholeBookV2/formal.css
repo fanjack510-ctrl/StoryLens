@@ -1,19 +1,19 @@
-.wbv2,.wbv2-state{max-width:1450px;margin:auto;padding:28px;color:#1d2923}.wbv2>header{background:#eef4f0;padding:20px}.wbv2>header h1{margin:0}.wbv2>nav{display:flex;position:sticky;top:0;background:#fff;border-bottom:1px solid #d6dfda}.wbv2>nav button{border:0;border-bottom:3px solid transparent;background:#fff;padding:16px 22px}.wbv2>nav button.active{border-color:#2f6b57;color:#2f6b57}.wbv2 main{padding:25px;background:#f7f9f7}.wbv2 details{background:#fff;border:1px solid #dce3df;padding:13px;margin:8px 0}.wbv2-chart{width:100%;background:#fff}.wbv2-chart line{stroke:#aebcb5;stroke-dasharray:2}.wbv2-heatmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(40px,1fr));gap:4px}.wbv2-heatmap button{height:38px;border:0}.wbv2-dims{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.wbv2-dims article{background:#fff;padding:14px;border-top:3px solid #477d66}.wbv2-product{padding:0}.wbv2-product-header{padding:24px 28px;background:#fff;border-bottom:1px solid #dbe3dd}.wbv2-prepare,.wbv2-legacy{max-width:720px;margin:32px auto;padding:28px;background:#fff;border:1px solid #dce4df;border-radius:8px}.wbv2-prepare ul{padding-left:20px;line-height:1.7}.wbv2-limits{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}.wbv2-limits label{display:flex;flex-direction:column;gap:6px;font-size:13px}.wbv2-limits input{padding:8px;border:1px solid #cfd9d2;border-radius:4px}.wbv2-consent{display:flex;gap:10px;align-items:flex-start;margin:16px 0;font-size:13px}.wbv2-warning,.wbv2-error{color:#8f332c;font-size:13px}.wbv2-prepare button,.wbv2-legacy button{margin-top:12px;padding:10px 18px;background:#2f6b57;color:#fff;border:0;border-radius:6px;cursor:pointer}.wbv2-prepare button:disabled{opacity:.5;cursor:not-allowed}
-.wbv2-reanalyse-confirm{max-width:720px;margin:32px auto;padding:28px;background:#fff;border:1px solid #dce4df;border-radius:8px}
+.wbv2,.wbv2-state{max-width:1450px;margin:auto;padding:28px;color:#1d2923}.wbv2>header{background:#eef4f0;padding:20px}.wbv2>header h1{margin:0}.wbv2>nav{display:flex;position:sticky;top:0;background: var(--color-bg-surface);border-bottom:1px solid #d6dfda}.wbv2>nav button{border:0;border-bottom:3px solid transparent;background: var(--color-bg-surface);padding:16px 22px}.wbv2>nav button.active{border-color: var(--color-brand);color: var(--color-brand)}.wbv2 main{padding:25px;background:#f7f9f7}.wbv2 details{background: var(--color-bg-surface);border:1px solid #dce3df;padding:13px;margin:8px 0}.wbv2-chart{width:100%;background: var(--color-bg-surface)}.wbv2-chart line{stroke:#aebcb5;stroke-dasharray:2}.wbv2-heatmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(40px,1fr));gap:4px}.wbv2-heatmap button{height:38px;border:0}.wbv2-dims{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.wbv2-dims article{background: var(--color-bg-surface);padding:14px;border-top:3px solid #477d66}.wbv2-product{padding:0}.wbv2-product-header{padding:24px 28px;background: var(--color-bg-surface);border-bottom:1px solid #dbe3dd}.wbv2-prepare,.wbv2-legacy{max-width:720px;margin:32px auto;padding:28px;background: var(--color-bg-surface);border:1px solid #dce4df;border-radius:8px}.wbv2-prepare ul{padding-left:20px;line-height:1.7}.wbv2-limits{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}.wbv2-limits label{display:flex;flex-direction:column;gap:6px;font-size:13px}.wbv2-limits input{padding:8px;border:1px solid #cfd9d2;border-radius:4px}.wbv2-consent{display:flex;gap:10px;align-items:flex-start;margin:16px 0;font-size:13px}.wbv2-warning,.wbv2-error{color:#8f332c;font-size:13px}.wbv2-prepare button,.wbv2-legacy button{margin-top:12px;padding:10px 18px;background: var(--color-brand);color: var(--color-text-inverse);border:0;border-radius:6px;cursor:pointer}.wbv2-prepare button:disabled{opacity:.5;cursor:not-allowed}
+.wbv2-reanalyse-confirm{max-width:720px;margin:32px auto;padding:28px;background: var(--color-bg-surface);border:1px solid #dce4df;border-radius:8px}
 .wbv2-reanalyse-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 24px;margin:16px 0;font-size:13px}
 .wbv2-reanalyse-meta dt{color:#5a6b62;margin:0 0 4px}
 .wbv2-reanalyse-meta dd{margin:0;font-weight:600}
 .wbv2-reanalyse-actions{display:flex;gap:12px;margin-top:16px}
-.wbv2-reanalyse-actions button{padding:10px 18px;background:#2f6b57;color:#fff;border:0;border-radius:6px;cursor:pointer}
+.wbv2-reanalyse-actions button{padding:10px 18px;background: var(--color-brand);color: var(--color-text-inverse);border:0;border-radius:6px;cursor:pointer}
 .wbv2-reanalyse-actions button:disabled{opacity:.5;cursor:not-allowed}
 .wbv2-btn-secondary{background:#eef4f0!important;color:#1d2923!important;border:1px solid #cfd9d2!important}
 .wbv2-reanalyse-running-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 28px 16px;padding:14px 18px;background:#eef6f2;border:1px solid #b8d4c8;border-radius:8px}
-.wbv2-reanalyse-running-banner p{margin:0;font-weight:600;color:#2f6b57}
+.wbv2-reanalyse-running-banner p{margin:0;font-weight:600;color: var(--color-brand)}
 .wbv2-reanalyse-running-actions{display:flex;gap:8px}
-.wbv2-reanalyse-running-actions button{padding:8px 14px;border:1px solid #cfd9d2;background:#fff;border-radius:6px;cursor:pointer;font-size:13px}
-.wbv2-reanalyse-running-actions button.active{background:#2f6b57;color:#fff;border-color:#2f6b57}
+.wbv2-reanalyse-running-actions button{padding:8px 14px;border:1px solid #cfd9d2;background: var(--color-bg-surface);border-radius:6px;cursor:pointer;font-size:13px}
+.wbv2-reanalyse-running-actions button.active{background: var(--color-brand);color: var(--color-text-inverse);border-color: var(--color-brand)}
 .wbv2-nonreal-warning,.wbv2-error-banner{margin:0 0 12px;padding:12px 16px;background:#fdf3e8;border:1px solid #e8c99a;border-radius:6px;color:#7a4f12;font-size:13px}
-.wbv2-reanalyse-btn{margin-left:auto;padding:8px 16px;background:#fff;color:#2f6b57;border:1px solid #2f6b57;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap}
+.wbv2-reanalyse-btn{margin-left:auto;padding:8px 16px;background: var(--color-bg-surface);color: var(--color-brand);border:1px solid var(--color-brand);border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap}
 .wb2-book-header .wbv2-reanalyse-btn{align-self:center}
 
 /* 分析读法选择 —— 评测 / 拆文。The two options are the same size and weight on purpose:
@@ -21,7 +21,7 @@
 .wbv2-mode{border:0;padding:0;margin:0 0 20px;display:grid;gap:10px}
 .wbv2-mode legend{padding:0;font-size:13px;color:#5a6b62;margin-bottom:8px}
 .wbv2-mode label{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:2px 10px;align-items:baseline;padding:12px 14px;border:1px solid #cfd9d2;border-radius:6px;cursor:pointer}
-.wbv2-mode label[data-selected="true"]{border-color:#2f6b57;background:#f2f7f4}
+.wbv2-mode label[data-selected="true"]{border-color: var(--color-brand);background:#f2f7f4}
 .wbv2-mode input{grid-row:1/3;align-self:center}
 .wbv2-mode b{font-size:15px}
 .wbv2-mode span{grid-column:2;font-size:12.5px;color:#5a6b62;line-height:1.6}
@@ -30,6 +30,19 @@
 /* 评测 ⇄ 拆文, shown only when the book actually holds both readings. */
 .wbv2-reading-switch{display:flex;align-items:center;gap:8px;margin-top:12px}
 .wbv2-reading-switch>span{font-size:12.5px;color:#5a6b62}
-.wbv2-reading-switch button{border:1px solid #cfd9d2;background:#fff;color:#3d4a44;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer}
+.wbv2-reading-switch button{border:1px solid #cfd9d2;background: var(--color-bg-surface);color:#3d4a44;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer}
 .wbv2-reading-switch button:hover{border-color:#8fae9f}
-.wbv2-reading-switch button.active{border-color:#2f6b57;background:#eaf2ed;color:#235c48;font-weight:700}
+.wbv2-reading-switch button.active{border-color: var(--color-brand);background:#eaf2ed;color:#235c48;font-weight:700}
+.wbv2-start-blockers{margin:10px 0 0;padding-left:20px;font-size:13px;color:#8f332c;line-height:1.7}
+
+/* 开篇拆解的范围声明。
+   用 info 而不是 warning：只读开篇不是出错，是用户点的那个按钮做的事。涂成警告色，
+   一次正常完成的分析会被当成残次品重跑一遍——再付一次钱。 */
+.wb2-scope-notice{
+  display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+  margin:0 0 16px;padding:12px 16px;border-radius:8px;
+  background:var(--color-info-soft);border:1px solid var(--color-info);
+  color:var(--color-text-primary);font-size:13px;line-height:1.7;
+}
+.wb2-scope-notice strong{white-space:nowrap;color:var(--color-info)}
+.wb2-scope-notice span{flex:1 1 320px;color:var(--color-text-secondary)}

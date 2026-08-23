@@ -9,7 +9,7 @@
 
 .bp-head{display:flex;gap:28px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;
   border-bottom:1px solid #c6d2ca;padding-bottom:16px}
-.bp-head a{color:#2f6b57;text-decoration:none;font-size:12.5px}
+.bp-head a{color: var(--color-brand);text-decoration:none;font-size:12.5px}
 .bp-head h1{font-size:24px;margin:8px 0 6px;font-weight:600}
 .bp-head p{margin:0;max-width:66ch;color:#5d6b64;font-size:13px}
 .bp-head b{color:#1b241f;font-weight:600}
@@ -32,19 +32,19 @@
 .bp-axis:first-of-type{border-top:0;padding-top:4px}
 .bp-axis-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
 .bp-axis-name{font-size:14px;font-weight:600;min-width:5.5em}
-.bp-axis select{flex:1 1 230px;min-width:0;font:inherit;font-size:13.5px;color:#1b241f;background:#fff;
+.bp-axis select{flex:1 1 230px;min-width:0;font:inherit;font-size:13.5px;color:#1b241f;background: var(--color-bg-surface);
   border:1px solid #c6d2ca;border-radius:3px;padding:6px 9px}
-.bp-axis select:focus-visible{outline:2px solid #2f6b57;outline-offset:1px}
+.bp-axis select:focus-visible{outline:2px solid var(--color-brand);outline-offset:1px}
 .bp-src{font-size:10.5px;letter-spacing:.05em;padding:2px 7px;border-radius:2px;white-space:nowrap;
   border:1px solid currentColor;color:#5d6b64}
 .bp-src[data-source="L0-A"],.bp-src[data-source="L0-C"]{color:#17605a}
-.bp-src[data-source="L0-B"]{color:#2f6b57}
+.bp-src[data-source="L0-B"]{color: var(--color-brand)}
 /* An axis the user touched is the authority on this page; it is marked as theirs. */
 .bp-src[data-source="user"]{color:#b8791c;background:#f6e8d2}
 .bp-why{margin:8px 0 0;font-size:12px;color:#5d6b64;font-variant-numeric:tabular-nums}
 
 .bp-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:26px}
-.bp-actions a{color:#2f6b57;font-size:13px}
+.bp-actions a{color: var(--color-brand);font-size:13px}
 .bp-primary{font:inherit;font-size:14px;padding:9px 20px;border-radius:3px;cursor:pointer;
   border:1px solid #3c8768;background:#3c8768;color:#fff}
 .bp-primary:disabled{opacity:.45;cursor:not-allowed}
@@ -52,7 +52,7 @@
 .bp-warn{font-size:12.5px;color:#b8791c}
 .bp-deltas{font-size:12px;color:#5d6b64}
 
-.bp-curves{background:#fff;border:1px solid #dfe6e1;padding:16px 18px 12px}
+.bp-curves{background: var(--color-bg-surface);border:1px solid #dfe6e1;padding:16px 18px 12px}
 .bp-curve{display:grid;grid-template-columns:5.4em 1fr 3.6em;align-items:center;gap:10px;padding:3px 0}
 .bp-curve-name{font-size:12.5px}
 .bp-curve-total{font-size:11.5px;color:#5d6b64;text-align:right;font-variant-numeric:tabular-nums}

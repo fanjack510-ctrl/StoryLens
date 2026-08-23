@@ -12,14 +12,12 @@ import {
   selectImportantChapterHooks,
 } from "./chapterHookSimplification";
 import { getNarrativeLoops, type NarrativeLoopView } from "./narrativeLoopView";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { JOURNEY_STAGE_VISUAL_TOKENS } from "./journeyVisualTokens";
 import { JourneySceneDetailPanel } from "./JourneySceneDetailPanel";
 import { chg005CompleteFixtureViz } from "./chg005CompleteFixture";
 
 afterEach(() => {
   cleanup();
-  useDeveloperModeStore.setState({ developerMode: false });
 });
 
 describe("CHG-20260729-005 complete sections 11–19", () => {
@@ -136,28 +134,8 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
     );
   });
 
-  it("normal UI hides tech table; developer mode shows collapsed tech details", () => {
-    const viz = chg005CompleteFixtureViz();
-    useDeveloperModeStore.setState({ developerMode: false });
-    const { rerender } = render(<HookPayoffTimeline visualization={viz} />);
-    expect(screen.queryByTestId("hook-chapter-tech-details")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("hook-resolution-table")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("hook-payoff-stats")).not.toBeInTheDocument();
-    expect(screen.getByTestId("hook-chapter-reader-questions").textContent).not.toMatch(
-      /ID-identity/,
-    );
+  // 「normal UI hides tech table; developer mode shows collapsed tech details」删除：「技术详情」是开发者模式独有的折叠，已随该模式删除。
 
-    useDeveloperModeStore.setState({ developerMode: true });
-    rerender(<HookPayoffTimeline visualization={viz} />);
-    const details = screen.getByTestId("hook-chapter-tech-details");
-    expect(details).not.toHaveAttribute("open");
-    expect(within(details).getByTestId("hook-chapter-tech-table")).toBeInTheDocument();
-    expect(details.textContent).toMatch(/Hook ID/);
-
-    useDeveloperModeStore.setState({ developerMode: false });
-    rerender(<HookPayoffTimeline visualization={viz} />);
-    expect(screen.queryByTestId("hook-chapter-tech-details")).not.toBeInTheDocument();
-  });
 
   it("empty and low-confidence states avoid negative quality copy", () => {
     const empty = chg005CompleteFixtureViz();

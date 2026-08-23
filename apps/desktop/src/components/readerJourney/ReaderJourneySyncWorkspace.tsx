@@ -357,8 +357,13 @@ export function ReaderJourneySyncWorkspace({
     return queryClient.getQueryData<ReaderJourneyResult>(["reader-journey", runId]) ?? null;
   })();
 
+  // 「我要把这章带走」是一件事，不是两件。旅程面板把它的导出动作交上来，和场景卡那个
+  // 并排放在页头——它产出整章七页的报告，不该是面板深处一行末尾的 12px 小标签。
+  const [reportExport, setReportExport] = useState<{ run: () => void; busy: boolean } | null>(null);
+
   const journeyPane = (
     <ReaderJourneyWorkspace
+      onExportReady={setReportExport}
       visualization={visualization}
       chapterTitle={chapterTitle}
       onLocateEvidence={handleLocateEvidence}
@@ -459,15 +464,30 @@ export function ReaderJourneySyncWorkspace({
           >
             章节结构
           </button>
-          {activeNode && (
-            <button
-              type="button"
-              data-testid="export-scene-card"
-              onClick={handleExportSceneCard}
-            >
-              导出当前Scene分析卡
-            </button>
-          )}
+          <span className="journey-export-group" data-testid="journey-export-group">
+            <span className="journey-export-group__label">导出</span>
+            {reportExport && (
+              <button
+                type="button"
+                data-testid="journey-export-report-pdf"
+                title="整章的结构化评测报告：三项判断、追读曲线、悬念账本、逐场证据 · 7 页 A4"
+                disabled={reportExport.busy}
+                onClick={reportExport.run}
+              >
+                {reportExport.busy ? "正在生成…" : "本章报告 · VIP"}
+              </button>
+            )}
+            {activeNode && (
+              <button
+                type="button"
+                data-testid="export-scene-card"
+                title="只导出正在看的这一个场景 · Markdown"
+                onClick={handleExportSceneCard}
+              >
+                当前场景卡
+              </button>
+            )}
+          </span>
         </div>
 
         {exportBar}

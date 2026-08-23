@@ -31,8 +31,8 @@ vi.mock("../services/wholeBookDiagnosticsFlag", async () => {
   };
 });
 
-vi.mock("../components/onboarding/QwenFirstLaunchBanner", () => ({
-  QwenFirstLaunchBanner: () => null,
+vi.mock("../components/onboarding/AiSetupBanner", () => ({
+  AiSetupBanner: () => null,
 }));
 
 vi.mock("../components/onboarding/FirstLaunchWizard", () => ({

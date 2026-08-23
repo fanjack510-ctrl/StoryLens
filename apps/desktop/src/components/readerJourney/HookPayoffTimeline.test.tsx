@@ -2,7 +2,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { chg005CompleteFixtureViz } from "./chg005CompleteFixture";
 
 function vizWithLoops(): ReaderJourneyVisualization {
@@ -11,7 +10,6 @@ function vizWithLoops(): ReaderJourneyVisualization {
 
 afterEach(() => {
   cleanup();
-  useDeveloperModeStore.setState({ developerMode: false });
 });
 
 describe("Hook resolution result page (CHG-011 ordinary UI)", () => {

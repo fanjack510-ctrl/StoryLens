@@ -132,7 +132,7 @@
   margin: 0.25rem 0 0;
   padding: 0.35rem 0;
   list-style: none;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-bg-surface));
   border: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 15%, transparent);
   border-radius: 6px;
   box-shadow: 0 4px 16px color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
@@ -157,7 +157,7 @@
   align-items: center;
   padding: 0.85rem 1.25rem;
   border-top: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
-  background: color-mix(in srgb, var(--surface, #f7f4ef) 92%, #fff);
+  background: color-mix(in srgb, var(--surface, #f7f4ef) 92%, var(--color-bg-surface));
 }
 
 .scene-boundary-actions-left,

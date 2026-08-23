@@ -1,9 +1,13 @@
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookWorkspacePage } from "./BookWorkspacePage";
 import { CompactToolbar } from "../components/layout/CompactToolbar";
 import { OverflowMenu } from "../components/layout/OverflowMenu";
+import { shortFormApi } from "../services/shortFormApi";
+import { getBookProfile } from "../features/bookProfile/api";
+import { profileHref } from "../features/bookProfile/origin";
 import { BookProfileEntry } from "../components/books/BookProfileEntry";
 import { ReadingSettingsPopover } from "../components/layout/ReadingSettingsPopover";
 import { WorkspaceViewSwitcher } from "../components/layout/WorkspaceViewSwitcher";
@@ -1469,6 +1473,30 @@ export function BookRoutePage() {
     })();
   };
 
+  // 短篇整篇就是一个分析单元，没有「按章分析」这回事。与 WholeBookFreeEntry 同一个
+  // 查询键，这一对只花一次请求。
+  const shortFormPrepare = useQuery({
+    queryKey: ["short-form-prepare", bookId],
+    queryFn: () => shortFormApi.prepare(bookId),
+    enabled: bookId > 0,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const isShortForm = Boolean(shortFormPrepare.data?.is_short_form);
+
+  // 画像是一道门，不是一个可选项：没确认，两种分析都开不了。
+  const bookProfile = useQuery({
+    queryKey: ["book-profile", bookId],
+    queryFn: () => getBookProfile(bookId),
+    enabled: bookId > 0,
+    retry: false,
+  });
+  // 没建过画像的书，`getBookProfile` 返回 null——那是**最**未确认的状态，不是「不确定」。
+  // 写成 `data != null && ...` 会让 null 静默放行，于是新导入的书一道门都没有。
+  // 只有查询还没回来（isPending）才算不确定。
+  const profileUnconfirmed =
+    !bookProfile.isPending && bookProfile.data?.status !== "confirmed";
+
   const primaryAction = resolveChapterPrimaryAction({
     hasChapter: Boolean(chapterId) && !noChapters && !bootstrappingChapter,
     run: progress.run,
@@ -1668,16 +1696,30 @@ export function BookRoutePage() {
           )
         }
         primary={
-          noChapters || bootstrappingChapter || effectivePrimaryAction.kind === "none" ? null : (
+          noChapters || bootstrappingChapter ? null : profileUnconfirmed &&
+            (effectivePrimaryAction.kind === "none" ||
+              effectivePrimaryAction.kind === "start" ||
+              effectivePrimaryAction.kind === "reanalyze") ? (
+            // 没确认画像，「开始」开不了——那这就是当下唯一该做的事。
+            // 但任务已经在跑、或者已经有结果时，主按钮仍属于那件事：都跑起来了，
+            // 再把人拽去确认画像没有意义。
+            <Link
+              className="primary"
+              data-testid="shell-confirm-profile"
+              to={profileHref(bookId, chapterId ? { from: "chapter", chapterId } : undefined)}
+            >
+              确认作品画像
+            </Link>
+          ) : effectivePrimaryAction.kind === "none" ||
+            effectivePrimaryAction.kind === "start" ||
+            effectivePrimaryAction.kind === "reanalyze" ? null : (
+            // 这里只剩状态性的动作（进行中 / 待确认场景 / 看结果）——那确实是当下唯一
+            // 该做的事，所以它保留主按钮。「开始」不在这里：开始本章还是开始全书，是两个
+            // 并列的选择，都在下面的分析组里。
             <button
               type="button"
               className="primary"
               data-testid={effectivePrimaryAction.testId}
-              disabled={
-                (effectivePrimaryAction.kind === "start" ||
-                  effectivePrimaryAction.kind === "reanalyze") &&
-                startAnalysisDisabled
-              }
               onClick={onPrimaryAction}
             >
               {effectivePrimaryAction.label}
@@ -1689,8 +1731,30 @@ export function BookRoutePage() {
             {!noChapters && !bootstrappingChapter && view !== "result" ? (
               <ReadingSettingsPopover />
             ) : null}
+            {/* 画像的入口必须一直够得着。它是一道门：没确认，两种分析都开不了；确认之后，
+                人也还需要能回去改（一本书的类型判断不是一次就永远对）。
+                改版时我把它从这一排删掉了，只留主按钮上的「确认作品画像」——于是一旦查询
+                失败或状态未知，画像就彻底没有入口，只能靠点分析撞 409 才知道它存在。 */}
             {!noChapters && !bootstrappingChapter ? (
               <BookProfileEntry bookId={bookId} chapterId={chapterId} />
+            ) : null}
+            {/* 「分析本章」和「全书分析」是并列的选择——它们回答不同的问题，没有哪个更主。
+                成一组放在一起，而不是一个抢主色、一个混在其余入口里。 */}
+            {!noChapters &&
+            !bootstrappingChapter &&
+            !isShortForm &&
+            (effectivePrimaryAction.kind === "start" ||
+              effectivePrimaryAction.kind === "reanalyze") ? (
+              <button
+                type="button"
+                className="secondary"
+                data-testid={effectivePrimaryAction.testId}
+                disabled={startAnalysisDisabled || profileUnconfirmed}
+                title={profileUnconfirmed ? "先确认作品画像，分析才能开始" : undefined}
+                onClick={onPrimaryAction}
+              >
+                {effectivePrimaryAction.label}
+              </button>
             ) : null}
             {!noChapters && !bootstrappingChapter ? (
               <ProNativeOverviewEntry bookId={bookId} />

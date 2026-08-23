@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildMockReaderJourneyVisualization } from "./mockVisualization";
 import type { ReactElement } from "react";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 vi.mock("./exportJourneyPng", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./exportJourneyPng")>();
@@ -19,7 +18,6 @@ vi.mock("./exportJourneyPng", async (importOriginal) => {
 afterEach(cleanup);
 
 beforeEach(() => {
-  useDeveloperModeStore.setState({ developerMode: false });
 });
 
 function renderJourney(ui: ReactElement, initial = "/") {
@@ -125,21 +123,8 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.queryByTestId("summary-card-traction")).not.toBeInTheDocument();
   });
 
-  it("calls onLocateEvidence from developer tech evidence when enabled", () => {
-    useDeveloperModeStore.setState({ developerMode: true });
-    const onLocateEvidence = vi.fn();
-    renderJourney(
-      <ReaderJourneyWorkspace
-        visualization={visualization}
-        onLocateEvidence={onLocateEvidence}
-      />,
-    );
-    fireEvent.click(screen.getByTestId("journey-curve-node-1"));
-    const drawer = screen.getByTestId("journey-detail-drawer");
-    fireEvent.click(within(drawer).getByText("技术详情"));
-    fireEvent.click(within(drawer).getByTestId("journey-evidence-B0001-C0002-P0010"));
-    expect(onLocateEvidence).toHaveBeenCalledWith("B0001-C0002-P0010");
-  });
+  // 「calls onLocateEvidence from developer tech evidence when enabled」删除：开发者证据面板已随开发者模式删除。
+
 
   it("calls onSelectionChange when curve node clicked in controlled mode", () => {
     const onSelectionChange = vi.fn();

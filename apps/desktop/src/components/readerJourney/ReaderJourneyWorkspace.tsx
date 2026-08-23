@@ -178,6 +178,8 @@ type Props = {
   journeyRunId?: number | null;
   /** Printed on the report's cover and in its 口径 appendix. Absent → those rows are omitted. */
   bookTitle?: string | null;
+  /** 宿主想把「导出本章报告」画在自己的页头里时传这个：拿到动作和忙碌状态，按钮它自己画。 */
+  onExportReady?: (action: { run: () => void; busy: boolean }) => void;
   providerName?: string | null;
   modelName?: string | null;
   /** Optional SourcePane (正文) for three-column workspace grid. */
@@ -204,6 +206,7 @@ export function ReaderJourneyWorkspace({
   modelName,
   sourcePane,
   sourceCollapsed: sourceCollapsedProp,
+  onExportReady,
 }: Props) {
   const visualization = useMemo(
     () => enrichVisualizationComprehensivePresentation(visualizationProp),
@@ -972,6 +975,14 @@ export function ReaderJourneyWorkspace({
     }
   };
 
+  // 宿主（同步工作台）把这个动作画在页头的导出组里。逻辑留在这儿，因为报告要用的
+  // visualization / chapterTitle 都在这儿。
+  useEffect(() => {
+    if (!onExportReady) return;
+    onExportReady({ run: () => void handleReportExport(), busy: reportBusy });
+  }, [onExportReady, reportBusy, visualization, chapterTitle, bookTitle]);
+
+
   const selectedPhaseData = useMemo(
     () => visualization.phases.find((item) => item.ordinal === selectedPhase) ?? null,
     [visualization.phases, selectedPhase],
@@ -1491,16 +1502,20 @@ export function ReaderJourneyWorkspace({
               onResetView={() => syncViewToUrl(1, sceneCount)}
               liveMessage={compareLiveMessage}
             />
-            <button
-              type="button"
-              className="journey-report-export-btn"
-              data-testid="journey-export-report-pdf"
-              title="一份结构化的章节评测报告：三项判断、追读曲线、悬念账本、逐场证据"
-              disabled={reportBusy}
-              onClick={() => void handleReportExport()}
-            >
-              {reportBusy ? "正在生成…" : "导出报告 · VIP"}
-            </button>
+            {/* 按钮本身移到了页头的导出组里——它是这一页唯一的产出动作，不该是一行末尾的
+                12px 小标签。这里只留逻辑，因为数据在这儿。 */}
+            {onExportReady ? null : (
+              <button
+                type="button"
+                className="journey-report-export-btn"
+                data-testid="journey-export-report-pdf"
+                title="一份结构化的章节评测报告：三项判断、追读曲线、悬念账本、逐场证据"
+                disabled={reportBusy}
+                onClick={() => void handleReportExport()}
+              >
+                {reportBusy ? "正在生成…" : "导出本章报告 · VIP"}
+              </button>
+            )}
           </div>
           {vipNotice && (
             <div className="journey-vip-notice" data-testid="journey-vip-notice" role="alert">

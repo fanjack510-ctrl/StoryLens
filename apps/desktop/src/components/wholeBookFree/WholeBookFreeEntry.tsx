@@ -6,7 +6,10 @@ import {
   readEvidenceRestoreState,
   wholeBookFreeModuleHref,
 } from "../../services/wholeBookFreeEvidenceDeepLink";
-import type { ModuleKey } from "../../features/wholeBookV2/presentation/modules";
+import {
+  WHOLE_BOOK_FREE_MODULES,
+  type WholeBookModuleKey,
+} from "../../services/wholeBookFreeProductApi";
 
 type Props = {
   bookId: number;
@@ -17,15 +20,16 @@ const RETURN_TITLE = "返回分析";
 const ENTRY_DESCRIPTION =
   "从完整原文出发，分析全书总览、故事、人物、悬念、节奏、章节与综合诊断。";
 
-const MODULE_KEYS = new Set<string>([
-  "overview",
-  "story",
-  "characters",
-  "suspense",
-  "pacing",
-  "chapters",
-  "assessment",
-]);
+/** 能被「返回分析」还原的模块。
+ *
+ *  从 `WHOLE_BOOK_FREE_MODULES` 派生，不再手抄一份。手抄的那份抄的是另一套命名
+ *  （全书 V2 报告的 story / characters / suspense…），而链接的目的地
+ *  `WholeBookFreeProductPage` 认的是这一套（characters_events / structure /
+ *  chapter_functions）。两套名字对不上时不会报错——`returnModule` 静静地变成 null，
+ *  「返回分析」退化成一个普通入口，用户点回去发现自己回到了列表开头，
+ *  筛选、游标、展开的那一条全没了，而没有任何地方说出过什么。
+ */
+const MODULE_KEYS = new Set<string>(WHOLE_BOOK_FREE_MODULES.map((m) => m.key));
 
 /**
  * Book workspace secondary-toolbar entry for formal Free whole-book product.
@@ -54,7 +58,7 @@ export function WholeBookFreeEntry({ bookId }: Props) {
   const returnModuleRaw = searchParams.get("returnModule");
   const returnModule =
     returnTo === "whole-book" && returnModuleRaw && MODULE_KEYS.has(returnModuleRaw)
-      ? (returnModuleRaw as ModuleKey)
+      ? (returnModuleRaw as WholeBookModuleKey)
       : null;
   const restore = returnModule ? readEvidenceRestoreState(searchParams) : undefined;
   const href = returnModule

@@ -5,8 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPage } from "./SettingsPage";
 import { settingsApi } from "../services/settingsApi";
 import { providersApi } from "../services/providersApi";
-import { useDeveloperModeStore } from "../stores/developerModeStore";
-import { useAdvancedSettingsStore } from "../stores/advancedSettingsStore";
 
 vi.mock("../services/settingsApi", () => ({ settingsApi: {
   diagnostics: vi.fn(), get: vi.fn(), save: vi.fn(), cloud: vi.fn(), setCloud: vi.fn(),
@@ -68,11 +66,8 @@ const plusProvider = {
 const renderPage = (page: React.ReactNode) => render(<MemoryRouter><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{page}</QueryClientProvider></MemoryRouter>);
 
 beforeEach(() => {
-  localStorage.removeItem("storylens.developerMode");
   localStorage.removeItem("storylens.showAdvancedSettings");
   localStorage.removeItem("storylens.onboarding.v1");
-  useDeveloperModeStore.setState({ developerMode: false });
-  useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
   vi.mocked(settingsApi.diagnostics).mockResolvedValue({ fastapi: "ok", sqlite: "ok" });
   vi.mocked(settingsApi.cloud).mockResolvedValue({ enabled: false, state: "disabled" });
   vi.mocked(settingsApi.setCloud).mockResolvedValue({});
@@ -155,47 +150,34 @@ describe("设置页结构", () => {
     expect(screen.queryByTestId("settings-tab-advanced")).not.toBeInTheDocument();
   });
 
-  it("开启高级设置后显示高级标签", async () => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
-    renderPage(<SettingsPage />);
-    expect(await screen.findByTestId("settings-tab-advanced")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("settings-tab-advanced"));
-    expect(await screen.findByTestId("settings-panel-advanced")).toBeInTheDocument();
-    expect(await screen.findByTestId("advanced-provider-list")).toBeInTheDocument();
-  });
+  // 「开启高级设置后显示高级标签」删除：开发者模式与它的标签页已经整个删除，没有任何开关
+  // 能把它打开。技术项去处见 AiConnectionPanel（接口地址 / 本地模型）与使用额度（逐项上限）。
 });
 
 describe("外观与AI服务普通模式", () => {
   it("外观页可保存且无 Demo 徽章", async () => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-appearance"));
-    expect(screen.getByTestId("demo-mode-switch")).toBeInTheDocument();
+    // 「演示标记」原本和开发者开关同住一个折叠里，只有开发者模式能看见；那个折叠已经删除。
+    expect(screen.queryByTestId("demo-mode-switch")).not.toBeInTheDocument();
     expect(screen.queryByText("演示")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(settingsApi.save).toHaveBeenCalled());
   });
 
-  it("普通模式不显示Provider工程字段", async () => {
+  it("AI 页不把工程字段摊在主视图上", async () => {
+    // 原断言里那句 `ai-service-name === "阿里云百炼（推荐）"` 正是改版要修的东西：那一栏是
+    // 写死的字符串，跟当前选中的服务商无关。现在服务商由下拉决定，工程参数收进高级设置。
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-ai"));
-    expect(await screen.findByTestId("ai-service-status-card")).toBeInTheDocument();
-    expect(screen.getByTestId("ai-service-name")).toHaveValue("阿里云百炼（推荐）");
+    expect(await screen.findByTestId("ai-connection-status")).toBeInTheDocument();
     expect(screen.queryByText("Workspace ID")).not.toBeInTheDocument();
-    expect(screen.queryByText("Base URL")).not.toBeInTheDocument();
     expect(screen.queryByText("Region")).not.toBeInTheDocument();
     expect(screen.queryByText("路由预览")).not.toBeInTheDocument();
-    expect(screen.queryByText(/aliyun_qwen_plus/)).not.toBeInTheDocument();
   });
 
-  it("诊断详情保留原始错误码", async () => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
-    renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-ai"));
-    fireEvent.click(await screen.findByTestId("ai-service-diagnostics-toggle"));
-    const diag = await screen.findByTestId("ai-service-diagnostics");
-    expect(diag.textContent).toMatch(/providerId|aliyun_qwen_plus/);
-  });
+  // 「诊断详情保留原始错误码」删除：那个折叠属于开发者模式，已随之删除。错误码现在由后端
+  // 翻译成人话，逐条挂在连接状态下面（见 AiConnectionPanel.test.tsx 的「拦路原因逐条列出」）。
 });
 
 describe("使用额度", () => {
@@ -235,10 +217,12 @@ describe("使用额度", () => {
     expect(settingsApi.saveCloudBudget).not.toHaveBeenCalled();
   });
 
-  it("高级预算字段仅高级设置可见且默认值不变", async () => {
-    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
+  it("逐项用量上限在 AI 页的高级设置里，默认值不变", async () => {
+    // 这一块原本住在「开发者设置」。开发者模式删除后它需要新家——不能放「使用额度」：
+    // 那一页刚刚才把请求数与 Token 日限拿掉（见上一条），搬回去等于把那个决定推翻。
     renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-advanced"));
+    fireEvent.click(await screen.findByTestId("settings-tab-ai"));
+    fireEvent.click(await screen.findByTestId("ai-advanced-toggle"));
     expect(await screen.findByLabelText("单请求最大输入 Token")).toHaveValue(16000);
     expect(screen.getByLabelText("单请求最大输出 Token")).toHaveValue(2000);
   });

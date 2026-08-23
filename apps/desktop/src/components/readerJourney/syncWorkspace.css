@@ -502,3 +502,8 @@
     padding: 8px 10px;
   }
 }
+
+/* 「我要把这章带走」是一件事，不是两件——两个导出并成一组，中间不再隔着半页滚动。 */
+.journey-export-group { display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 6px 3px 10px; border: 1px solid var(--color-bg-subtle); border-radius: 10px; }
+.journey-export-group__label { font-size: 11.5px; color: var(--color-text-tertiary); }

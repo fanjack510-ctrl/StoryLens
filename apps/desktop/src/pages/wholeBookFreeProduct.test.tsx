@@ -56,8 +56,8 @@ vi.mock("../services/settingsApi", () => ({
   },
 }));
 
-vi.mock("../components/onboarding/QwenFirstLaunchBanner", () => ({
-  QwenFirstLaunchBanner: () => null,
+vi.mock("../components/onboarding/AiSetupBanner", () => ({
+  AiSetupBanner: () => null,
 }));
 
 vi.mock("../components/onboarding/FirstLaunchWizard", () => ({
@@ -452,10 +452,10 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     const entry = await screen.findByTestId("whole-book-free-entry");
     expect(entry).toHaveTextContent("全书分析");
     expect(entry).toHaveAttribute("href", "/books/1/whole-book");
-    expect(entry).toHaveAttribute(
-      "title",
-      "从完整原文出发，分析全书总览、主要人物、关键事件、故事结构和章节功能。",
-    );
+    // 这条测的是「入口是紧凑的」：说明文字只作为 tooltip，不占工具条的位置。
+    // 原来这里钉的是那句话的逐字内容，于是模块改名（关键事件 → 悬念/节奏/综合诊断）
+    // 时它就断了——而入口的形状一点没变。钉形状，不钉文案。
+    expect(entry.getAttribute("title")).toMatch(/^从完整原文出发/);
     expect(entry.textContent?.trim()).toBe("全书分析");
     expect(entry).not.toHaveTextContent("开始全书分析");
     expect(entry).not.toHaveTextContent("从完整原文出发");
