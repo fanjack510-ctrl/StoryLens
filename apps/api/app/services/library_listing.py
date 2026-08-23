@@ -54,6 +54,29 @@ def _analysis_state(session: Session, book_id: int) -> tuple[str, str]:
     return "未分析", "idle"
 
 
+def _last_activity(session: Session, book_id: int) -> str | None:
+    """这本书最后一次被分析是什么时候。
+
+    首页要按「最近动过」排，而 `Book` 上只有导入时间——一本三个月前导入、昨天才拆完的书，
+    按导入时间排会沉到最底下，而它恰恰是用户最可能想接着看的那一本。
+
+    取运行的完成 / 开始 / 创建时间里最新的那个；一次都没跑过就返回 None，
+    调用方退回导入时间。
+    """
+    from app.db.models import WholeBookRun
+
+    row = session.execute(
+        select(
+            func.max(
+                func.coalesce(
+                    WholeBookRun.completed_at, WholeBookRun.started_at, WholeBookRun.created_at
+                )
+            )
+        ).where(WholeBookRun.book_id == int(book_id))
+    ).scalar()
+    return row.isoformat() if hasattr(row, "isoformat") else (str(row) if row else None)
+
+
 def build_library_listing(
     session: Session, *, book_ids: list[int] | None = None
 ) -> list[dict[str, Any]]:
@@ -104,6 +127,10 @@ def build_library_listing(
                 "chapter_count": int(counts.get(int(book.id), 0) or 0),
                 "analysis_state": state,
                 "analysis_state_label": state_label,
+                # 最后一次分析的时间。没跑过就退回导入时间——首页那一列不能空着，
+                # 空白会被读成「不知道」，而我们其实知道。
+                "last_activity_at": _last_activity(session, int(book.id))
+                or (book.created_at.isoformat() if book.created_at else None),
             }
         )
     return items

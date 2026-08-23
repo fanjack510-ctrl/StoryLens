@@ -14,12 +14,54 @@ import { DocumentTitleSync } from "../product/DocumentTitleSync";
 import { ProductEditionBadge } from "../product/ProductEditionBadge";
 import { AppearanceThemeMenu } from "./AppearanceThemeMenu";
 
-const PRIMARY_NAV: Array<[string, string, string]> = [
-  ["/library", "我的书库", "▤"],
+/** 顶栏导航的图标。
+ *
+ *  原来用的是 `▤ ⌕ ◉` 这类几何符号——它们在不同系统上字重、基线、大小都不一样，
+ *  跟旁边的中文对不齐，看起来像占位符而不是图标。改画成 SVG：线宽和尺寸自己说了算。
+ */
+function NavIcon({ name }: { name: "library" | "search" | "settings" }) {
+  const common = {
+    width: 17,
+    height: 17,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (name === "search") {
+    return (
+      <svg {...common}>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+    );
+  }
+  if (name === "settings") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="3.2" />
+        <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H8v16H5.5A1.5 1.5 0 0 1 4 18.5Z" />
+      <path d="M9.5 4H12v16H9.5z" />
+      <path d="m14.4 4.6 2.3-.4 2.9 15.4-2.3.4z" />
+    </svg>
+  );
+}
+
+const PRIMARY_NAV: Array<[string, string, "library" | "search" | "settings"]> = [
+  ["/library", "我的书库", "library"],
   // 跨书检索的范围是整个书库，不属于任何一本书——所以它在应用级导航里，
   // 而不是某本书的页面上。
-  ["/search", "检索", "⌕"],
-  ["/settings", "设置", "◉"],
+  ["/search", "搜索", "search"],
+  ["/settings", "设置", "settings"],
 ];
 
 function serviceLabel(health: {
@@ -122,8 +164,8 @@ export function AppShell() {
         <nav className="primary-nav-links" data-testid="primary-nav">
           {PRIMARY_NAV.map(([to, label, icon]) => (
             <NavLink key={to} to={to} data-testid={`nav-${to.slice(1)}`}>
-              <i>{icon}</i>
-              {label}
+              <NavIcon name={icon} />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>

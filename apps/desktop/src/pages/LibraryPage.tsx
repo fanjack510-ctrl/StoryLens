@@ -227,6 +227,35 @@ export function LibraryPage() {
     }
   }, [searchParams]);
 
+  // 按本机时间给一句问候。不引第三方库，也不做时区推断——用户的机器时间就是他的时间。
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 5) return "夜深了";
+    if (h < 11) return "早上好";
+    if (h < 13) return "中午好";
+    if (h < 18) return "下午好";
+    return "晚上好";
+  }, []);
+
+  // 最近动过的三本，给顶部那排卡片。
+  //
+  // 参考稿画的是三张带进度条的「继续分析」卡，但那要有正在跑的运行才有进度可言，
+  // 而跑完的书没有百分比。所以这一区有两种状态：有在跑的就显示它们（真进度），
+  // 一个都没有就显示最近分析过的。这块位置因此永远有真东西，
+  // 而不是一排空卡或者一个编出来的百分比。
+  const spotlight = useMemo(() => {
+    const rows = library.data || [];
+    const running = rows.filter((r) => r.analysis_state === "running");
+    const pool = running.length
+      ? running
+      : rows
+          .filter((r) => r.analysis_state === "done")
+          .sort((a, b) =>
+            String(b.last_activity_at || "").localeCompare(String(a.last_activity_at || "")),
+          );
+    return { running: running.length > 0, items: pool.slice(0, 3) };
+  }, [library.data]);
+
   const chapterPreviewLimit = 8;
   const previewTitles = preview.data?.chapter_titles || [];
   const moreChapters = Math.max(0, (preview.data?.final_chapter_count || 0) - chapterPreviewLimit);
@@ -238,9 +267,10 @@ export function LibraryPage() {
       <AiSetupBanner />
       <PageHeader className="library-title-compact">
         <div>
-          <PageTitle>我的书库</PageTitle>
-          {/* 「管理已导入的书和分析项目」是一句说明书——它对每个人、每一天说的都一样。
-              换成当下真实的数字：有几本，跑过几本。 */}
+          {/* 标题从「我的书库」换成一句问候。书库是这个页面**是什么**，
+              而人每天回到这里不是来看它叫什么名字的。真正有用的信息（几本、跑过几本）
+              移到副标题，标题这一行让给「你回来了，接着上次那件事」。 */}
+          <PageTitle>{greeting}，欢迎回来</PageTitle>
           <PageSubtitle data-testid="library-subtitle">{librarySummary}</PageSubtitle>
           {webShell ? (
             <p className="muted library-local-upload-hint" data-testid="library-local-upload-hint">
@@ -253,6 +283,21 @@ export function LibraryPage() {
           data-testid="import-book"
           onClick={() => input.current?.click()}
         >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 16V4" />
+            <path d="m7 9 5-5 5 5" />
+            <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+          </svg>
           导入书籍
         </Button>
         <input
@@ -451,9 +496,70 @@ export function LibraryPage() {
         </div>
       )}
 
+      {/* 最近动过的三本。有正在跑的就显示它们，否则显示最近分析过的——
+          见 `spotlight` 的注释：跑完的书没有百分比，编一个出来是这一屏最容易犯的错。 */}
+      {spotlight.items.length > 0 ? (
+        <section className="library-spotlight" data-testid="library-spotlight">
+          <h2>{spotlight.running ? "正在分析" : "最近分析"}</h2>
+          <div className="library-spotlight-cards">
+            {spotlight.items.map((item) => (
+              <Link
+                key={item.id}
+                to={`/books/${item.id}`}
+                className="spotlight-card"
+                data-testid={`spotlight-${item.id}`}
+              >
+                <span className="spotlight-head">
+                  <span
+                    className="book-spine spotlight-spine"
+                    aria-hidden="true"
+                    style={{ background: spineColor(item.title) }}
+                  >
+                    {spineGlyph(item.title)}
+                  </span>
+                  <span className="spotlight-title">
+                    <b title={item.title}>{item.title}</b>
+                    <small>{item.kind_label}</small>
+                  </span>
+                </span>
+                <span className="spotlight-meta">
+                  <span className={`book-state book-state--${item.analysis_state}`}>
+                    {item.analysis_state_label}
+                  </span>
+                  {item.chapter_count > 0 ? (
+                    <span className="book-chapters">{item.chapter_count} 章</span>
+                  ) : null}
+                </span>
+                <span className="spotlight-when">
+                  最近更新：{relativeTime(item.last_activity_at)}
+                </span>
+                <span className="spotlight-go">
+                  {spotlight.running ? "查看进度" : "打开"}
+                  <i aria-hidden="true">›</i>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <div className="library-filter-bar" data-testid="library-filter-bar">
         <label className="library-search-field">
           <span className="sr-only">搜索</span>
+          {/* 图标放进框里而不是框外：框外的图标读起来是一个按钮，而它并不能点。 */}
+          <svg
+            className="library-search-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -896,6 +1002,26 @@ function spineGlyph(title: string): string {
   return /[a-z]/i.test(ch) ? ch.toUpperCase() : ch || "?";
 }
 
+/** 「今天 10:23」「昨天 18:55」「3 天前」。
+ *
+ *  绝对时间戳（2026-08-22T23:10:03）对「上次做到哪儿」这个问题没有帮助——
+ *  人要的是「多久之前」，而换算那一步不该由他来做。超过一周才退回日期，
+ *  因为到那时「几天前」本身也不再精确了。
+ */
+function relativeTime(iso: string | null): string {
+  if (!iso) return "—";
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return "—";
+  const now = new Date();
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(now) - startOf(then)) / 86400000);
+  const hhmm = `${String(then.getHours()).padStart(2, "0")}:${String(then.getMinutes()).padStart(2, "0")}`;
+  if (days <= 0) return `今天 ${hhmm}`;
+  if (days === 1) return `昨天 ${hhmm}`;
+  if (days < 7) return `${days} 天前`;
+  return then.toLocaleDateString();
+}
+
 function deleteErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === "BOOK_HAS_ACTIVE_TASKS") {
@@ -1008,7 +1134,11 @@ function BookRow({
                 {info.kind_label}
                 {info.material_kind_confirmed ? "" : " · 待确认"}
               </span>
-              {info.chapter_count > 0 ? `${info.chapter_count} 章 · ` : ""}
+              {/* 章节数做成胶囊，和类型标同一族。裸着放在两个标签中间时，
+                  它既不像标签也不像正文，成了那一行里唯一没有归属的东西。 */}
+              {info.chapter_count > 0 ? (
+                <span className="book-chapters">{info.chapter_count} 章</span>
+              ) : null}
               <span className={`book-state book-state--${info.analysis_state}`}>
                 {info.analysis_state_label}
               </span>
@@ -1021,6 +1151,29 @@ function BookRow({
           )}
         </small>
       </span>
+      {/* 「什么时候动过」在列表里和状态一样重要——它回答的是「我上次做到哪儿」。
+          放在右侧独立一列而不是挤进 meta 那一行：那一行已经有三个标签了。 */}
+      {info?.last_activity_at ? (
+        <span className="book-row-when" title={info.last_activity_at}>
+          {relativeTime(info.last_activity_at)}
+        </span>
+      ) : null}
+      {/* 整行可点，但之前没有任何东西说它可点。这个 › 是那句提示，
+          并且它把每一行的右端对齐成一条线。 */}
+      <svg
+        className="book-row-chevron"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m9 6 6 6-6 6" />
+      </svg>
       <div className="book-row-actions">
         {/* 「打开」按钮去掉了——书名本身就是那个链接。这个隐藏的链接留给验收脚本和
             键盘用户：它们都按 book-open-<id> 找入口，拿掉会把「少一个按钮」变成

@@ -17,6 +17,8 @@ export type LibraryItem = {
   chapter_count: number;
   analysis_state: "idle" | "running" | "done";
   analysis_state_label: string;
+  /** 最后一次分析的时间；没跑过则是导入时间。首页按它排序。 */
+  last_activity_at: string | null;
 };
 
 export const booksApi = {

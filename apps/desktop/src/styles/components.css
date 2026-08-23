@@ -1438,21 +1438,21 @@ button:disabled.primary {
 .book-row .book-row-more:focus-within { opacity: 1; }
 
 /* 状态用带色圆点，一眼分出跑过没跑过：绿=已分析，灰=没跑过，橙=正在跑。 */
-.book-row-meta .book-state {
+.book-state {
   display: inline-flex; align-items: center; gap: 6px; font-weight: 500;
 }
-.book-row-meta .book-state::before {
+.book-state::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor;
 }
 .book-state--done { color: var(--color-brand); }
 .book-state--running { color: var(--color-warning); }
 .book-state--idle { color: var(--color-text-tertiary); opacity: .8; }
 .book-row-meta { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.book-row-meta .book-kind {
+.book-kind {
   background: var(--color-bg-muted); color: var(--color-text-secondary);
   padding: 2px 9px; border-radius: 5px; font-size: 12px;
 }
-.book-row-meta .book-kind--reference {
+.book-kind--reference {
   background: var(--color-warning-soft); color: var(--color-warning);
 }
 
@@ -1558,3 +1558,85 @@ button:disabled.primary {
 .cb-kind--technique { background: var(--color-brand-soft); color: var(--color-brand); }
 .cb-kind--moment { background: var(--color-warning-soft); color: var(--color-warning); }
 .cb-kind--character, .cb-kind--cast { background: var(--color-info-soft); color: var(--color-info); }
+
+/* ---- 书库页版式细化 ---- */
+
+/* 搜索框内嵌放大镜。图标绝对定位，输入框留出左内边距给它。 */
+.library-search-field { position: relative; display: flex; align-items: center; flex: 1 1 260px; }
+.library-search-icon {
+  position: absolute; left: 12px; color: var(--color-text-tertiary); pointer-events: none;
+}
+.library-filter-bar .library-search-field input { padding-left: 36px; width: 100%; }
+
+/* 导入按钮里的图标 */
+.sl-btn svg, button.primary svg { flex: none; margin-right: 7px; vertical-align: -3px; }
+
+/* 章节数做成胶囊，和类型标同一族——裸着放在两个标签中间时，
+   它既不像标签也不像正文，是那一行里唯一没有归属的东西。
+   不加 `.book-row-meta` 前缀：同一个胶囊也出现在首页的卡片里（`.spotlight-meta`），
+   带前缀的话卡片里那个没有任何背景，在深色下直接消失成一行灰字。 */
+.book-chapters {
+  background: var(--color-bg-muted); color: var(--color-text-secondary);
+  padding: 2px 9px; border-radius: 5px; font-size: 12px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* 行尾的 ›。整行本来就可点，但之前没有任何东西说它可点；
+   它同时把每一行的右端对齐成一条线。 */
+.book-row { grid-template-columns: 20px 44px 1fr auto auto; }
+.book-row-chevron {
+  color: var(--color-text-tertiary); opacity: .45; flex: none;
+  transition: opacity .12s ease, transform .12s ease;
+}
+.book-row:hover .book-row-chevron { opacity: 1; transform: translateX(2px); }
+
+/* 行之间加一条极浅的分隔线。去掉全部分隔线之后，七行连成一片，
+   扫的时候容易串行——一条 6% 的线足够分开，又不会把列表切成表格。 */
+.book-row + .book-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-radius: 0;
+}
+.book-row { padding: 15px 16px; min-height: 84px; }
+.book-spine { border-radius: 4px 7px 7px 4px; }
+
+/* ---- 首页：最近分析 ---- */
+.library-spotlight { margin: 0 0 22px; }
+.library-spotlight h2 {
+  font-size: 15px; font-weight: 650; margin: 0 0 12px; color: var(--color-text-primary);
+}
+.library-spotlight-cards {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+}
+.spotlight-card {
+  display: grid; gap: 12px; padding: 16px; border-radius: 12px;
+  border: 1px solid var(--color-border); background: var(--color-bg-surface);
+  text-decoration: none; color: inherit;
+  box-shadow: 0 1px 2px rgb(27 36 32 / 4%);
+  transition: border-color .12s ease, transform .12s ease;
+}
+.spotlight-card:hover { border-color: var(--color-brand); transform: translateY(-1px); }
+.app[data-theme="dark"] .spotlight-card { box-shadow: none; }
+.spotlight-head { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.spotlight-spine { width: 40px; height: 46px; font-size: 17px; }
+.spotlight-title { min-width: 0; display: grid; gap: 3px; }
+.spotlight-title b {
+  font-size: 15px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.spotlight-title small { font-size: 12px; color: var(--color-text-tertiary); }
+.spotlight-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; }
+.spotlight-when { font-size: 12.5px; color: var(--color-text-tertiary); }
+.spotlight-go {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px; border-radius: 8px; background: var(--color-bg-subtle);
+  color: var(--color-brand); font-size: 13px; font-weight: 600;
+}
+.spotlight-go i { font-style: normal; }
+.spotlight-card:hover .spotlight-go { background: var(--color-brand-soft); }
+
+/* 列表行右侧的「什么时候动过」。等宽数字，让几行的时间竖着对齐。 */
+.book-row { grid-template-columns: 20px 44px 1fr auto auto auto; }
+.book-row-when {
+  font-size: 12.5px; color: var(--color-text-tertiary); white-space: nowrap;
+  font-variant-numeric: tabular-nums; margin-right: 4px;
+}
+@media (max-width: 900px) { .book-row-when { display: none; } }

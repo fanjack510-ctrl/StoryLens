@@ -38,14 +38,15 @@ a {
 }
 .app > header {
   grid-column: 1 / -1;
+  /* 比原来高 8px：下划线选中态需要贴着底边，而字也放大了一档。 */
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   padding: 0 22px;
   gap: 16px;
-  min-height: 52px;
-  height: 52px;
+  min-height: 60px;
+  height: 60px;
 }
 .brand {
   border: 0;
@@ -1761,7 +1762,7 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 .app-shell-simplified {
   /* 单列。导航搬进顶栏之后，左边那条 200px 没有理由继续占着——尤其是打开一本书时，
      它会和书籍面板并排，两条竖栏一共 450px，而那一屏本来是用来读小说的。 */
-  grid-template: 52px 1fr / 1fr;
+  grid-template: 60px 1fr / 1fr;
   /* Definite height so the 1fr main row fills the viewport (min-height alone
      leaves 1fr content-sized, and nested height:100% then collapses). */
   height: 100vh;
@@ -1789,9 +1790,10 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 }
 .app-shell-simplified .primary-nav-links {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 8px;
+  align-items: stretch;
+  gap: 4px;
+  margin-left: 18px;
+  align-self: stretch;
 }
 .app-shell-simplified .nav-spacer {
   flex: 1;
@@ -2662,13 +2664,19 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 .library-filter-bar {
   display: flex;
   flex-wrap: nowrap;
-  gap: 12px 16px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  background: var(--surface);
+  /* 卡片要立起来：原来它贴在页面底色上、四周几乎没有留白，读起来是页面的一部分，
+     而不是一组可以动的控件。 */
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: var(--color-bg-surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(27 36 32 / 4%);
+}
+.app[data-theme="dark"] .library-filter-bar {
+  box-shadow: none;
 }
 .library-search-field {
   flex: 0 0 auto;
@@ -3606,33 +3614,34 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 .app-topbar .primary-nav-links a {
   color: var(--color-text-secondary);
   text-decoration: none;
-  padding: 6px 14px;
-  border-radius: 7px;
-  font-size: 14px;
+  /* 选中态用下划线而不是填充胶囊：胶囊把每一项都框成一个按钮，三个并排时
+     整条顶栏读起来像一排控件；下划线只标「你在这儿」，那才是导航要说的事。 */
+  padding: 0 4px;
+  margin: 0 8px;
+  height: 100%;
+  border-bottom: 2px solid transparent;
+  font-size: 14.5px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  line-height: 1.4;
+  gap: 8px;
   white-space: nowrap;
 }
 .app-topbar .primary-nav-links a:hover {
-  background: var(--color-bg-subtle);
   color: var(--color-text-primary);
 }
 .app-topbar .primary-nav-links a.active {
-  background: var(--color-brand-soft);
   color: var(--color-brand);
   font-weight: 600;
+  border-bottom-color: var(--color-brand);
+}
+.app-topbar .primary-nav-links a svg {
+  flex: none;
 }
 .app-topbar .primary-nav-links a:focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 1px;
 }
-.app-topbar .primary-nav-links i {
-  font-style: normal;
-  line-height: 1;
-  opacity: 0.75;
-}
+
 
 /* 服务状态与版本标识也进顶栏。原来它们占着侧栏底部一整块；
    「本地服务正常」本质上是一个圆点加四个字。 */
