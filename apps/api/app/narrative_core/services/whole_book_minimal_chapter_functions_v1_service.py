@@ -326,7 +326,20 @@ def _persist_chapter_function_assets(
             "primary_function": primary,
             "secondary_functions": secondary,
             "function_labels": labels,
-            "chapter_functions_v2": result,
+            # 这里**不放** `result`。
+            #
+            # `result` 是整本书的章节功能结果，里面的 `chapters` 是全书所有章的清单。
+            # 而这段代码在逐章循环里：每一章的资产都嵌一份完整结果，就是 O(n²)。
+            # 实测《我不是戏神》1,299 章 → 1,299 条资产 × 每条 525 KB ≈ 682 MB，
+            # 占了整个生产库 1,064 MB 的三分之二。一本书。
+            #
+            # 而且没有任何地方读它：产品接口读的是检查点
+            # （`load_chapter_functions_checkpoint_envelope`），不是这些资产。
+            # 整份结果需要时从检查点取，那里本来就有一份权威的。
+            #
+            # 留下的是这一章自己的东西，加上几个标量上下文——它们合起来几百字节。
+            "coverage_scope": (result or {}).get("coverage_scope"),
+            "limitations": (result or {}).get("limitations") or [],
             "chapter": chapter,
             "result_origin": "fixture",
             "fixture_test_data": True,
