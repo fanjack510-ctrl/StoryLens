@@ -232,6 +232,9 @@ function PreparePanel({
   bookId,
   analysisMode,
   onAnalysisModeChange,
+  openingOnly,
+  onOpeningOnlyChange,
+  startBlockers,
 }: {
   prepare: WholeBookPrepareResponse;
   consented: boolean;
@@ -248,6 +251,11 @@ function PreparePanel({
   bookId: number;
   analysisMode: WholeBookAnalysisMode;
   onAnalysisModeChange: (next: WholeBookAnalysisMode) => void;
+  /** 只拆开篇（前 N 章）。默认 false＝整本，既有入口行为不变。 */
+  openingOnly: boolean;
+  onOpeningOnlyChange: (next: boolean) => void;
+  /** 按钮为什么点不动。空数组＝可以开始。 */
+  startBlockers: string[];
 }) {
   const est = prepare.estimate;
   // 「读懂」不过画像门。画像的五根轴是付费模式 / 读者 / 爽感引擎 / 人称 / 篇幅——全是网文的
@@ -271,7 +279,17 @@ function PreparePanel({
         analysisMode={analysisMode}
         onAnalysisModeChange={onAnalysisModeChange}
         breakdownAvailable={breakdownAvailable}
+        chapterTooLarge={prepare.chapter_too_large_reason ?? null}
       />
+      {/* 只对长篇小说给这个选择。「读懂」按节读、短篇本来就一次读完——那两种情况下
+          「只拆开篇」不是一个更便宜的选项，是一个没有意义的选项。 */}
+      {breakdownAvailable && analysisMode !== "comprehend" ? (
+        <AnalysisScopeFieldset
+          openingOnly={openingOnly}
+          onOpeningOnlyChange={onOpeningOnlyChange}
+          totalChapters={prepare.chapter_count ?? null}
+        />
+      ) : null}
       <p>{PREPARE_EXPLANATION}</p>
       <ul>
         {PREPARE_BULLETS.map((item) => (
@@ -296,6 +314,14 @@ function PreparePanel({
         {starting ? "创建中…" : "开始全书分析"}
       </button>
       {profileGateClosed && <p className="wbv2-reanalyse-meta">需要先确认作品画像</p>}
+      {/* 一个变灰的主操作必须说出原因。不说，人只能盯着它猜——而它可能只差一个勾。 */}
+      {!profileGateClosed && startBlockers.length > 0 && (
+        <ul className="wbv2-start-blockers" data-testid="whole-book-v2-start-blockers">
+          {startBlockers.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -343,15 +369,71 @@ function ReadingSwitch({
     </div>
   );
 }
+/** 读整本，还是只拆开篇。
+ *
+ *  扫榜看的是开篇：一次要过十几本新书，只看书名文案和前几章。按整本拆，十五本要几十块、
+ *  几个小时；按前五章拆，是几毛钱、十几分钟——实测同一本 542 章的书，整本 ¥2.90，
+ *  前五章 ¥0.0285。这笔钱是用户自己付给模型服务商的，所以这个选择必须摆在开跑之前，
+ *  而不是让他先付整本的钱再发现只想看开头。
+ *
+ *  默认整本：既有的每一个入口行为不变。
+ */
+const OPENING_CHAPTERS = 5;
+
+function AnalysisScopeFieldset({
+  openingOnly,
+  onOpeningOnlyChange,
+  totalChapters,
+}: {
+  openingOnly: boolean;
+  onOpeningOnlyChange: (next: boolean) => void;
+  totalChapters: number | null;
+}) {
+  const total = totalChapters && totalChapters > 0 ? totalChapters : null;
+  return (
+    <fieldset className="wbv2-mode" data-testid="whole-book-v2-scope">
+      <legend>读多少</legend>
+      <label data-selected={!openingOnly}>
+        <input
+          type="radio"
+          name="whole-book-analysis-scope"
+          value="full"
+          checked={!openingOnly}
+          onChange={() => onOpeningOnlyChange(false)}
+        />
+        <b>整本</b>
+        <span>{total ? `全书 ${total.toLocaleString()} 章，完整读一遍。` : "完整读一遍。"}</span>
+      </label>
+      <label data-selected={openingOnly}>
+        <input
+          type="radio"
+          name="whole-book-analysis-scope"
+          value="opening"
+          checked={openingOnly}
+          onChange={() => onOpeningOnlyChange(true)}
+        />
+        <b>只拆开篇（前 {OPENING_CHAPTERS} 章）</b>
+        <span>
+          想快速过一批书、看它们怎么开头时用这个。便宜一两个数量级，十几分钟出结果；
+          代价是结局和完整走向不在范围里。
+        </span>
+      </label>
+    </fieldset>
+  );
+}
+
 function AnalysisModeFieldset({
   analysisMode,
   onAnalysisModeChange,
   breakdownAvailable,
+  chapterTooLarge = null,
   legend = "这次要哪一种",
 }: {
   analysisMode: WholeBookAnalysisMode;
   onAnalysisModeChange: (next: WholeBookAnalysisMode) => void;
   breakdownAvailable: boolean;
+  /** 后端说的：某一章塞不进一个窗口。只挡小说那两种读法，读懂不受影响。 */
+  chapterTooLarge?: string | null;
   legend?: string;
 }) {
   return (
@@ -361,7 +443,16 @@ function AnalysisModeFieldset({
         // 拆文 exists only in the long-novel engine, and the panel knows which engine this
         // book gets. Offering it on a book that cannot run it would take the money and hand
         // back a diagnostic — an option that cannot be honoured must not look available.
-        const unavailable = item.value === "story_breakdown" && !breakdownAvailable;
+        // 一章过大只挡小说那两种：它们要把一章塞进一个窗口。读懂按节读，超长的节由规划器
+        // 切开，所以它照样能跑——这一条以前让整页失败，等于把唯一读得了这本书的读法也埋了。
+        const tooLarge = Boolean(chapterTooLarge) && item.value !== "comprehend";
+        const unavailable =
+          tooLarge || (item.value === "story_breakdown" && !breakdownAvailable);
+        const why = tooLarge
+          ? `（本书不适用：${chapterTooLarge}）`
+          : unavailable
+            ? "（本书暂不可用：需先确认作品画像，且章节数不少于 4）"
+            : "";
         return (
           <label
             key={item.value}
@@ -379,7 +470,7 @@ function AnalysisModeFieldset({
             <b>{item.label}</b>
             <span>
               {item.hint}
-              {unavailable ? "（本书暂不可用：需先确认作品画像，且章节数不少于 4）" : ""}
+              {why}
             </span>
           </label>
         );
@@ -438,6 +529,7 @@ function ReanalyseConfirmPanel({
         analysisMode={analysisMode}
         onAnalysisModeChange={onAnalysisModeChange}
         breakdownAvailable={breakdownAvailable}
+        chapterTooLarge={prepare.chapter_too_large_reason ?? null}
         legend="这次要哪一种"
       />
       <dl className="wbv2-reanalyse-meta">
@@ -712,10 +804,15 @@ function WholeBookV2ProductPageEnabled() {
   // In the query key because the panel's headline numbers are mode-dependent: quoting the
   // diagnostic's eight bounded calls for a 拆文 run overstates it by four on every book.
   const [analysisMode, setAnalysisMode] = useState<WholeBookAnalysisMode>("diagnostic");
+  //: 只拆开篇。默认关，所有既有入口行为不变。
+  const [openingOnly, setOpeningOnly] = useState(false);
+  const chapterLimit = openingOnly ? OPENING_CHAPTERS : null;
 
   const prepareQuery = useQuery({
-    queryKey: ["whole-book-v2-prepare", bookId, activeProviderName, analysisMode],
-    queryFn: () => wholeBookFreeProductApi.prepare(bookId, analysisMode),
+    // 范围进 queryKey：换成「只拆开篇」必须重新报价。少了它，面板上贴的还是整本的
+    // 调用数和费用，而用户按那个数字决定要不要开跑。
+    queryKey: ["whole-book-v2-prepare", bookId, activeProviderName, analysisMode, chapterLimit],
+    queryFn: () => wholeBookFreeProductApi.prepare(bookId, analysisMode, chapterLimit),
     enabled: bookId > 0 && Boolean(activeCloudQuery.data?.provider_name),
     retry: false,
     // The estimate depends on which reading is selected, so the key carries the mode — but a
@@ -809,6 +906,7 @@ function WholeBookV2ProductPageEnabled() {
         force_full_reanalysis: isReanalyse ? forceFullReanalysis : false,
         previous_run_id: isReanalyse ? (opts?.previousRunId ?? null) : null,
         analysis_mode: analysisMode,
+        chapter_limit: chapterLimit,
       });
     },
     onSuccess: () => {
@@ -847,6 +945,14 @@ function WholeBookV2ProductPageEnabled() {
       setActionError("继续分析失败");
     },
   });
+
+  // 这本书某一章塞不进窗口时，默认选中的「评测」是点不动的。停在一个永远点不动的选项上，
+  // 读者只会以为整本书都不能分析——而实际上「读懂」正是为这类书准备的。
+  useEffect(() => {
+    if (prepareQuery.data?.chapter_too_large_reason && analysisMode !== "comprehend") {
+      setAnalysisMode("comprehend");
+    }
+  }, [prepareQuery.data?.chapter_too_large_reason, analysisMode]);
 
   useEffect(() => {
     const rec = prepareQuery.data?.recommended_limits;
@@ -938,6 +1044,21 @@ function WholeBookV2ProductPageEnabled() {
     limitGaps.length === 0 &&
     !createMutation.isPending;
 
+  // 跟 canStart 用同一批条件，逐条翻译成人话。分成两处写，迟早会有一处忘了跟着改，
+  // 所以下面那条断言把它们绑在一起：能开始 ⇔ 没有任何一条原因。
+  const startBlockers: string[] = [];
+  if (!consented) startBlockers.push("请先勾选上面那条费用确认");
+  if (!realProviderFlagOn) startBlockers.push("当前构建关闭了真实模型调用");
+  if (prepare.provider_available === false || !prepare.run_creation_enabled) {
+    startBlockers.push(
+      ...(prepare.blocking_reasons?.length
+        ? prepare.blocking_reasons
+        : ["当前服务商不可用，请到 设置 → 模型服务商 检查"]),
+    );
+  }
+  if (limitGaps.length > 0) startBlockers.push(formatLimitGapsMessage(limitGaps));
+  if (createMutation.isPending) startBlockers.push("正在创建任务…");
+
   const canConfirmReanalyse =
     reanalyseConsented &&
     realProviderFlagOn &&
@@ -1012,9 +1133,12 @@ function WholeBookV2ProductPageEnabled() {
           consented={consented}
           onConsent={setConsented}
           canStart={canStart}
+          startBlockers={startBlockers}
           starting={createMutation.isPending}
           analysisMode={analysisMode}
           onAnalysisModeChange={chooseAnalysisMode}
+          openingOnly={openingOnly}
+          onOpeningOnlyChange={setOpeningOnly}
           onStart={() => createMutation.mutate(undefined)}
           actionError={actionError}
           limits={limits}

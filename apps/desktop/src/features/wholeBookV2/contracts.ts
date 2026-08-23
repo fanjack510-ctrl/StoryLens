@@ -47,7 +47,23 @@ export type WholeBookAnalysisV2={
  evidence_index:Record<string,EvidenceRef>;
  /** Optional: absent on every document produced before the journey section existed. */
  journey?:JourneyResult;
- analysis_metadata:{run_id:number;provider_name:string;model_name:string;module_availability:Record<string,Availability>;real_provider_calls:number;result_origin?:V2ResultOrigin;pipeline_version?:string};
+ analysis_metadata:{run_id:number;provider_name:string;model_name:string;module_availability:Record<string,Availability>;real_provider_calls:number;result_origin?:V2ResultOrigin;pipeline_version?:string;coverage?:CoverageReport|null};
+};
+/** 这次分析读了书的多少，以及那是不是它本来就打算读的范围。
+ *
+ *  `chapters_missing` 是「本该读到却丢了」；`scope_kind:"opening"` 是「本来就只打算读开篇」。
+ *  两者必须分开：前者要用户重跑，后者是分析正常完成。混成一件事，一次成功的开篇拆解会显示成
+ *  丢了 537 章的残次品，用户会去重跑一次已经成功的分析，再付一次钱。
+ */
+export type CoverageReport={
+ chapters_total:number;
+ chapters_analysed:number;
+ chapters_missing:number[];
+ blocks_total:number;
+ blocks_failed:number;
+ failure_reasons:string[];
+ scope_kind?:"full"|"opening";
+ scope_chapters?:number;
 };
 export type V2ResultOrigin="real_provider"|"deterministic_local_merge"|"deterministic_test"|"fixture"|"mock"|"legacy_migration"|"unknown";
 export type WholeBookV2ProductFlags={is_real_provider_result:boolean;needs_reanalysis:boolean;scaffold_detected:boolean};

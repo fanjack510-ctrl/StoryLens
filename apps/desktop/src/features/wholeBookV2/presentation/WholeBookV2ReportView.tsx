@@ -2358,6 +2358,15 @@ export function WholeBookV2ReportView({
   const [exporting, setExporting] = useState(false);
   const [vipNotice, setVipNotice] = useState<{ message: string; url: string } | null>(null);
   const showNonRealWarning = mode === "formal" && needsReanalysisWarning(data);
+  // 只在文档自己声明「我只读了开篇」时才出现。由后端判定而不是前端拿 5/542 去算：
+  // 一次读了 5 章的开篇拆解和一次丢了 537 章的失败运行，比例一模一样，含义正好相反。
+  const openingScope = (() => {
+    const cov = data.analysis_metadata?.coverage;
+    if (!cov || cov.scope_kind !== "opening") return null;
+    const read = cov.scope_chapters || cov.chapters_analysed || 0;
+    const total = cov.chapters_total || 0;
+    return read > 0 && total > read ? { read, total } : null;
+  })();
 
   return (
     <div
@@ -2369,6 +2378,16 @@ export function WholeBookV2ReportView({
       {showNonRealWarning ? (
         <div className="wbv2-nonreal-warning" data-testid="whole-book-v2-nonreal-warning">
           当前结果不是完整真实 V2 分析，需要重新分析。
+        </div>
+      ) : null}
+      {openingScope ? (
+        <div className="wb2-scope-notice" data-testid="whole-book-v2-opening-notice">
+          <strong>这是开篇拆解</strong>
+          <span>
+            只读了前 {openingScope.read} 章（全书 {openingScope.total.toLocaleString()} 章）。
+            下面的人物、悬念、节奏都只讲这几章之内的事——结局、完整走向不在范围里，
+            不是没分析出来。
+          </span>
         </div>
       ) : null}
       {headerBanner}
@@ -2389,6 +2408,14 @@ export function WholeBookV2ReportView({
             <dt>字数</dt>
             <dd>{meta.character_count.toLocaleString()}</dd>
           </div>
+          {openingScope ? (
+            <div data-testid="wb2-scope-cell">
+              <dt>分析范围</dt>
+              <dd>
+                开篇 {openingScope.read} 章 / 全书 {openingScope.total.toLocaleString()} 章
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt>作品画像</dt>
             <dd>{tp.primary_genre}</dd>

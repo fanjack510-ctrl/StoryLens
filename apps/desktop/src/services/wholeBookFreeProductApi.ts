@@ -130,6 +130,8 @@ export type WholeBookPrepareResponse = {
     max_output_tokens: number | null;
     max_cost_budget_cny: string | null;
   };
+  /** 某一章塞不进一个窗口时的说明。非 null 表示「评测 / 拆文」不可用，「读懂」不受影响。 */
+  chapter_too_large_reason?: string | null;
   blocking_reasons: string[];
   warnings: string[];
 };
@@ -152,6 +154,9 @@ export type CreateWholeBookRunRequest = {
   /** Which reading of the book to run. Omitted means the diagnostic, which is what every
    *  caller written before 拆文 existed intends. */
   analysis_mode?: WholeBookAnalysisMode;
+  /** 只拆前 N 章（开篇拆解）。省略 = 整本，所有既有调用方行为不变。
+   *  扫榜看的是开篇：十五本书按整本拆要几十块、几个小时；按前五章拆是几毛钱、十几分钟。 */
+  chapter_limit?: number | null;
 };
 
 /** 评测 finds what to fix in your own book; 拆文 reads someone else's for how it is done.
@@ -347,9 +352,16 @@ export const wholeBookFreeProductApi = {
    *
    *  The mode is a query parameter because the panel quotes calls and money, and the two modes
    *  do not cost the same: 拆文 runs four bounded units where the diagnostic runs eight. */
-  prepare: (bookId: number, analysisMode: WholeBookAnalysisMode = "diagnostic") =>
+  prepare: (
+    bookId: number,
+    analysisMode: WholeBookAnalysisMode = "diagnostic",
+    //: 只拆开篇时要按开篇报价。整本的价钱贴在一次只读 5 章的运行上，用户读到的
+    //: 时长、调用数、费用全是错的——而费用是他自己付给模型服务商的。
+    chapterLimit?: number | null,
+  ) =>
     api<WholeBookPrepareResponse>(
-      `/api/v1/books/${bookId}/whole-book/prepare?analysis_mode=${analysisMode}`,
+      `/api/v1/books/${bookId}/whole-book/prepare?analysis_mode=${analysisMode}` +
+        (chapterLimit ? `&chapter_limit=${chapterLimit}` : ""),
     ),
 
   createRun: (bookId: number, body: CreateWholeBookRunRequest) =>
@@ -368,6 +380,7 @@ export const wholeBookFreeProductApi = {
         reanalyse: Boolean(body.reanalyse),
         ...(body.previous_run_id != null ? { previous_run_id: body.previous_run_id } : {}),
         ...(body.analysis_mode ? { analysis_mode: body.analysis_mode } : {}),
+        ...(body.chapter_limit ? { chapter_limit: body.chapter_limit } : {}),
       }),
     }),
 

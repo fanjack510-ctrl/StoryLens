@@ -2,6 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { HomePage } from "../pages/HomePage";
 import { LibraryPage } from "../pages/LibraryPage";
+import { CommonPatternsPage } from "../pages/CommonPatternsPage";
+import { CrossBookSearchPage } from "../pages/CrossBookSearchPage";
 import { BookRoutePage } from "../pages/BookRoutePage";
 import { WorkspaceLandingPage } from "../pages/WorkspaceLandingPage";
 import { TasksPage } from "../pages/TasksPage";
@@ -59,6 +61,19 @@ export const router = createBrowserRouter([
     children: [
       { path: "/", element: <HomePage />, errorElement: routeErrorElement },
       { path: "/library", element: <LibraryPage />, errorElement: routeErrorElement },
+      {
+        // 跨书检索不挂在书或书单下面：它的默认问题是「有没有哪本书……」，
+        // 范围是整个书库。
+        path: "/search",
+        element: <CrossBookSearchPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        // 共性视图挂在书单下面而不是书下面：它比的是一组书，不是一本。
+        path: "/collections/:collectionId/patterns",
+        element: <CommonPatternsPage />,
+        errorElement: routeErrorElement,
+      },
       { path: "/workspace", element: <WorkspaceLandingPage />, errorElement: routeErrorElement },
       { path: "/books/:bookId", element: <BookRoutePage />, errorElement: routeErrorElement },
       {

@@ -143,6 +143,54 @@ describe("WholeBookV2ProductPage", () => {
     }
   });
 
+  it("开始按钮变灰时必须说出原因（缺一个勾也要说）", async () => {
+    // 一个不说话的灰按钮，人只能盯着它猜。实测就发生过：后端每一项都是绿的，按钮却是灰的，
+    // 而唯一的原因只是那条费用确认没勾——页面一个字都没说。
+    const profileApi = await import("../bookProfile/api");
+    vi.spyOn(profileApi, "getBookProfile").mockResolvedValue({
+      status: "confirmed",
+      axes: {},
+      options: [],
+      active_deltas: [],
+    } as never);
+    prepareSpy.mockResolvedValue({ ...basePrepare, latest_run: null, active_run: null } as never);
+    renderPage();
+
+    const reasons = await screen.findByTestId("whole-book-v2-start-blockers");
+    expect(reasons).toHaveTextContent("请先勾选上面那条费用确认");
+    expect(screen.getByRole("button", { name: /开始全书分析/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText(/我已了解本次分析会调用/));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /开始全书分析/ })).toBeEnabled(),
+    );
+    // 能开始 ⇔ 一条原因都没有。两处逻辑分开写，这条断言把它们绑在一起。
+    expect(screen.queryByTestId("whole-book-v2-start-blockers")).toBeNull();
+  });
+
+  it("服务商不可用时，按钮下面写的是后端给的那句原因", async () => {
+    const profileApi = await import("../bookProfile/api");
+    vi.spyOn(profileApi, "getBookProfile").mockResolvedValue({
+      status: "confirmed",
+      axes: {},
+      options: [],
+      active_deltas: [],
+    } as never);
+    prepareSpy.mockResolvedValue({
+      ...basePrepare,
+      latest_run: null,
+      active_run: null,
+      provider_available: false,
+      run_creation_enabled: false,
+      blocking_reasons: ["当前服务商 deepseek 未启用或已断开"],
+    } as never);
+    renderPage();
+
+    const reasons = await screen.findByTestId("whole-book-v2-start-blockers");
+    // 后端说的话原样呈现，不由客户端另编一句（INV-P4）。
+    expect(reasons).toHaveTextContent("当前服务商 deepseek 未启用或已断开");
+  });
+
   it("画像已确认时准备页没有门", async () => {
     const profileApi = await import("../bookProfile/api");
     const spy = vi.spyOn(profileApi, "getBookProfile").mockResolvedValue({
@@ -161,6 +209,62 @@ describe("WholeBookV2ProductPage", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  /** 只拆开篇。
+   *
+   *  扫榜要的是开篇：一次过十几本新书，只看前几章。实测同一本 542 章的书，整本 ¥2.90，
+   *  前五章 ¥0.0285。一个不改变发出去什么的选项比没有更糟——用户以为省了钱，实际按整本付了，
+   *  而这笔钱是他自己付给模型服务商的。
+   */
+  async function openPreparePanel(overrides: Record<string, unknown> = {}) {
+    const profileApi = await import("../bookProfile/api");
+    vi.spyOn(profileApi, "getBookProfile").mockResolvedValue({
+      status: "confirmed",
+      axes: {},
+      options: [],
+      active_deltas: [],
+    } as never);
+    prepareSpy.mockResolvedValue({
+      ...basePrepare,
+      latest_run: null,
+      active_run: null,
+      planner: "long_novel_engine",
+      chapter_count: 542,
+      ...overrides,
+    } as never);
+    renderPage();
+    return screen.findByTestId("whole-book-v2-prepare");
+  }
+
+  it("长篇小说的准备页给出「读多少」，默认整本", async () => {
+    await openPreparePanel();
+    const scope = await screen.findByTestId("whole-book-v2-scope");
+    expect(scope).toHaveTextContent("整本");
+    expect(scope).toHaveTextContent("只拆开篇");
+    // 全书章数照实说——这里写的是书有多长，不是这次要读多少。
+    expect(scope).toHaveTextContent("542");
+    expect(scope.querySelector<HTMLInputElement>('input[value="full"]')).toBeChecked();
+  });
+
+  it("选了开篇就按开篇重新报价", async () => {
+    await openPreparePanel();
+    const scope = await screen.findByTestId("whole-book-v2-scope");
+    await waitFor(() => expect(prepareSpy).toHaveBeenCalled());
+    // 默认不带范围＝整本。
+    expect(prepareSpy.mock.calls.at(-1)?.[2] ?? null).toBeFalsy();
+
+    fireEvent.click(scope.querySelector('input[value="opening"]') as HTMLInputElement);
+
+    // 换了范围必须重新问价，否则面板上贴的还是整本的调用数和费用。
+    await waitFor(() => expect(prepareSpy.mock.calls.at(-1)?.[2]).toBe(5));
+  });
+
+  it("短篇 / 读懂的书不给这个选择", async () => {
+    // 「只拆开篇」在这两种情况下不是更便宜的选项，是没有意义的选项：
+    // 读懂按节读，短篇本来就一次读完。
+    await openPreparePanel({ planner: "hierarchical_v2" });
+    await waitFor(() => expect(screen.queryByTestId("whole-book-v2-scope")).toBeNull());
   });
 
   it("拆文只在长篇引擎的书上可选", async () => {
