@@ -57,6 +57,7 @@ from app.narrative_core.services.whole_book_provider_gateway import (
     assert_no_credential_in_logs,
     create_lab_provider_gateway,
 )
+from tests.paths import config_file, repo_file
 
 
 def _provider_request(**overrides: Any) -> ProviderInferenceRequest:
@@ -238,9 +239,9 @@ def test_10_cost_low_expected_high() -> None:
 
 
 def test_11_unknown_pricing_not_zero() -> None:
-    pricing = ProviderPricingResolver(pricing_path=Path("config/cloud_pricing.missing.json"))
+    pricing = ProviderPricingResolver(pricing_path=config_file("cloud_pricing.missing.json"))
     # Force unknown via nonexistent conventional path handling — use empty models file.
-    tmp = Path("config") / "_tmp_unknown_pricing_u.json"
+    tmp = repo_file("config") / "_tmp_unknown_pricing_u.json"
     tmp.write_text('{"version":"unconfigured","currency":"CNY","models":{}}', encoding="utf-8")
     try:
         cost = ProviderPricingResolver(pricing_path=tmp).estimate(
@@ -544,7 +545,7 @@ def test_30_31_formal_run_and_private_lab_default_off() -> None:
 
 def test_32_no_migration_touch() -> None:
     # This change must not add migration modules under narrative_core/migrations.
-    root = Path("apps/api/app/narrative_core/migrations")
+    root = repo_file("apps", "api", "app", "narrative_core", "migrations")
     if root.exists():
         names = {p.name for p in root.glob("*.py")}
         assert "phase2br1_provider_context_cost" not in "".join(names)

@@ -26,6 +26,7 @@ from app.narrative_core.services.whole_book_startup_recovery_v1 import (
 )
 from app.narrative_core.whole_book_v2.pipeline import dry_run_1299, ProviderBudget
 from tests.whole_book_minimal_test_helpers import make_engine, seed_sample_s_book
+from tests.paths import API_ROOT
 
 
 def _seed_scaled_book(session, *, chapters: int, chars_per: int, title: str = "scale"):
@@ -71,8 +72,8 @@ def _seed_scaled_book(session, *, chapters: int, chars_per: int, title: str = "s
 
 
 def test_v2_start_and_reanalysis_share_same_planner(tmp_path):
-    free_src = Path(
-        "app/narrative_core/services/whole_book_free_product_v1_service.py"
+    free_src = (
+        API_ROOT / "app" / "narrative_core" / "services" / "whole_book_free_product_v1_service.py"
     ).read_text(encoding="utf-8")
     assert "estimate_hierarchical_whole_book_analysis_v1" in free_src
     # Formal prepare path must call hierarchical estimator.
@@ -216,12 +217,14 @@ def test_background_executor_owns_db_session(tmp_path):
 
 def test_request_session_not_reused_after_response(tmp_path):
     # Same assertion surface as owns_db_session — create path must schedule with factory.
-    router_src = Path("app/routers/whole_book_free_product_router.py").read_text(encoding="utf-8")
+    router_src = (
+        API_ROOT / "app" / "routers" / "whole_book_free_product_router.py"
+    ).read_text(encoding="utf-8")
     assert "schedule_free_whole_book_pipeline_background" in router_src
     assert "from fastapi import APIRouter, Depends" in router_src or "Depends" in router_src
     assert "background.add_task(" not in router_src
-    free_src = Path(
-        "app/narrative_core/services/whole_book_free_product_v1_service.py"
+    free_src = (
+        API_ROOT / "app" / "narrative_core" / "services" / "whole_book_free_product_v1_service.py"
     ).read_text(encoding="utf-8")
     create_block = free_src.split("def create_free_whole_book_analysis_v1")[1].split(
         "def create_fixture_free_whole_book_analysis_v1"

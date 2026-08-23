@@ -30,6 +30,7 @@ from app.services.scene_boundary_adjudicator import (
 )
 from app.services.scene_pipeline import _execute, execute_scene_pipeline
 from tests.fakes import FakeProvider
+from tests.paths import config_file
 
 
 def seed_run(testing_session, *, mode: str = "assisted_boundary_review", count: int = 4):
@@ -669,7 +670,7 @@ def test_manual_eligibility_ignores_business_validation_http_200(
         provider_name="aliyun_qwen_plus",
         capabilities=caps,
         store=Store(),
-        pricing_path=Path("config/cloud_pricing.json"),
+        pricing_path=config_file("cloud_pricing.json"),
     )
     assert result["manual_boundary_candidate_eligible"] is True
     assert result["manual_selection_blockers"] == []

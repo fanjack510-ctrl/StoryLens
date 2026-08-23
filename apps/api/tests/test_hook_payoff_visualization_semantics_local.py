@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from app.services.reader_journey_visualization import (
     _question_lifecycle_from_summary,
 )
+from tests.paths import repo_file
 
 
 def test_question_lifecycle_passthrough_from_deterministic_statistics():
@@ -60,7 +61,7 @@ def test_scene_score_dict_uses_per_scene_payoff_not_cumulative_alias():
     # Guard against accidental rename to cumulative fields in visualization builder.
     from pathlib import Path
 
-    text = Path("apps/api/app/services/reader_journey_visualization.py").read_text(
+    text = repo_file("apps", "api", "app", "services", "reader_journey_visualization.py").read_text(
         encoding="utf-8"
     )
     assert '"payoff": profile.payoff_score' in text

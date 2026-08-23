@@ -32,6 +32,7 @@ from app.services.scene_pipeline import classify_pipeline_error
 from app.schemas.settings import CloudBudgetUpdate
 
 from tests.optional_gates import require_main_db_cert_counts, require_path
+from tests.paths import config_file
 
 ROOT = Path(__file__).resolve().parents[3]
 UAT_DB = ROOT / "artifacts" / "release-candidate" / "storylens-human-uat-v1.sqlite3"
@@ -156,7 +157,7 @@ def _add_sent_invocation(session, run_id: int, *, tokens: int = 100, cost: float
 
 
 def _pricing() -> dict:
-    return pricing_status(Path("config/cloud_pricing.json"))
+    return pricing_status(config_file("cloud_pricing.json"))
 
 
 def test_01_reserve_daily30_reserve26(testing_session):

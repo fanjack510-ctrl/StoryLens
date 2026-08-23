@@ -28,6 +28,7 @@ from app.services.run_scoped_budget_auth import load_run_budget_auth
 from app.services.scene_analysis_progress import load_revision_scenes
 from pathlib import Path
 from tests.test_phase_1c_a10 import _enable_cloud, _scene_payload, _seed_confirmed_run
+from tests.paths import config_file
 
 
 def _set_budget(session, *, requests: int = 50, tokens: int = 2_000_000, cost: float = 50.0):
@@ -251,7 +252,7 @@ def test_full_pipeline_preflight_advisory_surfaces_shortfall(client):
             provider_name=provider.name,
             capabilities=provider.capabilities(),
             store=get_credential_store(),
-            pricing_path=Path("config/cloud_pricing.json"),
+            pricing_path=config_file("cloud_pricing.json"),
         )
         state_version = evaluation["provider_state_version"]
     finally:

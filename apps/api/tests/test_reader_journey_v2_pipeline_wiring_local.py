@@ -32,6 +32,7 @@ from app.services.reader_journey_version import (
     new_journey_version_fields,
     resolve_versions_for_new_run,
 )
+from tests.paths import config_file, repo_file
 
 
 def _level(level: int = 3, mapped: int | None = None) -> ScoredLevelField:
@@ -374,7 +375,7 @@ def test_persist_finalized_v2_writes_valid_rows(testing_session):
 
 
 def test_harness_script_calls_official_service_only():
-    path = Path("scripts/execute_reader_journey_v2_native_niujiaokao.py")
+    path = repo_file("scripts", "execute_reader_journey_v2_native_niujiaokao.py")
     text = path.read_text(encoding="utf-8")
     assert "execute_reader_journey_v2" in text
     assert "from app.services.reader_journey_v2_execution import execute_reader_journey_v2" in text
@@ -385,7 +386,7 @@ def test_harness_script_calls_official_service_only():
 
 
 def test_config_default_pipeline_is_v2():
-    cfg = json.loads(Path("config/reader_journey_pipeline_version.json").read_text(encoding="utf-8"))
+    cfg = json.loads(config_file("reader_journey_pipeline_version.json").read_text(encoding="utf-8"))
     assert cfg["default_pipeline"] == "v2"
     assert cfg["pipelines"]["v2"]["contract_version"] == "2.0"
     assert cfg["pipelines"]["legacy_v1"]["contract_version"] == "1.3"

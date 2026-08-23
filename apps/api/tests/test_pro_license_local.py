@@ -19,6 +19,7 @@ from app.services.license_crypto import (
     private_key_b64url,
     public_key_b64url,
 )
+from tests.paths import config_file, repo_file
 
 
 @pytest.fixture()
@@ -148,11 +149,13 @@ def test_entitlement_snapshot_edition_fields(session: Session, keypair) -> None:
 
 
 def test_private_key_not_in_repo_config() -> None:
-    prod = Path("config/license_public_keys.production.json").read_text(encoding="utf-8")
+    prod = config_file("license_public_keys.production.json").read_text(encoding="utf-8")
     assert "ed25519.priv" not in prod
     assert "test-dev-001" not in prod
     assert "BEGIN PRIVATE KEY" not in prod
-    fixture = Path("tests/fixtures/license_public_keys.test.json").read_text(encoding="utf-8")
+    fixture = repo_file("tests", "fixtures", "license_public_keys.test.json").read_text(
+        encoding="utf-8"
+    )
     assert "ed25519.priv" not in fixture
     data = json.loads(fixture)
     assert all(str(k.get("environment")) != "production" for k in data.get("keys") or [])

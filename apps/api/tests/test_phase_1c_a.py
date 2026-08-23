@@ -31,6 +31,7 @@ from app.services.boundary_review_service import (
     preview_ranges,
     update_counts,
 )
+from tests.paths import config_file
 
 
 def seed(testing_session):
@@ -235,7 +236,7 @@ def configured_eligibility(testing_session, *, cloud=True, credential="secret-re
     )
     return provider_eligibility(
         testing_session, provider_name="aliyun_qwen_plus", capabilities=capabilities,
-        healthy=True, store=Store(credential), pricing_path=Path("config/cloud_pricing.json"),
+        healthy=True, store=Store(credential), pricing_path=config_file("cloud_pricing.json"),
     )
 
 
@@ -263,7 +264,7 @@ def test_unified_manual_evaluation_has_versioned_readiness(
     )
     result = evaluate_manual_boundary_candidate(
         testing_session, provider_name="aliyun_qwen_plus", capabilities=capabilities,
-        store=Store("secret-reference"), pricing_path=Path("config/cloud_pricing.json"),
+        store=Store("secret-reference"), pricing_path=config_file("cloud_pricing.json"),
     )
     assert result["manual_boundary_candidate_eligible"] is True
     assert result["manual_selection_blockers"] == []

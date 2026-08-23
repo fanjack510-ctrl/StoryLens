@@ -36,6 +36,7 @@ from app.services.staged_budget import (
 )
 from app.schemas.settings import CloudBudgetUpdate
 from app.services.cloud_pricing import pricing_status
+from tests.paths import config_file
 
 
 def _seed_chapter(session, paragraphs: int = 12):
@@ -194,7 +195,7 @@ def test_usage_ignores_blocked_and_reservations(testing_session):
     )
     testing_session.commit()
     usage = daily_usage(
-        testing_session, budget, True, pricing_status(Path("config/cloud_pricing.json"))
+        testing_session, budget, True, pricing_status(config_file("cloud_pricing.json"))
     )
     assert usage["request_count"] == 0
     assert usage["reserved_requests"] == 5
