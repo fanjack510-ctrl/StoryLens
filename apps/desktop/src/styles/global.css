@@ -340,6 +340,12 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   padding: 28px 32px;
   max-width: 1500px;
   margin: auto;
+  /* `width: 100%` 不能省。
+     `main` 是 flex 列容器，而 flex 里的 `margin: auto` 会**覆盖** stretch——
+     元素于是收缩到内容宽度再居中，`max-width` 完全没起作用。
+     实测 1280px 窗口里这一页只有 709px，两边各空 350px，
+     内容挤成一团而屏幕大半是白的。 */
+  width: 100%;
 }
 .page-title {
   display: flex;
@@ -2667,9 +2673,9 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
      于是「更多筛选」被劈成「更多筛」「选」，「排序」劈成「排」「序」，
      几个筛选块各自掉到第二行、彼此对不齐。一整条读起来是坏的。
      换行由这一层控制，每个块自己 `white-space: nowrap`，就不会再断词。 */
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
   /* 卡片要立起来：原来它贴在页面底色上、四周几乎没有留白，读起来是页面的一部分，
      而不是一组可以动的控件。 */
   margin-bottom: 18px;

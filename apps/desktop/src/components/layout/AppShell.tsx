@@ -186,10 +186,21 @@ export function AppShell() {
               className={`nav-edition-identity ${edition.is_pro ? "nav-edition-identity--pro" : ""}`}
               data-testid="nav-edition-identity"
               data-edition={edition.edition}
-              onClick={() => navigate("/settings?tab=license")}
-              title="打开授权与专业版"
+              // 版本状态和「专业版能做什么」是同一件事，一个入口就够。
+              // 此前它们分成两处：顶栏这个徽章，和书库筛选条里一条「专业版能做什么」——
+              // 后者是为了解决「找不到 PRO」临时加的，加完就和这里重复了，
+              // 而两处说同一件事比一处都没有更让人困惑。
+              onClick={() => navigate("/pro")}
+              title={
+                edition.is_pro
+                  ? "查看你买到了什么、授权状态与有效期"
+                  : "看看专业版能做什么，以及免费到哪儿为止"
+              }
             >
               {edition.product_line_name}
+              {/* 免费版给一个「可以点」的提示。不加的话它读起来是一个状态标签，
+                  而状态标签没人会去点——那正是四个付费功能长期无人发现的原因之一。 */}
+              {edition.is_pro ? null : <i aria-hidden="true">›</i>}
             </button>
           ) : (
             <p className="nav-edition-identity nav-edition-identity--pending" data-testid="nav-edition-identity">

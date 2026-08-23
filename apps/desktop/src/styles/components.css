@@ -1647,8 +1647,7 @@ button:disabled.primary {
 .library-kind-filter, .library-collections { flex-wrap: nowrap; }
 .library-format-fold > summary { white-space: nowrap; }
 .library-sort-field { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-/* 排序推到最右，让左边的筛选块连成一片而不是散在中间。 */
-.library-sort-field { margin-left: auto; }
+
 
 /* 专业版入口：常驻但安静。它要一直在（看不见的功能等于不存在），
    但不该抢筛选控件的注意力——所以是一条文字链，不是按钮。 */
@@ -1689,3 +1688,64 @@ button:disabled.primary {
   color: var(--color-text-inverse); text-decoration: none; font-weight: 600; font-size: 14px;
 }
 .pro-cta a:not(.primary) { color: var(--color-text-secondary); font-size: 13.5px; }
+
+/* 列表区的标题。筛选条原来夹在卡片和列表之间，没有任何东西说它管的是谁。 */
+.library-list-head {
+  display: flex; align-items: baseline; gap: 12px; margin: 0 0 10px;
+}
+.library-list-head h2 { font-size: 15px; font-weight: 650; margin: 0; }
+/* 排序推到标题行的最右端。 */
+.library-list-head .library-sort-field { margin-left: auto; font-size: 13px; }
+.library-list-head .library-sort-field select {
+  border: 1px solid var(--color-border); border-radius: 7px; padding: 5px 10px;
+  font-size: 13px; font-family: inherit;
+  background: var(--color-bg-surface); color: var(--color-text-primary);
+}
+.library-list-count {
+  font-size: 13px; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums;
+}
+
+/* 顶栏版本徽章：免费版带一个「可以点」的提示。
+   不加的话它读起来是状态标签，而状态标签没人会去点——
+   那正是四个付费功能长期无人发现的原因之一。 */
+.app-topbar .nav-edition-identity i {
+  font-style: normal; margin-left: 6px; opacity: .5;
+}
+.app-topbar .nav-edition-identity:hover i { opacity: 1; }
+
+/* 筛选条第一行：搜索 + 类型 + 更多筛选。允许换行，但每块自己不断词。 */
+.library-filter-row {
+  display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+}
+.library-filter-row > * { white-space: nowrap; }
+/* 搜索框不抢空间：给一个够用的下限，多余的宽度让给筛选块。
+   `flex-grow: 1` 会让它把整行吃掉，把类型筛选顶到第二行——实测 630px 容器里
+   它一个人占了 385px。 */
+.library-filter-row .library-search-field { flex: 0 1 240px; min-width: 160px; }
+/* 第二行的书单带一个小标签，说明这一行是另一种筛法。 */
+.library-collections-label {
+  font-size: 12.5px; color: var(--color-text-tertiary); margin-right: 2px; white-space: nowrap;
+}
+.library-collections { flex-wrap: wrap; }
+
+/* 条件不满足时的入口：灰着，但在。
+   「不可用的入口」和「没有入口」是两回事——前者告诉你这里有个功能、以及缺什么，
+   后者让你以为产品没有这个东西。 */
+.library-collection-actions .is-disabled {
+  border-color: var(--color-border); background: transparent;
+  color: var(--color-text-tertiary); cursor: default; font-weight: 500;
+}
+.library-collection-actions .is-disabled:hover {
+  background: transparent; color: var(--color-text-tertiary);
+}
+
+/* 已激活时的授权状态。不显示到期时间——接口不返回，编一个会让人在还能用的时候以为过期了。 */
+.pro-status {
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+  padding: 14px 18px; margin: 0 0 18px; border-radius: 10px;
+  background: var(--color-brand-soft); border: 1px solid var(--color-brand);
+}
+.pro-status dl { display: flex; gap: 26px; margin: 0; flex-wrap: wrap; }
+.pro-status dt { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 2px; }
+.pro-status dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+.pro-status a { margin-left: auto; color: var(--color-brand); font-size: 13px; font-weight: 600; }

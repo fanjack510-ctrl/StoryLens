@@ -542,7 +542,40 @@ export function LibraryPage() {
           </div>
         </section>
       ) : null}
+      {/* 列表区的标题。
+          筛选条原来夹在卡片区和列表之间，上不着下不着——没有任何东西说它管的是谁。
+          给列表一个标题之后，它就从「中间的浮块」变成「这个列表的工具条」。
+          （顶栏那个「搜索」是跨书检索，搜的是分析出来的内容；这里搜的是书名。
+          两个搜索框都悬空时，更分不清哪个是哪个。） */}
+      <div className="library-list-head">
+        <h2>全部作品</h2>
+        <span className="library-list-count">
+          {visible.length === (books.data?.length ?? 0)
+            ? `${visible.length} 本`
+            : `${visible.length} / ${books.data?.length ?? 0} 本`}
+        </span>
+        {/* 排序放在标题这一行，不放筛选条里。
+            筛选条已经装了搜索框、四个类型、书单、更多筛选——再塞一个带下拉的排序，
+            挤不下就把它顶到单独一行，整条变成四行高的一坨。
+            排序管的是「这个列表怎么排」，本来就属于列表的标题行。 */}
+        <label className="library-sort-field">
+          排序
+          <select
+            data-testid="library-sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as "recent" | "title")}
+          >
+            <option value="recent">最近导入</option>
+            <option value="title">书名</option>
+          </select>
+        </label>
+      </div>
+      {/* 两行是结构，不是挤不下的妥协。
+          第一行筛的是**书的属性**（书名、类型、跑没跑过）；第二行选的是**一个命名集合**。
+          它们回答的不是同一个问题，抢同一行时既挤（实测 917px 容器塞 922px 内容）
+          又让人以为「书单」是第五个类型。 */}
       <div className="library-filter-bar" data-testid="library-filter-bar">
+        <div className="library-filter-row">
         <label className="library-search-field">
           <span className="sr-only">搜索</span>
           {/* 图标放进框里而不是框外：框外的图标读起来是一个按钮，而它并不能点。 */}
@@ -590,9 +623,26 @@ export function LibraryPage() {
             </button>
           ))}
         </div>
-        {/* 书单条。放在类型筛选旁边而不是另开一页：书单是看书库的一种取景方式，
+        <details className="library-format-fold">
+          <summary>更多筛选</summary>
+          <div className="library-filter-types" role="group" aria-label="格式">
+            {FORMAT_OPTIONS.map((type) => (
+              <label key={type} className="library-format-chip">
+                <input
+                  type="checkbox"
+                  checked={formats[type]}
+                  onChange={(e) => setFormats((prev) => ({ ...prev, [type]: e.target.checked }))}
+                />
+                <span>{type}</span>
+              </label>
+            ))}
+          </div>
+        </details>
+        </div>
+        {/* 书单条。放在类型筛选下面而不是另开一页：书单是看书库的一种取景方式，
             不是一个独立的地方——分成两页，用户要在两处之间来回对照才知道哪本在哪个单子里。 */}
         <div className="library-collections" role="group" aria-label="书单">
+          <span className="library-collections-label">书单</span>
           <button
             type="button"
             className="library-kind-chip"
@@ -676,59 +726,49 @@ export function LibraryPage() {
             </button>
           )}
         </div>
-        {/* 选中某个书单时才出现。共性视图比的是一组书——不先圈定是哪一组，这个入口没有意义。 */}
-        {collectionFilter != null ? (
-          <div className="library-collection-actions" data-testid="library-collection-actions">
-            <Link
-              className="secondary"
-              to={`/collections/${collectionFilter}/patterns`}
-              data-testid="library-open-patterns"
-            >
-              看这组书的共性 →
-            </Link>
-            <span className="muted">
-              把它们摆在一起，看共同做对了什么。
-            </span>
-          </div>
-        ) : null}
+        {/* 这个入口**一直在**，条件不满足时变灰并说清缺什么。
+            原来是「选中书单才渲染」——听起来合理，实际后果是一个没建过书单的人
+            永远不会知道共性视图存在：他得先建单、再选中，那个按钮才第一次出现。
+            一个看不见的功能和不存在没有区别，而这是要卖钱的功能。 */}
+        <div className="library-collection-actions" data-testid="library-collection-actions">
+          {collectionFilter != null ? (
+            <>
+              <Link
+                className="secondary"
+                to={`/collections/${collectionFilter}/patterns`}
+                data-testid="library-open-patterns"
+              >
+                看这组书的共性 →
+              </Link>
+              <span className="muted">把它们摆在一起，看共同做对了什么。</span>
+            </>
+          ) : (
+            <>
+              <span
+                className="secondary is-disabled"
+                data-testid="library-open-patterns-blocked"
+                aria-disabled="true"
+              >
+                看这组书的共性
+              </span>
+              {/* 说缺什么，而不是说「不可用」。前者是一句他能照做的话。
+                  但查询还没回来时不能说「先建一个书单」——他可能明明有。
+                  「还不知道」和「没有」是两回事，把前者当后者是我在画像门上犯过的同一个错。 */}
+              <span className="muted">
+                {collections.isPending
+                  ? "共性视图把一组书摆在一起，看它们共同做对了什么。"
+                  : (collections.data || []).length === 0
+                    ? "先建一个书单，把想比较的书放进去——共性视图会看出它们共同做对了什么。"
+                    : "先选上面一个书单。共性视图比的是一组书，得先圈定是哪一组。"}
+              </span>
+            </>
+          )}
+        </div>
         {collectionError ? (
           <p className="notice" role="alert" data-testid="library-collection-error">
             {collectionError}
           </p>
         ) : null}
-        <details className="library-format-fold">
-          <summary>更多筛选</summary>
-          <div className="library-filter-types" role="group" aria-label="格式">
-            {FORMAT_OPTIONS.map((type) => (
-              <label key={type} className="library-format-chip">
-                <input
-                  type="checkbox"
-                  checked={formats[type]}
-                  onChange={(e) => setFormats((prev) => ({ ...prev, [type]: e.target.checked }))}
-                />
-                <span>{type}</span>
-              </label>
-            ))}
-          </div>
-        </details>
-        {/* 专业版的常驻入口。不弹窗、不打断，但必须**一直在**——
-            四个付费功能原来全藏在流程内部（共性视图要先选书单、按意思找要先搜一次、
-            PDF 在报告页右上角），装好之后连着两次被问「为啥没有 pro 的功能」。
-            一个看不见的功能和不存在没有区别。 */}
-        <Link className="library-pro-link" to="/pro" data-testid="library-pro-link">
-          专业版能做什么
-        </Link>
-        <label className="library-sort-field">
-          排序
-          <select
-            data-testid="library-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as "recent" | "title")}
-          >
-            <option value="recent">最近导入</option>
-            <option value="title">书名</option>
-          </select>
-        </label>
       </div>
 
       <div

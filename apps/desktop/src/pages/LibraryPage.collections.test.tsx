@@ -122,6 +122,42 @@ describe("书库里的书单", () => {
     expect(screen.getByTestId("book-row-3")).toBeInTheDocument();
   });
 
+  it("共性视图的入口一直在，没选书单时说清缺什么", async () => {
+    // 原来是「选中书单才渲染」——后果是一个没建过书单的人永远不会知道共性视图存在：
+    // 他得先建单、再选中，那个按钮才第一次出现。一个看不见的功能和不存在没有区别，
+    // 而这是要卖钱的功能。
+    renderLibrary();
+    const bar = await screen.findByTestId("library-collection-actions");
+    expect(bar).toHaveTextContent("看这组书的共性");
+    // 灰着，但在。并且说的是缺什么，不是「不可用」——前者是一句他能照做的话。
+    expect(screen.getByTestId("library-open-patterns-blocked")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-open-patterns")).toBeNull();
+    // 等书单查询回来之后，文案才该断言「有书单但没选」。
+    // 加载中说「先建一个书单」是把「还不知道」当成了「没有」。
+    await waitFor(() => expect(bar).toHaveTextContent("先选上面一个书单"));
+  });
+
+  it("一个书单都没有时，说的是「先建一个」", async () => {
+    // 缺的东西不一样，该说的话就不一样：没书单要先建，有书单要先选。
+    collectionsList.mockResolvedValue([]);
+    renderLibrary();
+    const bar = await screen.findByTestId("library-collection-actions");
+    // 同样要等查询回来——加载中的文案是中性的那一句。
+    await waitFor(() => expect(bar).toHaveTextContent("先建一个书单"));
+  });
+
+  it("选中书单后入口变成可点的", async () => {
+    renderLibrary();
+    fireEvent.click(await screen.findByTestId("library-collection-7"));
+    await waitFor(() =>
+      expect(screen.getByTestId("library-open-patterns")).toHaveAttribute(
+        "href",
+        "/collections/7/patterns",
+      ),
+    );
+    expect(screen.queryByTestId("library-open-patterns-blocked")).toBeNull();
+  });
+
   it("没选书时不出现工具条", async () => {
     renderLibrary();
     await screen.findByTestId("book-row-1");

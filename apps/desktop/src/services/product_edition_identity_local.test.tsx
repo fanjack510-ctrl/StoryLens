@@ -117,6 +117,9 @@ function wrapShell(path = "/library") {
           <Route element={<AppShell />}>
             <Route path="/library" element={<div>书库</div>} />
             <Route path="/settings" element={<LicenseSettingsCard />} />
+            {/* 只放一个桩：这一组测试问的是「徽章点了以后去哪儿」，
+                不是「专业版说明页长什么样」——后者有它自己的测试文件。 */}
+            <Route path="/pro" element={<div data-testid="pro-capabilities-page">专业版</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -203,14 +206,20 @@ describe("AppShell product edition identity", () => {
     expect(screen.queryByText(proSnap().license_id!)).not.toBeInTheDocument();
   });
 
-  it("navigates to license settings from sidebar identity", async () => {
+  it("顶栏版本徽章通往专业版说明页", async () => {
+    // 目的地从「设置 → 授权」改成了 /pro。
+    //
+    // 版本状态和「专业版能做什么」是同一件事，此前分成两处：这个徽章去设置，
+    // 书库筛选条里另有一条「专业版能做什么」去说明页。两处说同一件事，
+    // 比一处都没有更让人困惑。现在只留这一个入口，页面内容随状态变：
+    // 没付费的看「能做什么、免费到哪儿」，付费的看「买到了什么、什么时候激活的」。
     wrapShell();
     await waitFor(() => {
       expect(screen.getByTestId("nav-edition-identity")).toHaveTextContent("StoryLens");
     });
     fireEvent.click(screen.getByTestId("nav-edition-identity"));
     await waitFor(() => {
-      expect(screen.getByTestId("settings-panel-license")).toBeInTheDocument();
+      expect(screen.getByTestId("pro-capabilities-page")).toBeInTheDocument();
     });
   });
 

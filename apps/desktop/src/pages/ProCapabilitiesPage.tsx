@@ -40,6 +40,35 @@ export function ProCapabilitiesPage() {
         </Link>
       </PageHeader>
 
+      {/* 已激活的人不需要看销售页，他要看的是「我买到了什么、什么时候激活的」。
+          同一个入口、同一个页面，内容随状态变。
+          **没有到期时间**——`/api/v1/entitlements` 不返回这个字段。宁可不显示，
+          也不编一个：一个错的到期日会让人在还能用的时候以为过期了。
+          完整的授权细节在设置里，下面给了链接。 */}
+      {isPro ? (
+        <div className="pro-status" data-testid="pro-status">
+          <dl>
+            <div>
+              <dt>版本</dt>
+              <dd>{entitlement.data?.edition_label || "专业版"}</dd>
+            </div>
+            {entitlement.data?.license_id_masked ? (
+              <div>
+                <dt>授权号</dt>
+                <dd>{entitlement.data.license_id_masked}</dd>
+              </div>
+            ) : null}
+            {entitlement.data?.activated_at ? (
+              <div>
+                <dt>激活于</dt>
+                <dd>{new Date(entitlement.data.activated_at).toLocaleDateString()}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <Link to="/settings?tab=license">授权详情与更换 →</Link>
+        </div>
+      ) : null}
+
       <ol className="pro-list">
         {SHIPPED_PRO_CAPABILITIES.map((cap) => (
           <li key={cap.key} className="pro-item" data-testid={`pro-item-${cap.key}`}>
