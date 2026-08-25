@@ -1,0 +1,53 @@
+{
+  "id": "CHG-20260825-014",
+  "title": "修复桌面端 Pro 购买链接无法打开",
+  "type": "fix",
+  "base_version": "1.3.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop",
+    "licensing"
+  ],
+  "files": [
+    "apps/desktop/src/services/openExternalUrl.ts",
+    "apps/desktop/src/components/common/ExternalUrlLink.tsx",
+    "apps/desktop/src-tauri/src/main.rs",
+    "apps/desktop/src/services/openExternalUrl.test.ts",
+    "apps/desktop/src-tauri/Cargo.toml"
+  ],
+  "user_summary": "设置页及功能内的爱发电购买入口会使用系统默认浏览器打开，并在打开失败时给出准确提示。",
+  "technical_summary": "正式配置中的爱发电 URL 已正确随 sidecar 打包；故障来自 Tauri WebView 使用 window.open/target=_blank。新增经过 HTTPS 与本地地址安全校验的原生 Tauri 命令，Windows 下通过 ShellExecuteW 调用系统默认浏览器；浏览器开发环境保留 window.open。新增统一 ExternalUrlLink，覆盖设置、短篇 PDF、全书 PDF、读者旅程、榜单共性、跨书检索和能力页入口，并区分地址缺失与系统打开失败提示。",
+  "acceptance_criteria": [
+    "正式桌面版点击设置页‘前往爱发电购买’会调用系统默认浏览器打开已配置商品页",
+    "短篇及其他 Pro 功能提示中的购买入口不再无响应",
+    "空地址、非 HTTPS、本地地址和危险协议仍被拒绝，打开失败显示准确提示"
+  ],
+  "tests": [
+    "Vitest 定向 4 文件：34 tests passed",
+    "npm run typecheck passed",
+    "cargo check passed",
+    "npm run build passed",
+    "scripts/check_project.py passed"
+  ],
+  "verification_evidence": [
+    "打包的 v1.3.2 sidecar /api/v1/entitlements 已实测返回 https://afdian.com/item/b7251700a07311f1be455254001e7c00，确认配置没有缺失"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅桌面外链打开方式变化，不修改数据库、授权码或用户数据。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-08-25T14:47:28Z",
+  "updated_at": "2026-08-25T15:03:40Z"
+}

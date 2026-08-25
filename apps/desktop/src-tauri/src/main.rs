@@ -7,6 +7,10 @@ mod win_lifecycle;
 
 use backend::{BackendState, BackendStatus};
 use serde::Serialize;
+#[cfg(windows)]
+use std::ffi::OsStr;
+#[cfg(windows)]
+use std::os::windows::ffi::OsStrExt;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, Webview};
 use tauri_plugin_updater::UpdaterExt;
@@ -31,6 +35,52 @@ fn get_backend_status(state: State<'_, Mutex<BackendState>>) -> Result<BackendSt
 #[tauri::command]
 fn get_app_version(app: AppHandle) -> String {
     app.package_info().version.to_string()
+}
+
+#[cfg(windows)]
+#[tauri::command]
+fn open_external_https_url(url: String) -> Result<(), String> {
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+
+    let parsed = url::Url::parse(url.trim()).map_err(|_| "购买地址无效。".to_string())?;
+    let host = parsed
+        .host_str()
+        .map(str::to_ascii_lowercase)
+        .ok_or_else(|| "购买地址无效。".to_string())?;
+    if parsed.scheme() != "https"
+        || host == "localhost"
+        || host == "127.0.0.1"
+        || host == "::1"
+        || host.ends_with(".localhost")
+    {
+        return Err("购买地址无效。".into());
+    }
+
+    let verb: Vec<u16> = OsStr::new("open").encode_wide().chain(Some(0)).collect();
+    let target: Vec<u16> = OsStr::new(parsed.as_str())
+        .encode_wide()
+        .chain(Some(0))
+        .collect();
+    let result = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            verb.as_ptr(),
+            target.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            1,
+        )
+    };
+    if result as isize <= 32 {
+        return Err("系统浏览器未能打开购买页面。".into());
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+fn open_external_https_url(_url: String) -> Result<(), String> {
+    Err("当前系统暂不支持打开外部页面。".into())
 }
 
 #[tauri::command]
@@ -148,6 +198,7 @@ fn main() {
             get_api_base,
             get_backend_status,
             get_app_version,
+            open_external_https_url,
             updater_enabled,
             get_updater_channel,
             set_updater_channel,

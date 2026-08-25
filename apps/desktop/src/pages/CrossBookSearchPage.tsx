@@ -7,6 +7,7 @@ import type { KeywordResult, MeaningMatch, MeaningResult, SearchHit } from "../s
 import { ApiError } from "../services/apiClient";
 import { Loading } from "../components/common/States";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
+import { ExternalUrlLink } from "../components/common/ExternalUrlLink";
 
 type SearchMode = "keyword" | "meaning";
 
@@ -227,7 +228,7 @@ function ProNotice({ error }: { error: ApiError }) {
   return (
     <div className="notice cp-pro" data-testid="cb-pro-required" role="alert">
       <b>{error.message}</b>
-      {details.afdian_product_url ? <a href={details.afdian_product_url} target="_blank" rel="noreferrer">了解 {details.product_label || "Pro"} →</a> : null}
+      {details.afdian_product_url ? <ExternalUrlLink url={details.afdian_product_url}>了解 {details.product_label || "Pro"} →</ExternalUrlLink> : null}
     </div>
   );
 }

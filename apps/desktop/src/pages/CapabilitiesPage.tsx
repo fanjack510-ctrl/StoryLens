@@ -14,6 +14,7 @@ import { ENTITLEMENTS_QUERY_KEY } from "../services/productEdition";
 import { booksApi } from "../services/booksApi";
 import { collectionsApi } from "../services/collectionsApi";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
+import { ExternalUrlLink } from "../components/common/ExternalUrlLink";
 
 /** 这个产品能做什么——**而且在这儿就能开始做**。
  *
@@ -223,9 +224,9 @@ export function CapabilitiesPage() {
           <div className="paid-three-head">
             <b>专业版解锁 5 项创作能力</b>
             {afdian ? (
-              <a href={afdian} target="_blank" rel="noreferrer" className="primary">
+              <ExternalUrlLink url={afdian} className="primary">
                 了解专业版
-              </a>
+              </ExternalUrlLink>
             ) : null}
           </div>
           <dl>

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ExternalUrlLink } from "../../../components/common/ExternalUrlLink";
 import type { JourneyAxis, JourneyResult, StageLedger, WholeBookAnalysisV2 } from "../contracts";
 import { needsReanalysisWarning } from "../adapter";
 import {
@@ -2483,9 +2484,9 @@ export function WholeBookV2ReportView({
           <p>{vipNotice.message}</p>
           <p>
             {vipNotice.url ? (
-              <a href={vipNotice.url} target="_blank" rel="noreferrer">
+              <ExternalUrlLink url={vipNotice.url}>
                 前往爱发电购买 StoryLens Pro →
-              </a>
+              </ExternalUrlLink>
             ) : (
               <span>购买入口尚未配置，请联系作者获取授权码。</span>
             )}

@@ -6,6 +6,7 @@ import { collectionsApi } from "../services/collectionsApi";
 import { ApiError } from "../services/apiClient";
 import { ErrorState, Loading } from "../components/common/States";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
+import { ExternalUrlLink } from "../components/common/ExternalUrlLink";
 import {
   CommonPatternsPdfError,
   downloadCommonPatternsPdf,
@@ -250,9 +251,9 @@ function ProNotice({ error }: { error: ApiError }) {
     <div className="notice cp-pro" data-testid="cp-pro-required" role="alert">
       <b>{error.message}</b>
       {details.afdian_product_url ? (
-        <a href={details.afdian_product_url} target="_blank" rel="noreferrer">
+        <ExternalUrlLink url={details.afdian_product_url}>
           了解 {details.product_label || "Pro"} →
-        </a>
+        </ExternalUrlLink>
       ) : null}
     </div>
   );
@@ -264,9 +265,9 @@ function PdfExportNotice({ error }: { error: unknown }) {
     <div className="notice cp-pdf-error" role="alert" data-testid="cp-pdf-error">
       <b>{pdfError?.message || "PDF 没能生成，请重试。"}</b>
       {pdfError?.proRequired && pdfError.upgradeUrl ? (
-        <a href={pdfError.upgradeUrl} target="_blank" rel="noreferrer">
+        <ExternalUrlLink url={pdfError.upgradeUrl}>
           了解 StoryLens Pro →
-        </a>
+        </ExternalUrlLink>
       ) : null}
     </div>
   );

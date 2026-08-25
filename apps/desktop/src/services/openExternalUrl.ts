@@ -1,10 +1,11 @@
 /**
  * Open an https commerce / external URL outside the app.
- * Browser local: new tab. Tauri webview: same helper (system/external handler via window.open).
+ * Browser local: new tab. Tauri webview: audited native command opens the system browser.
  * Never accepts javascript:/file:/data:/localhost or non-https targets.
  */
 
 const USER_UNCONFIGURED = "专业版购买地址尚未配置。";
+const USER_OPEN_FAILED = "未能打开购买页面，请稍后重试。";
 
 export type OpenExternalResult = { ok: boolean; message?: string; code?: string };
 
@@ -60,13 +61,17 @@ export async function openExternalUrl(url: string): Promise<OpenExternalResult> 
   }
 
   try {
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("open_external_https_url", { url: checked.url });
+      return { ok: true };
+    }
     const opened = window.open(checked.url, "_blank", "noopener,noreferrer");
     if (opened == null) {
-      // Popup blocked or unsupported — still no technical dump for users.
-      return { ok: false, code: "COMMERCE_OPEN_FAILED", message: USER_UNCONFIGURED };
+      return { ok: false, code: "COMMERCE_OPEN_FAILED", message: USER_OPEN_FAILED };
     }
     return { ok: true };
   } catch {
-    return { ok: false, code: "COMMERCE_OPEN_FAILED", message: USER_UNCONFIGURED };
+    return { ok: false, code: "COMMERCE_OPEN_FAILED", message: USER_OPEN_FAILED };
   }
 }

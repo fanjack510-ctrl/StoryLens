@@ -15,6 +15,7 @@ import type {
 } from "../../types/readerJourneyVisualization";
 import type { JourneySelectionSource } from "../../types/journeySelection";
 import { CanonicalJourneyChart } from "./CanonicalJourneyChart";
+import { ExternalUrlLink } from "../common/ExternalUrlLink";
 import { exportJourneyPng, JourneyExportError } from "./exportJourneyPng";
 import { JourneyChartToolbar } from "./JourneyChartToolbar";
 import { JourneyDiagnosisBand } from "./JourneyDiagnosisBand";
@@ -1523,9 +1524,9 @@ export function ReaderJourneyWorkspace({
               <p>{vipNotice.message}</p>
               <p>
                 {vipNotice.url ? (
-                  <a href={vipNotice.url} target="_blank" rel="noreferrer">
+                  <ExternalUrlLink url={vipNotice.url}>
                     前往爱发电购买 StoryLens Pro →
-                  </a>
+                  </ExternalUrlLink>
                 ) : (
                   <span>购买入口尚未配置，请联系作者获取授权码。</span>
                 )}

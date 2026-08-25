@@ -12,6 +12,7 @@
  *  可信的分界线。
  */
 import { useState } from "react";
+import { ExternalUrlLink } from "../../../components/common/ExternalUrlLink";
 import type { ComprehendResult } from "../../../services/wholeBookFreeProductApi";
 import {
   VipRequiredError,
@@ -166,9 +167,9 @@ export function ComprehendReportView({
             <p>{vip.message}</p>
             <p>
               {vip.url ? (
-                <a href={vip.url} target="_blank" rel="noreferrer">
+                <ExternalUrlLink url={vip.url}>
                   前往爱发电购买 StoryLens Pro →
-                </a>
+                </ExternalUrlLink>
               ) : (
                 <span>购买入口尚未配置，请联系作者获取授权码。</span>
               )}

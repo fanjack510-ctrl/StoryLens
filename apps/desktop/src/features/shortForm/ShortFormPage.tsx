@@ -15,6 +15,7 @@ import {
   downloadShortFormPdf,
   VipRequiredError,
 } from "./shortFormExport";
+import { ExternalUrlLink } from "../../components/common/ExternalUrlLink";
 import "./shortForm.css";
 
 /** 短篇精读 — the whole piece read in one sitting, one row per scene.
@@ -118,9 +119,9 @@ function Reading({ bookId, reading }: { bookId: number; reading: ShortFormReadin
         <p className="sf-export-error" role="alert">
           {pdfError}
           {purchaseUrl ? (
-            <a href={purchaseUrl} target="_blank" rel="noreferrer">
+            <ExternalUrlLink url={purchaseUrl}>
               获取 Pro 授权
-            </a>
+            </ExternalUrlLink>
           ) : null}
         </p>
       ) : null}
