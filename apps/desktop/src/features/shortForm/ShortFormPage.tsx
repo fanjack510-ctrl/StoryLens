@@ -16,6 +16,7 @@ import {
   VipRequiredError,
 } from "./shortFormExport";
 import { ExternalUrlLink } from "../../components/common/ExternalUrlLink";
+import { savedFileMessage } from "../../services/fileDownload";
 import "./shortForm.css";
 
 /** 短篇精读 — the whole piece read in one sitting, one row per scene.
@@ -81,14 +82,17 @@ function Reading({ bookId, reading }: { bookId: number; reading: ShortFormReadin
   const result = reading.result;
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfSuccess, setPdfSuccess] = useState<string | null>(null);
   const [purchaseUrl, setPurchaseUrl] = useState("");
 
   const exportPdf = async () => {
     setPdfBusy(true);
     setPdfError(null);
+    setPdfSuccess(null);
     setPurchaseUrl("");
     try {
-      await downloadShortFormPdf(bookId, reading);
+      const saved = await downloadShortFormPdf(bookId, reading);
+      setPdfSuccess(savedFileMessage(saved));
     } catch (err) {
       setPdfError(err instanceof Error ? err.message : "PDF 导出失败，请重试。");
       if (err instanceof VipRequiredError) setPurchaseUrl(err.afdianUrl);
@@ -125,6 +129,7 @@ function Reading({ bookId, reading }: { bookId: number; reading: ShortFormReadin
           ) : null}
         </p>
       ) : null}
+      {pdfSuccess ? <p className="sf-export-success" role="status">{pdfSuccess}</p> : null}
 
       <h2>起承转合</h2>
       <BeatBar result={result} />

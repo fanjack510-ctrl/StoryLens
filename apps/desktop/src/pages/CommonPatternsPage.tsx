@@ -7,6 +7,7 @@ import { ApiError } from "../services/apiClient";
 import { ErrorState, Loading } from "../components/common/States";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
 import { ExternalUrlLink } from "../components/common/ExternalUrlLink";
+import { savedFileMessage, type SavedFileResult } from "../services/fileDownload";
 import {
   CommonPatternsPdfError,
   downloadCommonPatternsPdf,
@@ -37,7 +38,7 @@ export function CommonPatternsPage() {
   const synth = useMutation<PatternsResult, unknown, void>({
     mutationFn: () => commonPatternsApi.synthesize(collectionId),
   });
-  const exportPdf = useMutation<void, unknown, void>({
+  const exportPdf = useMutation<SavedFileResult, unknown, void>({
     mutationFn: () =>
       downloadCommonPatternsPdf(
         collectionId,
@@ -133,6 +134,11 @@ export function CommonPatternsPage() {
         </div>
 
         {exportPdf.error ? <PdfExportNotice error={exportPdf.error} /> : null}
+        {exportPdf.data ? (
+          <p className="notice" role="status" data-testid="cp-pdf-success">
+            {savedFileMessage(exportPdf.data)}
+          </p>
+        ) : null}
 
         {!data.can_synthesize ? (
           <p className="notice" data-testid="cp-blocked">

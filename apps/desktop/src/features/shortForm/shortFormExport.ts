@@ -12,6 +12,7 @@
  * print its chapter table, and a short piece has no such problem.
  */
 import type { ShortFormReading, ShortFormResult, ShortFormSegment } from "../../services/shortFormApi";
+import { saveBlobAsFile, type SavedFileResult } from "../../services/fileDownload";
 import { VipRequiredError } from "../wholeBookV2/reportExport";
 
 export { VipRequiredError };
@@ -198,7 +199,7 @@ export function downloadShortForm(reading: ShortFormReading): void {
 export async function downloadShortFormPdf(
   bookId: number,
   reading: ShortFormReading,
-): Promise<void> {
+): Promise<SavedFileResult> {
   const { getApiBase } = await import("../../services/apiClient");
   const response = await fetch(
     `${getApiBase()}/api/v1/books/${bookId}/short-form/readings/${reading.id}/export-pdf`,
@@ -227,7 +228,7 @@ export async function downloadShortFormPdf(
     throw new Error(message);
   }
 
-  triggerDownload(
+  return saveBlobAsFile(
     await response.blob(),
     shortFormFileName(reading).replace(/\.html$/, ".pdf"),
   );

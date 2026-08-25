@@ -11,6 +11,7 @@
  *  hand-off path.
  */
 import type { WholeBookAnalysisV2 } from "./contracts";
+import { saveBlobAsFile, type SavedFileResult } from "../../services/fileDownload";
 import { buildPrintHtml } from "./printExport";
 import {
   PACING_SERIES,
@@ -769,7 +770,7 @@ export class VipRequiredError extends Error {
 /** PDF via the sidecar, which prints the same HTML through a headless Chromium — a real
  *  .pdf file, vector text, charts included. Throws VipRequiredError when the licence gate
  *  refuses, and a plain Error for operational failures the caller may fall back from. */
-export async function downloadReportPdf(d: WholeBookAnalysisV2): Promise<void> {
+export async function downloadReportPdf(d: WholeBookAnalysisV2): Promise<SavedFileResult> {
   const { getApiBase } = await import("../../services/apiClient");
   const res = await fetch(
     `${getApiBase()}/api/v1/whole-book-runs/${d.analysis_metadata.run_id}/v2/export-pdf`,
@@ -799,5 +800,8 @@ export async function downloadReportPdf(d: WholeBookAnalysisV2): Promise<void> {
     }
     throw new Error(message);
   }
-  triggerDownload(await res.blob(), reportFileName(d).replace(/\.html$/, ".pdf"));
+  return saveBlobAsFile(
+    await res.blob(),
+    reportFileName(d).replace(/\.html$/, ".pdf"),
+  );
 }

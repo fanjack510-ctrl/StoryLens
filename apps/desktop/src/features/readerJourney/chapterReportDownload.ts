@@ -4,6 +4,7 @@
  *  所以两份文件的字体嵌入、纸张、边距一定一致，不会出现「全书能印、单章印成乱码」。
  */
 import { VipRequiredError } from "../wholeBookV2/reportExport";
+import { saveBlobAsFile, type SavedFileResult } from "../../services/fileDownload";
 import {
   buildChapterPrintHtml,
   chapterReportFileName,
@@ -33,7 +34,9 @@ export function downloadChapterReportHtml(input: ChapterReportInput): void {
 
 /** PDF 走 sidecar。授权不足时抛 VipRequiredError——门拒绝是一个答案，不是故障，
  *  所以调用方不能把它当失败去悄悄发 HTML 顶替。 */
-export async function downloadChapterReportPdf(input: ChapterReportInput): Promise<void> {
+export async function downloadChapterReportPdf(
+  input: ChapterReportInput,
+): Promise<SavedFileResult> {
   const runId = input.journeyRunId;
   if (runId == null) throw new Error("这份分析没有旅程任务号，无法导出 PDF");
 
@@ -64,5 +67,8 @@ export async function downloadChapterReportPdf(input: ChapterReportInput): Promi
     throw new Error(message);
   }
 
-  triggerDownload(await res.blob(), chapterReportFileName(input).replace(/\.html$/, ".pdf"));
+  return saveBlobAsFile(
+    await res.blob(),
+    chapterReportFileName(input).replace(/\.html$/, ".pdf"),
+  );
 }

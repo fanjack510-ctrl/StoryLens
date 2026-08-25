@@ -20,6 +20,7 @@ import {
   CATEGORY_ROW,
 } from "./labels";
 import { downloadReport, downloadReportPdf, VipRequiredError } from "../reportExport";
+import { savedFileMessage } from "../../../services/fileDownload";
 import "../../wholeBookV2Mock/wholeBookV2Mock.css";
 
 export type WholeBookV2ReportViewProps = {
@@ -2358,6 +2359,7 @@ export function WholeBookV2ReportView({
   const statusLabel = analysisStatusLabel ?? "已完成";
   const [exporting, setExporting] = useState(false);
   const [vipNotice, setVipNotice] = useState<{ message: string; url: string } | null>(null);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const showNonRealWarning = mode === "formal" && needsReanalysisWarning(data);
   // 只在文档自己声明「我只读了开篇」时才出现。由后端判定而不是前端拿 5/542 去算：
   // 一次读了 5 章的开篇拆解和一次丢了 537 章的失败运行，比例一模一样，含义正好相反。
@@ -2437,8 +2439,10 @@ export function WholeBookV2ReportView({
             onClick={async () => {
               setExporting(true);
               setVipNotice(null);
+              setExportMessage(null);
               try {
-                await downloadReportPdf(data);
+                const saved = await downloadReportPdf(data);
+                setExportMessage(savedFileMessage(saved));
               } catch (err) {
                 if (err instanceof VipRequiredError) {
                   // The gate refusing is an answer, not an outage — no silent fallback
@@ -2497,6 +2501,7 @@ export function WholeBookV2ReportView({
           </button>
         </div>
       )}
+      {exportMessage ? <p className="wb2-export-message" role="status">{exportMessage}</p> : null}
 
       <nav className="wb2-nav" aria-label="全书分析模块">
         {modules.map((m, i) => (

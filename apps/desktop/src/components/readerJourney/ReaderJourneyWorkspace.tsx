@@ -134,6 +134,7 @@ import {
   downloadChapterReportPdf,
   VipRequiredError,
 } from "../../features/readerJourney/chapterReportDownload";
+import { savedFileMessage } from "../../services/fileDownload";
 import "./readerJourney.css";
 
 function exportErrorMessage(error: unknown): string {
@@ -956,9 +957,9 @@ export function ReaderJourneyWorkspace({
       modelName,
     };
     try {
-      await downloadChapterReportPdf(input);
+      const saved = await downloadChapterReportPdf(input);
       setExportStatus("succeeded");
-      setExportMessage("已导出章节评测报告 PDF");
+      setExportMessage(savedFileMessage(saved));
     } catch (error) {
       if (error instanceof VipRequiredError) {
         setVipNotice({ message: error.message, url: error.afdianUrl });

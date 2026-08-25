@@ -9,8 +9,11 @@ use backend::{BackendState, BackendStatus};
 use serde::Serialize;
 #[cfg(windows)]
 use std::ffi::OsStr;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, Webview};
 use tauri_plugin_updater::UpdaterExt;
@@ -35,6 +38,124 @@ fn get_backend_status(state: State<'_, Mutex<BackendState>>) -> Result<BackendSt
 #[tauri::command]
 fn get_app_version(app: AppHandle) -> String {
     app.package_info().version.to_string()
+}
+
+const MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
+
+fn safe_download_filename(filename: &str) -> String {
+    let basename = Path::new(filename.trim())
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("StoryLens-export.pdf");
+    let mut cleaned: String = basename
+        .chars()
+        .map(|ch| {
+            if ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+            {
+                '_'
+            } else {
+                ch
+            }
+        })
+        .take(180)
+        .collect();
+    cleaned = cleaned.trim_matches([' ', '.']).to_string();
+    if cleaned.is_empty() {
+        return "StoryLens-export.pdf".into();
+    }
+
+    let stem = Path::new(&cleaned)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("")
+        .to_ascii_uppercase();
+    let reserved = matches!(
+        stem.as_str(),
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
+    );
+    if reserved {
+        cleaned.insert(0, '_');
+    }
+    cleaned
+}
+
+fn numbered_download_path(directory: &Path, filename: &str, index: usize) -> PathBuf {
+    if index == 0 {
+        return directory.join(filename);
+    }
+    let path = Path::new(filename);
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("StoryLens-export");
+    match path.extension().and_then(|value| value.to_str()) {
+        Some(extension) if !extension.is_empty() => {
+            directory.join(format!("{stem} ({index}).{extension}"))
+        }
+        _ => directory.join(format!("{stem} ({index})")),
+    }
+}
+
+/// Persist a generated export through the desktop shell. WebView download anchors are not
+/// reliable in installed Tauri builds, so the UI sends the already-rendered bytes here and gets
+/// the exact final path back for a visible success message.
+#[tauri::command]
+fn save_download_file(app: AppHandle, filename: String, bytes: Vec<u8>) -> Result<String, String> {
+    if bytes.is_empty() {
+        return Err("导出文件为空，未保存。".into());
+    }
+    if bytes.len() > MAX_DOWNLOAD_BYTES {
+        return Err("导出文件超过 64 MB，未保存。".into());
+    }
+
+    let directory = app
+        .path()
+        .download_dir()
+        .map_err(|error| format!("无法定位系统下载目录：{error}"))?;
+    fs::create_dir_all(&directory).map_err(|error| format!("无法创建下载目录：{error}"))?;
+    let filename = safe_download_filename(&filename);
+
+    for index in 0..10_000 {
+        let target = numbered_download_path(&directory, &filename, index);
+        match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&target)
+        {
+            Ok(mut file) => {
+                if let Err(error) = file.write_all(&bytes).and_then(|_| file.flush()) {
+                    drop(file);
+                    let _ = fs::remove_file(&target);
+                    return Err(format!("保存导出文件失败：{error}"));
+                }
+                return Ok(target.to_string_lossy().into_owned());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(format!("无法写入下载目录：{error}")),
+        }
+    }
+    Err("下载目录中同名文件过多，请整理后重试。".into())
 }
 
 #[cfg(windows)]
@@ -198,6 +319,7 @@ fn main() {
             get_api_base,
             get_backend_status,
             get_app_version,
+            save_download_file,
             open_external_https_url,
             updater_enabled,
             get_updater_channel,

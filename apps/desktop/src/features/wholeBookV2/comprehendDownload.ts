@@ -5,6 +5,7 @@
  *  名字发出去。
  */
 import type { ComprehendResult } from "../../services/wholeBookFreeProductApi";
+import { saveBlobAsFile, type SavedFileResult } from "../../services/fileDownload";
 import { VipRequiredError } from "./reportExport";
 import { buildComprehendPrintHtml, comprehendFileName } from "./comprehendPrintExport";
 
@@ -32,7 +33,7 @@ export async function downloadComprehendPdf(
   runId: number,
   data: ComprehendResult,
   title: string,
-): Promise<void> {
+): Promise<SavedFileResult> {
   const { getApiBase } = await import("../../services/apiClient");
   const res = await fetch(
     `${getApiBase()}/api/v1/whole-book-runs/${runId}/comprehend/export-pdf`,
@@ -60,5 +61,8 @@ export async function downloadComprehendPdf(
     }
     throw new Error(message);
   }
-  triggerDownload(await res.blob(), comprehendFileName(title).replace(/\.html$/, ".pdf"));
+  return saveBlobAsFile(
+    await res.blob(),
+    comprehendFileName(title).replace(/\.html$/, ".pdf"),
+  );
 }

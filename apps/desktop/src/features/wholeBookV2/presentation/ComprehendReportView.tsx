@@ -14,6 +14,7 @@
 import { useState } from "react";
 import { ExternalUrlLink } from "../../../components/common/ExternalUrlLink";
 import type { ComprehendResult } from "../../../services/wholeBookFreeProductApi";
+import { savedFileMessage } from "../../../services/fileDownload";
 import {
   VipRequiredError,
   downloadComprehendHtml,
@@ -112,7 +113,8 @@ export function ComprehendReportView({
     setVip(null);
     setNote("");
     try {
-      await downloadComprehendPdf(runId, data, title);
+      const saved = await downloadComprehendPdf(runId, data, title);
+      setNote(savedFileMessage(saved));
     } catch (err) {
       if (err instanceof VipRequiredError) {
         // 门拒绝是一个答案，不是故障——这时不落回 HTML，否则等于把收费的东西换个名字发出去。

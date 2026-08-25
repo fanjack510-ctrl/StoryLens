@@ -1,4 +1,5 @@
 import { getApiBase } from "../../services/apiClient";
+import { saveBlobAsFile, type SavedFileResult } from "../../services/fileDownload";
 import type { PatternBook, PatternsResult } from "../../services/commonPatternsApi";
 
 const esc = (value: unknown): string =>
@@ -158,17 +159,6 @@ export class CommonPatternsPdfError extends Error {
   }
 }
 
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 export function commonPatternsFileName(collectionName: string): string {
   const safe = (collectionName || "未命名榜单").replace(/[\\/:*?"<>|]/g, "_");
   return `${safe}-榜单共性报告.pdf`;
@@ -178,7 +168,7 @@ export async function downloadCommonPatternsPdf(
   collectionId: number,
   collectionName: string,
   result: PatternsResult,
-): Promise<void> {
+): Promise<SavedFileResult> {
   const response = await fetch(
     `${getApiBase()}/api/v1/collections/${collectionId}/common-patterns/export-pdf`,
     {
@@ -206,5 +196,5 @@ export async function downloadCommonPatternsPdf(
       upgradeUrl,
     );
   }
-  triggerDownload(await response.blob(), commonPatternsFileName(collectionName));
+  return saveBlobAsFile(await response.blob(), commonPatternsFileName(collectionName));
 }
