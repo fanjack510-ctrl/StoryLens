@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Release registry validation resolves historical commit evidence.
+          # A shallow tag checkout makes every recorded SHA look missing.
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -59,7 +63,14 @@ jobs:
             if ($ref -match '^v(\d+\.\d+\.\d+.*)$') { $version = $Matches[1] }
           }
           if ($version) {
-            .\.venv\Scripts\python.exe scripts/version_manager.py set $version --allow-same
+            $current = (Get-Content VERSION -Raw).Trim()
+            if ($current -eq $version) {
+              Write-Host "Tag/input version already matches repository VERSION; keep checkout clean."
+              .\.venv\Scripts\python.exe scripts/version_manager.py check
+            } else {
+              .\.venv\Scripts\python.exe scripts/version_manager.py set $version
+            }
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
           } else {
             Write-Host "Keeping repository VERSION"
             .\.venv\Scripts\python.exe scripts/version_manager.py check
