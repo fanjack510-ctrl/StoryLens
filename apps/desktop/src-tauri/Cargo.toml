@@ -1,6 +1,6 @@
 [package]
 name = "storylens-desktop"
-version = "1.3.3"
+version = "1.3.4"
 description = "StoryLens desktop shell"
 authors = ["StoryLens"]
 edition = "2021"
