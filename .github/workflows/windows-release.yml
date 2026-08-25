@@ -103,6 +103,10 @@ jobs:
       - name: Build Windows release
         shell: pwsh
         env:
+          # A manual run can verify an already-published version. Treat its
+          # artifacts as validation-only so the pre-tag release guard does not
+          # reject the existing tag.
+          STORYLENS_RC_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
           # Signing is opt-in via STORYLENS_SIGN_UPDATER=1 AND a real private key secret.
           STORYLENS_SIGN_UPDATER: "1"
           TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
@@ -112,6 +116,8 @@ jobs:
 
       - name: Release smoke tests
         shell: pwsh
+        env:
+          STORYLENS_RC_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         run: ./scripts/smoke_windows_release.ps1
 
       - name: Print build summary
