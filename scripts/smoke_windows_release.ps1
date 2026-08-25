@@ -138,6 +138,14 @@ if ($Sidecar) {
             if (-not $healthy) {
                 throw "Sidecar /health not reachable on port $Port within timeout"
             }
+            # A clean packaged runtime must receive the public material seed without
+            # inheriting any local books or database rows from the build machine.
+            $seedSummary = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/v1/material-lab/library/summary" -TimeoutSec 10
+            $seedState = "$($seedSummary.knowledge_count),$($seedSummary.imported_knowledge_count),$($seedSummary.source_book_count)"
+            if ($seedState -ne "798,798,0") {
+                throw "Packaged material seed mismatch (all,imported,books=$seedState; expected 798,798,0)"
+            }
+            Write-Host "Packaged material seed OK (materials=798, imported=798, books=0)"
             Write-Host ("Sidecar /health OK (data_dir=$SmokeData, start_pid=$($proc.Id), listen_pid=$listenOwner, owned_new=$($ownedNewPids -join ','))")
         } catch {
             $smokeFailed = $true
