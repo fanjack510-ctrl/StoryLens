@@ -9,10 +9,18 @@
       "environment": "test",
       "public_key_b64url": "kJyzrowjgdbMJI6pYltcNA53_-utGqR_Dr8ipR3uc6I",
       "status": "active"
+    },
+    {
+      "key_id": "test-local-pro-20260824",
+      "signature_version": 1,
+      "algorithm": "ed25519",
+      "environment": "test",
+      "public_key_b64url": "NP_IGhmM0CfUlPOVCcFYDRoalc0m4bI_Fd11fedKF0I",
+      "status": "active"
     }
   ],
   "commerce": {
-    "afdian_product_url": "https://afdian.com/item/test-placeholder",
+    "afdian_product_url": "https://afdian.com/item/b7251700a07311f1be455254001e7c00",
     "product_code": "storylens_pro",
     "product_label": "StoryLens Pro 1.x (test)"
   }

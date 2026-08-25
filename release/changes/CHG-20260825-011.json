@@ -1,0 +1,43 @@
+{
+  "id": "CHG-20260825-011",
+  "title": "修复跨版本变更池错误阻塞发布",
+  "type": "fix",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [
+    "scripts/change_registry.py",
+    "apps/api/tests/test_change_registry.py"
+  ],
+  "user_summary": "发布预览和冻结只校验当前基础版本之后的变更，历史版本记录继续保留但不再阻塞新版本。",
+  "technical_summary": "",
+  "acceptance_criteria": [
+    "历史基础版本的未就绪变更不会阻塞当前基础版本的 release-preview 和 freeze。",
+    "当前基础版本的未就绪变更仍然正常阻塞发布。"
+  ],
+  "tests": [
+    ".venv/Scripts/python.exe -m pytest apps/api/tests/test_change_registry.py -q (17 passed)"
+  ],
+  "verification_evidence": [
+    "发布预览从 199 个跨版本记录收敛为 32 个 1.3.0 基线后变更；历史记录仍保留在 release/changes。",
+    "apps/api/tests/test_change_registry.py 隔离 Git fixture 17 项通过。"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-25T11:43:45Z",
+  "updated_at": "2026-08-25T11:43:51Z"
+}

@@ -12,6 +12,9 @@
  * print its chapter table, and a short piece has no such problem.
  */
 import type { ShortFormReading, ShortFormResult, ShortFormSegment } from "../../services/shortFormApi";
+import { VipRequiredError } from "../wholeBookV2/reportExport";
+
+export { VipRequiredError };
 
 const esc = (s: unknown): string =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -186,5 +189,46 @@ export function downloadShortForm(reading: ShortFormReading): void {
   triggerDownload(
     new Blob([buildShortFormHtml(reading)], { type: "text/html;charset=utf-8" }),
     shortFormFileName(reading),
+  );
+}
+
+/** Generate a real PDF through the same Pro-gated printer used by the whole-book and chapter
+ * reports. The HTML remains the free, self-contained fallback; a rejected licence is surfaced
+ * as a product answer instead of being disguised as a rendering failure. */
+export async function downloadShortFormPdf(
+  bookId: number,
+  reading: ShortFormReading,
+): Promise<void> {
+  const { getApiBase } = await import("../../services/apiClient");
+  const response = await fetch(
+    `${getApiBase()}/api/v1/books/${bookId}/short-form/readings/${reading.id}/export-pdf`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html: buildShortFormHtml(reading) }),
+    },
+  );
+
+  if (!response.ok) {
+    let message = `PDF 导出失败（${response.status}）`;
+    let detail:
+      | { error_code?: string; message?: string; details?: { afdian_product_url?: string } }
+      | null = null;
+    try {
+      const body = await response.json();
+      detail = body?.detail ?? body ?? null;
+      message = detail?.message || message;
+    } catch {
+      /* retain the status-based message */
+    }
+    if (response.status === 403 && detail?.error_code === "PDF_REQUIRES_VIP") {
+      throw new VipRequiredError(message, detail.details?.afdian_product_url ?? "");
+    }
+    throw new Error(message);
+  }
+
+  triggerDownload(
+    await response.blob(),
+    shortFormFileName(reading).replace(/\.html$/, ".pdf"),
   );
 }

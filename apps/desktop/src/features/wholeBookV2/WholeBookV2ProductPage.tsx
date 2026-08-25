@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../../components/common/States";
 import { ComprehendReportView } from "./presentation/ComprehendReportView";
@@ -28,6 +28,22 @@ import { WholeBookV2ReportView } from "./presentation/WholeBookV2ReportView";
 import type { ModuleKey } from "./presentation/modules";
 import "./formal.css";
 
+/** 页面的名字随读法变。
+ *
+ *  原来无论哪种读法，标题都写「全书分析」，副标题都写「分析全书总览、故事、人物、
+ *  悬念、节奏……」。对一本人因工程手册说这句话是错的——**读懂给的是逐节的主张、
+ *  依据和能照做的动作，里面没有「悬念」和「节奏」这回事**。
+ *  用一个名字盖住三种读法，等于让人进去之后自己猜会得到什么。 */
+const PAGE_TITLE_BY_MODE: Record<string, string> = {
+  diagnostic: "评测",
+  story_breakdown: "拆文",
+  comprehend: "读懂",
+};
+const PAGE_DESC_BY_MODE: Record<string, string> = {
+  diagnostic: "看自己的书：从完整原文出发，找出该改哪里、为什么、动的时候不能损伤什么。",
+  story_breakdown: "看别人的书：起承转合、爆点在哪、钩子怎么下、哪些写法可以拿走用。不打分。",
+  comprehend: "看不是小说的书：逐节给出主张、依据、能照做的动作和术语对照。读英文原书也出中文。",
+};
 const PAGE_TITLE = "全书分析";
 const PAGE_DESCRIPTION =
   "从完整原文出发，分析全书总览、故事、人物、悬念、节奏、章节与综合诊断。";
@@ -339,8 +355,11 @@ function PreparePanel({
  *  whichever run finished last. Running the second reading therefore made the first one
  *  unreachable — paid for, stored, and with no way back to it.
  *
- *  Nothing renders when a book has fewer than two readings: a switch with one position is
- *  not a switch.
+ *  只有一份读法时不画切换器（一个位置的开关不是开关），但**也不能什么都不说**。
+ *  走查发现：一个人打开已分析完的书，看到的是一份没有署名的报告——它是评测、拆文
+ *  还是读懂，页面一个字都没提；另外两种读法的存在，他也无从知道。
+ *  三种读法只在「还没分析」那一屏出现过一次，分析完就永远消失了。
+ *  所以少于两份时改成一句陈述：这是哪一种，另外还有哪几种。
  */
 function ReadingSwitch({
   readings,
@@ -351,7 +370,24 @@ function ReadingSwitch({
   current: WholeBookAnalysisMode | null;
   onChange: (next: WholeBookAnalysisMode) => void;
 }) {
-  if (readings.length < 2) return null;
+  if (readings.length < 2) {
+    const mine = ANALYSIS_MODES.find((m) => m.value === (current ?? readings[0]?.value));
+    if (!mine) return null;
+    const others = ANALYSIS_MODES.filter((m) => m.value !== mine.value);
+    return (
+      <div className="wbv2-reading-note" data-testid="whole-book-v2-reading-note">
+        <span>
+          这份是<b>{mine.label}</b>
+        </span>
+        {/* 说出另外两种叫什么、各自看什么书。不做成按钮：换一种读法要重新跑、要花钱，
+            那个决定属于「重新分析」那条路，不该由这里一键触发。 */}
+        <span className="wbv2-reading-note-others">
+          另有 {others.map((o) => o.label).join(" / ")} 两种读法——
+          {others.map((o) => o.hint.split("：")[0]).join(" / ")}。换一种要重新分析。
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="wbv2-reading-switch" data-testid="whole-book-v2-reading-switch">
       <span>这本书有两份报告</span>
@@ -803,7 +839,18 @@ function WholeBookV2ProductPageEnabled() {
 
   // In the query key because the panel's headline numbers are mode-dependent: quoting the
   // diagnostic's eight bounded calls for a 拆文 run overstates it by four on every book.
-  const [analysisMode, setAnalysisMode] = useState<WholeBookAnalysisMode>("diagnostic");
+  // 「能做什么」那一页上，评测/拆文/读懂 是三张各自的卡，按钮分别写着「开始评测」
+  // 「开始拆文」「开始读懂」。**按钮说的是哪一种，进来就必须真的是哪一种**——
+  // 否则那三张卡只是三个通往同一个选择器的入口，等于没拆。
+  const [modeParams] = useSearchParams();
+  const [analysisMode, setAnalysisMode] = useState<WholeBookAnalysisMode>(() => {
+    // 拿 ANALYSIS_MODES 校验，不用别处的 guard：那个 guard 管的是一个更宽的联合类型
+    // （含私有引擎的两种），而这里能接受的就是渲染选择器的这三种。
+    // 校验用的表和渲染用的表是同一份，就不会出现「能传进来但画不出来」的模式。
+    const asked = modeParams.get("mode");
+    const hit = ANALYSIS_MODES.find((m) => m.value === asked);
+    return hit ? hit.value : "diagnostic";
+  });
   //: 只拆开篇。默认关，所有既有入口行为不变。
   const [openingOnly, setOpeningOnly] = useState(false);
   const chapterLimit = openingOnly ? OPENING_CHAPTERS : null;
@@ -1098,16 +1145,22 @@ function WholeBookV2ProductPageEnabled() {
     pageMode === "running" && (runningSubview === "progress" || !hasOldResultWhileRunning);
   const showOldResultWhileRunning =
     pageMode === "running" && hasOldResultWhileRunning && runningSubview === "old-result";
+  const showingComprehendResult =
+    (pageMode === "completed-v2" || showOldResultWhileRunning) && Boolean(comprehendQuery.data);
 
   return (
     <div className="wbv2-product" data-testid="whole-book-v2-formal-page">
-      <header className="wbv2-product-header">
+      <header className={`wbv2-product-header${showingComprehendResult ? " wbv2-product-header--result" : ""}`}>
         <p className="muted">
           <Link to={`/books/${bookId}`}>← 返回书籍</Link>
         </p>
-        <h1>{PAGE_TITLE}</h1>
-        <p className="muted">{PAGE_DESCRIPTION}</p>
-        <AnalysisFormSwitch bookId={bookId} />
+        {!showingComprehendResult && (
+          <>
+        <h1>{PAGE_TITLE_BY_MODE[analysisMode] || PAGE_TITLE}</h1>
+        <p className="muted">{PAGE_DESC_BY_MODE[analysisMode] || PAGE_DESCRIPTION}</p>
+        {/* 「其实是短篇？改用短篇精读」不给工具书看。
+            长短篇是小说的分法，工具书按节读——问它要不要按短篇读没有意义。 */}
+        {analysisMode !== "comprehend" ? <AnalysisFormSwitch bookId={bookId} /> : null}
         {/* The book's title, chapters and length are stated once, by the report's own header
             band below. Repeating them here also printed a *different* word count — 27,766
             (paragraph text) against the report's 28,768 (chapter text, which counts title
@@ -1117,14 +1170,22 @@ function WholeBookV2ProductPageEnabled() {
             so the only way to reach it was to type the URL. That matters more than a missing
             link usually does — the profile decides which engine analyses the book, so an
             unreachable page meant an unreachable engine. */}
-        <p className="muted">
-          <Link
-            to={profileHref(bookId, { from: "whole-book" })}
-            data-testid="whole-book-v2-profile-link"
-          >
-            作品画像 · 确认后由长篇引擎分析 →
-          </Link>
-        </p>
+        {/* 读懂不给画像入口。画像的五根轴是付费模式 / 读者 / 爽感引擎 / 人称 / 篇幅——
+            全是网文的东西，它决定的是小说分析走哪个引擎、量哪几条类型轴，而读懂一条都不用
+            （`profileGateClosed` 已经放行了读懂）。
+            门放行了、入口还挂着，等于请人去做一件对他这本书没有意义的事。 */}
+        {analysisMode !== "comprehend" ? (
+          <p className="muted">
+            <Link
+              to={profileHref(bookId, { from: "whole-book" })}
+              data-testid="whole-book-v2-profile-link"
+            >
+              作品画像 · 确认后由长篇引擎分析 →
+            </Link>
+          </p>
+        ) : null}
+          </>
+        )}
       </header>
 
       {pageMode === "prepare" && (

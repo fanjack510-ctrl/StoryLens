@@ -120,8 +120,12 @@ describe("StoryLens Pro entitlement UI", () => {
       expect(screen.getByTestId("license-pro-active")).toBeInTheDocument();
     });
     expect(screen.getByTestId("license-pro-status-heading")).toHaveTextContent("专业版已激活");
-    expect(screen.queryByText("StoryLens Pro 已激活")).not.toBeInTheDocument();
-    expect(screen.getAllByTestId("capability-pending").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("license-message")).toHaveTextContent("StoryLens Pro 已激活");
+    expect(screen.getAllByTestId("capability-active")).toHaveLength(5);
+    expect(screen.queryByText("后续开放")).not.toBeInTheDocument();
+    expect(screen.getByText("导出 PDF")).toBeInTheDocument();
+    expect(screen.getByTestId("license-view-product")).toBeInTheDocument();
+    expect(screen.getByTestId("license-replace-code")).toBeInTheDocument();
   });
 
   it("maps activation failure codes", async () => {
@@ -138,6 +142,28 @@ describe("StoryLens Pro entitlement UI", () => {
     await waitFor(() => {
       expect(screen.getByTestId("license-activate-error-code")).toHaveTextContent(
         "LICENSE_SIGNATURE_INVALID",
+      );
+      expect(screen.getByTestId("license-activate-error")).toHaveTextContent("授权签名无效");
+    });
+  });
+
+  it("explains inside the dialog when a production code is pasted into development mode", async () => {
+    vi.spyOn(entitlementApi, "activate").mockRejectedValue(
+      new ApiError("LICENSE_KEY_UNSUPPORTED", "不支持的授权密钥。", 400),
+    );
+    wrap(<LicenseSettingsCard />);
+    await waitFor(() => screen.getByTestId("license-open-activate"));
+    fireEvent.click(screen.getByTestId("license-open-activate"));
+    fireEvent.change(screen.getByTestId("license-code-input"), {
+      target: { value: "SLP1-production.sig" },
+    });
+    fireEvent.click(screen.getByTestId("license-activate-submit"));
+    await waitFor(() => {
+      expect(screen.getByTestId("license-activate-error")).toHaveTextContent(
+        "这是正式购买授权码，当前开发模式不能验证",
+      );
+      expect(screen.getByTestId("license-activate-error-code")).toHaveTextContent(
+        "LICENSE_KEY_UNSUPPORTED",
       );
     });
   });
@@ -157,7 +183,7 @@ describe("StoryLens Pro entitlement UI", () => {
       expect(screen.getByTestId("license-activate-error-code")).toHaveTextContent(
         "LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME",
       );
-      expect(screen.getByTestId("license-message")).toHaveTextContent("此授权码不能用于当前版本");
+      expect(screen.getByTestId("license-activate-error")).toHaveTextContent("此授权码不能用于当前版本");
       expect(screen.queryByText(/test-dev/i)).not.toBeInTheDocument();
     });
   });

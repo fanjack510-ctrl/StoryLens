@@ -36,6 +36,28 @@
     "sidecar_sha256": "1c14ecb2f5f43c51a529b7d8821d13c89eeb2da8dd7e6b0d0011d5e7fdca2e84",
     "acceptance_dir": "D:\\StoryLens-Local-Evidence\\v1.2.0-manual-acceptance\\"
   },
+  "acceptance_criteria": [
+    "Build the manual-acceptance installer from the recorded clean source head",
+    "Record installer and sidecar checksums without publishing a stable release"
+  ],
+  "tests": [
+    "scripts/build_windows_release.ps1"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-058/"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Manual acceptance artifact only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
   "created_at": "2026-08-08T03:20:00Z",
   "updated_at": "2026-08-08T04:33:49Z",
   "head_inclusion": "INCLUDED"

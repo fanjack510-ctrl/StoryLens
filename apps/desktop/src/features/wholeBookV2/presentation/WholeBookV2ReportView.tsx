@@ -2453,7 +2453,7 @@ export function WholeBookV2ReportView({
               }
             }}
           >
-            {exporting ? "正在生成 PDF…" : "导出 PDF · VIP"}
+            {exporting ? "正在生成 PDF…" : "导出 PDF · PRO"}
           </button>
           <button
             type="button"
@@ -2479,12 +2479,12 @@ export function WholeBookV2ReportView({
       </header>
       {vipNotice && (
         <div className="wb2-vip-notice" data-testid="whole-book-v2-vip-notice" role="alert">
-          <b>PDF 导出是 VIP 功能</b>
+          <b>PDF 导出是专业版功能</b>
           <p>{vipNotice.message}</p>
           <p>
             {vipNotice.url ? (
               <a href={vipNotice.url} target="_blank" rel="noreferrer">
-                前往爱发电购买月卡授权 →
+                前往爱发电购买 StoryLens Pro →
               </a>
             ) : (
               <span>购买入口尚未配置，请联系作者获取授权码。</span>

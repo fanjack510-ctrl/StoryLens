@@ -3,13 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   entitlementApi,
   maskLicenseCode,
-  PRO_FEATURE_KEYS,
 } from "../../services/entitlementApi";
 import {
   ENTITLEMENTS_QUERY_KEY,
-  PRO_CAPABILITY_LABELS,
-  PRO_CAPABILITIES_SHIPPED,
 } from "../../services/productEdition";
+import {
+  FREE_FEATURE_LINES,
+  PAID_FEATURE_LINES,
+} from "../../services/capabilityCatalog";
 import { openExternalUrl } from "../../services/openExternalUrl";
 import { ApiError } from "../../services/apiClient";
 import { useProductEdition } from "../../hooks/useProductEdition";
@@ -54,12 +55,16 @@ export function LicenseSettingsCard() {
       await qc.invalidateQueries({ queryKey: ENTITLEMENTS_QUERY_KEY });
       setDialogOpen(false);
       setCode("");
-      // Status card carries success; avoid duplicate bottom banner.
-      setMessage("");
+      setErrorCode(null);
+      setMessage(result.user_message || "StoryLens Pro 已激活。");
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorCode(error.code);
-        setMessage(error.message);
+        setMessage(
+          error.code === "LICENSE_KEY_UNSUPPORTED" && data?.license_trust_mode === "development"
+            ? "这是正式购买授权码，当前开发模式不能验证。请在 StoryLens 正式版或本地网页正式模式中激活；原有授权没有变化。"
+            : error.message,
+        );
       } else {
         setErrorCode("LICENSE_ACTIVATE_FAILED");
         setMessage(error instanceof Error ? error.message : "激活失败");
@@ -88,7 +93,7 @@ export function LicenseSettingsCard() {
     <article className="settings-panel settings-module" data-testid="settings-panel-license">
       <header className="settings-panel-header">
         <h2>授权与专业版</h2>
-        <p>爱发电购买后，使用授权码在本机离线激活。</p>
+        <p>免费版可完成分析；StoryLens Pro 解锁知识沉淀、跨书能力和结构化 PDF。</p>
       </header>
 
       <section className="settings-zone" data-testid="license-edition-zone">
@@ -96,7 +101,7 @@ export function LicenseSettingsCard() {
         <p data-testid="license-edition-label">{edition.product_line_name}</p>
         {!pro && (
           <p className="zone-hint muted">
-            可以使用书库、章节分析和阅读旅程等基础功能。
+            免费版没有试用倒计时，可继续使用下面这些完整基础能力。
           </p>
         )}
         {!pro && data?.license_issuance_message && (
@@ -124,14 +129,12 @@ export function LicenseSettingsCard() {
           </ul>
           <p className="muted">专业版能力</p>
           <ul data-testid="license-pro-capabilities">
-            {PRO_FEATURE_KEYS.map((key) => (
-              <li key={key} data-testid={`license-capability-${key}`}>
-                <span>{PRO_CAPABILITY_LABELS[key] || key}</span>
-                {!PRO_CAPABILITIES_SHIPPED ? (
-                  <span className="capability-pending" data-testid="capability-pending">
-                    后续开放
-                  </span>
-                ) : null}
+            {PAID_FEATURE_LINES.map((capability) => (
+              <li key={capability.key} data-testid={`license-capability-${capability.key}`}>
+                <span>{capability.label}</span>
+                <span className="capability-active" data-testid="capability-active">
+                  已解锁
+                </span>
               </li>
             ))}
           </ul>
@@ -139,32 +142,66 @@ export function LicenseSettingsCard() {
             <Button type="button" data-testid="license-copy-summary" onClick={() => void copySummary()}>
               复制授权摘要
             </Button>
+            <Button type="button" data-testid="license-view-product" onClick={() => void onBuy()}>
+              查看爱发电商品
+            </Button>
+            <Button type="button" data-testid="license-replace-code" onClick={() => setDialogOpen(true)}>
+              更换授权码
+            </Button>
           </div>
         </section>
       ) : (
         <section className="settings-zone" data-testid="license-free-actions">
-          <p className="muted">专业版能力</p>
-          <ul data-testid="license-free-capabilities">
-            {PRO_FEATURE_KEYS.map((key) => (
-              <li key={key}>{PRO_CAPABILITY_LABELS[key] || key}</li>
+          <div className="settings-edition-grid">
+            <section data-testid="license-free-includes">
+              <h3>免费版包含</h3>
+              <ul className="settings-feature-list">
+                {FREE_FEATURE_LINES.map((capability) => (
+                  <li key={capability.label}>
+                    <b>{capability.label}</b>
+                    <span>{capability.line}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section data-testid="license-pro-includes">
+              <h3>StoryLens Pro 额外解锁</h3>
+              <ul className="settings-feature-list" data-testid="license-free-capabilities">
+            {PAID_FEATURE_LINES.map((capability) => (
+              <li key={capability.key}>
+                    <b>{capability.label}</b>
+                    <span>{capability.line}</span>
+              </li>
             ))}
           </ul>
+            </section>
+          </div>
+
+          <div className="settings-purchase-flow" data-testid="license-purchase-flow">
+            <h3>购买后 3 步启用</h3>
+            <ol>
+              <li><b>1</b><span>前往爱发电购买 StoryLens Pro</span></li>
+              <li><b>2</b><span>在爱发电订单中复制以 SLP1- 开头的授权码</span></li>
+              <li><b>3</b><span>回到这里粘贴授权码，本机立即离线激活</span></li>
+            </ol>
+            <p className="muted">授权码仅用于本机校验；激活后无需保持联网。</p>
+          </div>
           <div className="settings-actions">
             <Button
               variant="primary"
               data-testid="license-buy-pro"
               onClick={() => void onBuy()}
             >
-              购买专业版
+              前往爱发电购买
             </Button>
             <Button data-testid="license-open-activate" onClick={() => setDialogOpen(true)}>
-              输入授权码
+              我已有授权码
             </Button>
           </div>
         </section>
       )}
 
-      {message && (
+      {message && !dialogOpen && (
         <p role="status" data-testid="license-message" data-error-code={errorCode || undefined}>
           {message}
         </p>
@@ -189,6 +226,7 @@ export function LicenseSettingsCard() {
           <small className="field-hint">
             {showFullCode ? code : maskLicenseCode(code || "SLP1-••••••••")}
           </small>
+          <small className="field-hint">授权码来自爱发电订单的自动发货内容。</small>
           <button
             type="button"
             className="linkish"
@@ -208,11 +246,13 @@ export function LicenseSettingsCard() {
             {busy ? "正在激活…" : "激活专业版"}
           </Button>
         </div>
-        {errorCode && (
-          <p className="muted" data-testid="license-activate-error-code">
-            {errorCode}
-          </p>
-        )}
+        {errorCode && message ? (
+          <div className="settings-license-error" role="alert" data-testid="license-activate-error">
+            <b>激活未完成</b>
+            <span>{message}</span>
+            <small data-testid="license-activate-error-code">{errorCode}</small>
+          </div>
+        ) : null}
       </Dialog>
     </article>
   );

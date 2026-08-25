@@ -1,9 +1,9 @@
 {
   "id": "CHG-20260807-056",
   "title": "Evaluate long-book real Provider cost and execution plan",
-  "type": "validation",
+  "type": "documentation",
   "base_version": "1.2.0",
-  "status": "implemented",
+  "status": "registered",
   "include_in_next_release": true,
   "head_inclusion": null,
   "blocker_level": null,
@@ -56,6 +56,9 @@
     "CF batch delta 0",
     "Scaling vs L3-B documented",
     "No product code change; long real run not executed"
+  ],
+  "tests": [
+    "release/evidence/whole-book/CHG-20260807-056/LONG_COST_GATE_RAW.json"
   ],
   "verification_evidence": [
     "release/evidence/whole-book/CHG-20260807-056/LONG_COST_GATE_DECISION.md",

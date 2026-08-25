@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -21,6 +23,12 @@ from app.services.collection_service import CollectionError, read_collection
 router = APIRouter(prefix="/api/v1", tags=["common-patterns"])
 
 _FEATURE = "common_patterns"
+
+
+class CommonPatternsPdfRequest(BaseModel):
+    """A print-ready report assembled from the already verified result on screen."""
+
+    html: str = Field(min_length=1, max_length=2_000_000)
 
 
 def _collection_book_ids(db: Session, collection_id: int) -> list[int]:
@@ -81,3 +89,18 @@ def post_patterns(collection_id: int, db: Session = Depends(get_db)) -> dict:
             detail={"error_code": exc.code, "message": exc.message},
         ) from exc
     return result
+
+
+@router.post("/collections/{collection_id}/common-patterns/export-pdf")
+def export_patterns_pdf(
+    collection_id: int,
+    body: CommonPatternsPdfRequest,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Export the structured common-patterns result through the shared Pro PDF printer."""
+    # Resolve the collection before the licence gate. A missing report target is a 404,
+    # not an upsell prompt; this also keeps arbitrary collection ids out of the printer.
+    _collection_book_ids(db, collection_id)
+    from app.narrative_core.whole_book_v2.router import render_report_pdf
+
+    return render_report_pdf(db, body.html, report_label="榜单共性报告")

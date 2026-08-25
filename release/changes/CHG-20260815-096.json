@@ -1,7 +1,7 @@
 {
   "id": "CHG-20260815-096",
   "title": "API 设置合并为一处：服务商一个下拉带出地址与模型，删除重复的模型与API页",
-  "type": "refactor",
+  "type": "improvement",
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": false,

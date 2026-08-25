@@ -1,0 +1,71 @@
+{
+  "id": "CHG-20260824-002",
+  "title": "收束能力入口、书籍工作台与素材库体验",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/services/capabilityCatalog.ts",
+    "apps/desktop/src/pages/CapabilitiesPage.tsx",
+    "apps/desktop/src/components/books/BookAnalysisCards.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/CommonPatternsStartPage.tsx",
+    "apps/desktop/src/pages/MaterialLabPage.tsx"
+  ],
+  "files": [
+    "apps/desktop/src/services/capabilityCatalog.ts",
+    "apps/desktop/src/pages/CapabilitiesPage.tsx",
+    "apps/desktop/src/components/books/BookAnalysisCards.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/pages/CommonPatternsStartPage.tsx",
+    "apps/desktop/src/pages/CommonPatternsStartPage.test.tsx",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx",
+    "apps/desktop/src/pages/MaterialLabPage.tsx",
+    "apps/desktop/src/styles/components.css"
+  ],
+  "user_summary": "统一功能入口，按书籍类型过滤可用读法，去除重复章节动作与未接线的素材迁移半成品，并提供可直接验收的本地预览。",
+  "technical_summary": "Complete the in-flight capability-discovery and book-workspace consolidation. Capability metadata now declares accepted material kinds; launchers filter fiction/reference books consistently with the book page. Stateful chapter actions remain in the toolbar while start/reanalyze lives in BookAnalysisCards. Unwired imported-material migration/service and the unused duplicate MaterialLabEntry were removed before entering the product contract.",
+  "acceptance_criteria": [
+    "评测和拆文只列小说，读懂只列工具书，素材库接受两种书",
+    "书籍页的开始/重新分析入口在分析卡中，进行中动作不与工具条重复",
+    "素材库可从书籍页直接进入并展示确定性抽取结果",
+    "共性比较未命名组不再被错误描述为一次性数据",
+    "未接线、无测试且违背冻结决策的旧素材迁移半成品不进入本批次",
+    "功能总览、书籍工作台与素材库均可在本地真实数据上打开"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx",
+    "apps/desktop/src/pages/CommonPatternsStartPage.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/pages/LibraryPage.collections.test.tsx",
+    "apps/desktop/src/pages/wholeBookFreeProduct.test.tsx",
+    "apps/api/tests/test_material_lab_bridge.py",
+    "apps/api/tests/test_material_lab_api.py"
+  ],
+  "verification_evidence": [
+    "前端定向 85 项通过；新增书种过滤与进行中动作唯一入口回归测试通过",
+    "TypeScript noEmit 类型检查通过",
+    "素材库后端 17 项通过",
+    "本地真实数据浏览器走查：功能总览、书籍工作台、素材库均成功渲染",
+    "预览图保存在 data/runtime/dev/previews/，不进入版本库"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T02:55:08Z",
+  "updated_at": "2026-08-24T02:55:08Z"
+}

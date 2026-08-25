@@ -25,19 +25,28 @@ from sqlalchemy.orm import Session
 from app.db.material_lab_models import (
     MaterialLabAtom,
     MaterialLabEvidence,
+    MaterialLabLegacyMaterial,
     MaterialLabMaterial,
     MaterialLabPattern,
     MaterialLabRun,
 )
-from app.db.models import Book, Chapter, Paragraph
+from app.db.models import Book, Chapter, Paragraph, WholeBookRun
+from app.narrative_core.material_kind import FICTION, book_material_kind
 
-from .bridge import chapter_text_from_paragraphs, extract_book_materials, guess_genre
+from .bridge import (
+    chapter_text_from_paragraphs,
+    curate_book_materials,
+    extract_book_materials,
+    guess_genre,
+)
 from .dedup import signature, similarity
 from .genre_templates import GENRE_ORDER, TEMPLATES, label_index
 from .quality import WEIGHTS, _clip, _freq_weight, confidence_of, score_material
 
 #: 与源项目 config.DEFAULTS 一致。
 DEDUP_SIMILARITY_THRESHOLD = 0.62
+FULL_BREAKDOWN_SUFFIX = "+story_breakdown"
+FORMAL_RESULT_ORIGINS = {"formal", "real_provider"}
 
 
 class MaterialLabError(Exception):
@@ -49,6 +58,52 @@ class MaterialLabError(Exception):
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def eligible_knowledge_source_runs(db: Session) -> dict[int, WholeBookRun]:
+    """Return the newest completed full-book breakdown for each fiction book.
+
+    Knowledge is a library-level derivative of an already completed breakdown. A
+    diagnostic run, an opening-only run, a reference book, or a fixture/non-formal
+    run is never a source. This predicate also quarantines old persisted rows.
+    """
+    newest: dict[int, WholeBookRun] = {}
+    runs = db.scalars(
+        select(WholeBookRun)
+        .where(
+            WholeBookRun.status == "completed",
+            WholeBookRun.chapter_limit.is_(None),
+            WholeBookRun.engine_version.like(f"%{FULL_BREAKDOWN_SUFFIX}"),
+            WholeBookRun.result_origin.in_(FORMAL_RESULT_ORIGINS),
+        )
+        .order_by(WholeBookRun.id.desc())
+    )
+    for run in runs:
+        book_id = int(run.book_id)
+        if book_id in newest:
+            continue
+        if book_material_kind(db, book_id)[0] != FICTION:
+            continue
+        newest[book_id] = run
+    return newest
+
+
+def _require_eligible_knowledge_source(db: Session, book_id: int) -> WholeBookRun:
+    book = db.get(Book, book_id)
+    if book is None:
+        raise MaterialLabError("MATERIAL_LAB_BOOK_NOT_FOUND", f"book {book_id} 不存在")
+    if book_material_kind(db, book_id)[0] != FICTION:
+        raise MaterialLabError(
+            "MATERIAL_LAB_SOURCE_NOT_FICTION",
+            "知识库只从小说提取素材，工具书不会进入这里",
+        )
+    run = eligible_knowledge_source_runs(db).get(book_id)
+    if run is None:
+        raise MaterialLabError(
+            "MATERIAL_LAB_SOURCE_NOT_FULLY_DISSECTED",
+            "这本小说尚未完成全文拆文；评测、进行中任务和只拆开篇都不能作为知识库来源",
+        )
+    return run
 
 
 # ------------------------------------------------------------- 模式簇归并
@@ -93,10 +148,8 @@ class _PatternCache:
 
 # ------------------------------------------------------------------- 跑批
 def run_material_lab(db: Session, book_id: int, *, genre_slug: str | None = None) -> dict:
-    """对一本书跑完整链路：抽取 -> 归簇 -> 评分 -> 落库。同步执行，秒级。"""
-    book = db.get(Book, book_id)
-    if book is None:
-        raise MaterialLabError("MATERIAL_LAB_BOOK_NOT_FOUND", f"book {book_id} 不存在")
+    """从一部已完成全文拆文的小说提取知识；只能由全局知识库触发。"""
+    _require_eligible_knowledge_source(db, book_id)
     if genre_slug and genre_slug not in TEMPLATES:
         raise MaterialLabError(
             "MATERIAL_LAB_UNKNOWN_GENRE",
@@ -124,6 +177,8 @@ def run_material_lab(db: Session, book_id: int, *, genre_slug: str | None = None
             "无法从文本判断类型，请显式指定 genre_slug",
         )
 
+    curated = curate_book_materials(result)
+
     # 重跑即重来：清掉这本书名下的派生行（run 历史保留，模式簇稍后收缩计数）。
     for model in (MaterialLabMaterial, MaterialLabAtom, MaterialLabEvidence):
         db.query(model).filter(model.book_id == book_id).delete(synchronize_session=False)
@@ -146,27 +201,38 @@ def run_material_lab(db: Session, book_id: int, *, genre_slug: str | None = None
 
     # 最终频次先算好，评分一次到位（见模块 docstring 第 1 条）。
     run_example_freq: Counter[str] = Counter(
-        d.concise_example for sc in result.scenes for d in sc.drafts
+        item.draft.concise_example for item in curated
     )
+    eligible_book_ids = set(eligible_knowledge_source_runs(db))
     other_books_freq: dict[str, int] = {
         ex: n for ex, n in db.execute(
             select(MaterialLabMaterial.concise_example, func.count())
-            .where(MaterialLabMaterial.book_id != book_id)
+            .where(
+                MaterialLabMaterial.book_id != book_id,
+                MaterialLabMaterial.book_id.in_(eligible_book_ids),
+            )
             .group_by(MaterialLabMaterial.concise_example)
         )
     }
 
     made = 0
     pattern_rows: dict[int, list[MaterialLabMaterial]] = {}
-    for sc in result.scenes:
-        chapter_id = chapter_id_by_seq[sc.chapter_seq]
-        evidence = MaterialLabEvidence(
-            book_id=book_id, chapter_id=chapter_id, run_id=run.id,
-            scene_seq=sc.scene_seq, char_start=sc.char_start, char_end=sc.char_end,
-            snippet=sc.summary[:180], note="scene head",
+    curated_by_scene: dict[tuple[int, int, int, int], list] = {}
+    for item in curated:
+        scene_key = (
+            item.scene.chapter_seq,
+            item.scene.scene_seq,
+            item.scene.char_start,
+            item.scene.char_end,
         )
-        db.add(evidence)
-        db.flush()
+        curated_by_scene.setdefault(scene_key, []).append(item.draft)
+
+    for sc in result.scenes:
+        scene_key = (sc.chapter_seq, sc.scene_seq, sc.char_start, sc.char_end)
+        selected_drafts = curated_by_scene.get(scene_key)
+        if not selected_drafts:
+            continue
+        chapter_id = chapter_id_by_seq[sc.chapter_seq]
         for a in sc.atoms:
             db.add(MaterialLabAtom(
                 book_id=book_id, chapter_id=chapter_id, run_id=run.id,
@@ -175,7 +241,14 @@ def run_material_lab(db: Session, book_id: int, *, genre_slug: str | None = None
                 salience=a.salience, char_pos=sc.char_start + a.char_pos,
                 meta_json=json.dumps(a.meta, ensure_ascii=False),
             ))
-        for d in sc.drafts:
+        for d in selected_drafts:
+            evidence = MaterialLabEvidence(
+                book_id=book_id, chapter_id=chapter_id, run_id=run.id,
+                scene_seq=sc.scene_seq, char_start=sc.char_start, char_end=sc.char_end,
+                snippet=d.concise_example[:180], note="matched evidence sentence",
+            )
+            db.add(evidence)
+            db.flush()
             pattern, sim = cache.assign(d.category_key, d.core_pattern, d.mechanism)
             row = MaterialLabMaterial(
                 book_id=book_id, chapter_id=chapter_id, run_id=run.id,
@@ -235,6 +308,7 @@ def run_material_lab(db: Session, book_id: int, *, genre_slug: str | None = None
         "scenes": len(result.scenes),
         "duplicate_chapters": result.duplicate_chapters,
         "skipped_short_scenes": result.skipped_short_scenes,
+        "candidates_scanned": len(result.drafts),
         "materials": made,
     }
 
@@ -344,8 +418,7 @@ def genre_options() -> list[dict]:
 
 def suggest_genre(db: Session, book_id: int) -> dict:
     """导入时的类型建议：取全书文本样本跑 guess_genre。"""
-    if db.get(Book, book_id) is None:
-        raise MaterialLabError("MATERIAL_LAB_BOOK_NOT_FOUND", f"book {book_id} 不存在")
+    _require_eligible_knowledge_source(db, book_id)
     texts: list[str] = []
     total = 0
     for ch_id in db.scalars(
@@ -365,8 +438,7 @@ def suggest_genre(db: Session, book_id: int) -> dict:
 
 
 def book_summary(db: Session, book_id: int) -> dict:
-    if db.get(Book, book_id) is None:
-        raise MaterialLabError("MATERIAL_LAB_BOOK_NOT_FOUND", f"book {book_id} 不存在")
+    _require_eligible_knowledge_source(db, book_id)
     last_run = db.scalars(
         select(MaterialLabRun).where(MaterialLabRun.book_id == book_id)
         .order_by(MaterialLabRun.id.desc()).limit(1)
@@ -392,13 +464,235 @@ def book_summary(db: Session, book_id: int) -> dict:
         select(func.count()).select_from(MaterialLabMaterial)
         .where(MaterialLabMaterial.book_id == book_id)
     ) or 0
+    material_kind, material_kind_confirmed = book_material_kind(db, book_id)
     return {
         "book_id": book_id,
+        "source_material_kind": material_kind,
+        "source_material_kind_confirmed": material_kind_confirmed,
+        "knowledge_role": "genre_example" if material_kind == FICTION else "domain_reference",
         "material_count": total,
         "by_type": by_type,
         "by_category": by_category,
         "last_run": _run_dict(last_run) if last_run else None,
     }
+
+
+def knowledge_library_summary(db: Session) -> dict:
+    """全局知识库统计；旧的、不合资格的单书抽取结果会被硬隔离。"""
+    eligible_book_ids = set(eligible_knowledge_source_runs(db))
+    counts_by_book = {
+        book_id: count
+        for book_id, count in db.execute(
+            select(MaterialLabMaterial.book_id, func.count())
+            .where(MaterialLabMaterial.book_id.in_(eligible_book_ids))
+            .group_by(MaterialLabMaterial.book_id)
+        )
+    }
+    extracted_count = sum(counts_by_book.values())
+    imported_count = int(
+        db.scalar(select(func.count()).select_from(MaterialLabLegacyMaterial)) or 0
+    )
+    legacy_source_book_count = int(
+        db.scalar(
+            select(func.count(func.distinct(MaterialLabLegacyMaterial.source_book_id)))
+        ) or 0
+    )
+    by_role = {"genre_example": imported_count, "domain_reference": 0}
+    sources: list[dict] = []
+    if counts_by_book:
+        books = {
+            book.id: book
+            for book in db.scalars(select(Book).where(Book.id.in_(counts_by_book)))
+        }
+        for book_id, count in counts_by_book.items():
+            kind, confirmed = book_material_kind(db, book_id)
+            role = "genre_example"
+            by_role[role] += count
+            book = books.get(book_id)
+            sources.append({
+                "book_id": book_id,
+                "book_title": book.title if book else f"书籍 {book_id}",
+                "source_material_kind": kind,
+                "source_material_kind_confirmed": confirmed,
+                "knowledge_role": role,
+                "knowledge_count": count,
+            })
+    cats, _subs = label_index()
+    category_counts: Counter[str] = Counter()
+    category_labels: dict[str, str] = {}
+    for key, count in db.execute(
+        select(MaterialLabMaterial.category_key, func.count())
+        .where(MaterialLabMaterial.book_id.in_(eligible_book_ids))
+        .group_by(MaterialLabMaterial.category_key)
+    ):
+        category_counts[key] += count
+        category_labels[key] = cats.get(key, key)
+    for key, label, count in db.execute(
+        select(
+            MaterialLabLegacyMaterial.category_key,
+            func.max(MaterialLabLegacyMaterial.category_label),
+            func.count(),
+        ).group_by(MaterialLabLegacyMaterial.category_key)
+    ):
+        category_counts[key] += count
+        category_labels.setdefault(key, label or cats.get(key, key))
+    by_category = [
+        {"key": key, "label": category_labels.get(key, key), "count": count}
+        for key, count in category_counts.most_common(30)
+    ]
+
+    genre_counts: Counter[str] = Counter()
+    genre_labels: dict[str, str] = {}
+    taxonomy_counts: Counter[tuple[str, str]] = Counter()
+    taxonomy_labels: dict[tuple[str, str], str] = {}
+    # 分类是产品底座，不依赖当前是否已有素材。空库也要完整显示 10 个题材及
+    # 各题材自己的分类，避免错误数据被删除后连分类导航一起消失。
+    for template_slug in GENRE_ORDER:
+        template = TEMPLATES[template_slug]
+        genre_counts[template_slug] = 0
+        genre_labels[template_slug] = template["label"]
+        for template_category in template["categories"]:
+            taxonomy_counts[(template_slug, template_category["key"])] = 0
+            taxonomy_labels[(template_slug, template_category["key"])] = (
+                template_category["label"]
+            )
+    for slug, count in db.execute(
+        select(MaterialLabMaterial.genre_slug, func.count())
+        .where(MaterialLabMaterial.book_id.in_(eligible_book_ids))
+        .group_by(MaterialLabMaterial.genre_slug)
+    ):
+        genre_counts[slug] += count
+        genre_labels[slug] = TEMPLATES.get(slug, {}).get("label", slug)
+    for slug, key, count in db.execute(
+        select(
+            MaterialLabMaterial.genre_slug,
+            MaterialLabMaterial.category_key,
+            func.count(),
+        )
+        .where(MaterialLabMaterial.book_id.in_(eligible_book_ids))
+        .group_by(MaterialLabMaterial.genre_slug, MaterialLabMaterial.category_key)
+    ):
+        taxonomy_counts[(slug, key)] += count
+        taxonomy_labels[(slug, key)] = cats.get(key, key)
+    for slug, label, count in db.execute(
+        select(
+            MaterialLabLegacyMaterial.genre_slug,
+            func.max(MaterialLabLegacyMaterial.genre_label),
+            func.count(),
+        ).group_by(MaterialLabLegacyMaterial.genre_slug)
+    ):
+        genre_counts[slug] += count
+        genre_labels.setdefault(slug, label or TEMPLATES.get(slug, {}).get("label", slug))
+    for slug, key, label, count in db.execute(
+        select(
+            MaterialLabLegacyMaterial.genre_slug,
+            MaterialLabLegacyMaterial.category_key,
+            func.max(MaterialLabLegacyMaterial.category_label),
+            func.count(),
+        ).group_by(
+            MaterialLabLegacyMaterial.genre_slug,
+            MaterialLabLegacyMaterial.category_key,
+        )
+    ):
+        taxonomy_counts[(slug, key)] += count
+        taxonomy_labels.setdefault((slug, key), label or cats.get(key, key))
+    extra_genres = sorted(set(genre_counts) - set(GENRE_ORDER))
+    by_genre = [
+        {"slug": slug, "label": genre_labels.get(slug, slug), "count": count}
+        for slug in [*GENRE_ORDER, *extra_genres]
+        for count in [genre_counts[slug]]
+    ]
+    taxonomy = [
+        {
+            "slug": item["slug"],
+            "label": item["label"],
+            "count": item["count"],
+            "categories": (
+                [
+                    {
+                        "key": category["key"],
+                        "label": category["label"],
+                        "count": taxonomy_counts[(item["slug"], category["key"])],
+                    }
+                    for category in TEMPLATES[item["slug"]]["categories"]
+                ]
+                if item["slug"] in TEMPLATES
+                else [
+                    {
+                        "key": key,
+                        "label": taxonomy_labels.get((item["slug"], key), key),
+                        "count": count,
+                    }
+                    for (slug, key), count in sorted(
+                        taxonomy_counts.items(), key=lambda pair: (-pair[1], pair[0][1])
+                    )
+                    if slug == item["slug"]
+                ]
+            ),
+        }
+        for item in by_genre
+    ]
+    return {
+        "knowledge_count": extracted_count + imported_count,
+        "extracted_knowledge_count": extracted_count,
+        "imported_knowledge_count": imported_count,
+        "source_book_count": len(counts_by_book),
+        "legacy_source_book_count": legacy_source_book_count,
+        "by_role": by_role,
+        "by_genre": by_genre,
+        "by_category": by_category,
+        "taxonomy": taxonomy,
+        "sources": sorted(sources, key=lambda row: (-row["knowledge_count"], row["book_id"])),
+    }
+
+
+def list_knowledge_sources(db: Session) -> dict:
+    """List every novel currently eligible to feed the standalone knowledge page."""
+    eligible = eligible_knowledge_source_runs(db)
+    if not eligible:
+        return {"total": 0, "items": []}
+    counts = {
+        book_id: count
+        for book_id, count in db.execute(
+            select(MaterialLabMaterial.book_id, func.count())
+            .where(MaterialLabMaterial.book_id.in_(eligible))
+            .group_by(MaterialLabMaterial.book_id)
+        )
+    }
+    books = {
+        int(book.id): book
+        for book in db.scalars(select(Book).where(Book.id.in_(eligible)))
+    }
+    last_runs = {
+        int(run.book_id): run
+        for run in db.scalars(
+            select(MaterialLabRun)
+            .where(MaterialLabRun.book_id.in_(eligible), MaterialLabRun.status == "done")
+            .order_by(MaterialLabRun.id.asc())
+        )
+    }
+    items = []
+    for book_id, breakdown_run in eligible.items():
+        book = books.get(book_id)
+        extraction = last_runs.get(book_id)
+        material_count = int(counts.get(book_id, 0) or 0)
+        items.append(
+            {
+                "book_id": book_id,
+                "book_title": book.title if book else f"书籍 {book_id}",
+                "breakdown_run_id": int(breakdown_run.id),
+                "breakdown_completed_at": (
+                    breakdown_run.completed_at.isoformat()
+                    if breakdown_run.completed_at
+                    else None
+                ),
+                "material_count": material_count,
+                "genre_slug": extraction.genre_slug if extraction else "",
+                "extracted": material_count > 0,
+            }
+        )
+    items.sort(key=lambda item: (not item["extracted"], -item["book_id"]))
+    return {"total": len(items), "items": items}
 
 
 def _run_dict(run: MaterialLabRun) -> dict:
@@ -420,17 +714,37 @@ def list_materials(
     db: Session,
     *,
     book_id: int | None = None,
+    genre_slug: str | None = None,
+    knowledge_role: str | None = None,
     material_type: str | None = None,
     category_key: str | None = None,
     min_score: int | None = None,
     primary_only: bool = False,
     q: str | None = None,
+    source_kind: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> dict:
-    stmt = select(MaterialLabMaterial)
+    if source_kind not in {None, "whole_book", "legacy_import"}:
+        raise MaterialLabError(
+            "MATERIAL_LAB_UNKNOWN_SOURCE_KIND", f"未知素材来源 {source_kind}"
+        )
+    eligible_book_ids = set(eligible_knowledge_source_runs(db))
+    stmt = select(MaterialLabMaterial).where(
+        MaterialLabMaterial.book_id.in_(eligible_book_ids)
+    )
     if book_id is not None:
         stmt = stmt.where(MaterialLabMaterial.book_id == book_id)
+    if genre_slug:
+        stmt = stmt.where(MaterialLabMaterial.genre_slug == genre_slug)
+    if knowledge_role:
+        if knowledge_role not in {"genre_example", "domain_reference"}:
+            raise MaterialLabError(
+                "MATERIAL_LAB_UNKNOWN_KNOWLEDGE_ROLE",
+                f"未知知识来源类型 {knowledge_role}",
+            )
+        matching_book_ids = list(eligible_book_ids) if knowledge_role == "genre_example" else []
+        stmt = stmt.where(MaterialLabMaterial.book_id.in_(matching_book_ids))
     if material_type:
         stmt = stmt.where(MaterialLabMaterial.material_type == material_type)
     if category_key:
@@ -447,22 +761,239 @@ def list_materials(
             | MaterialLabMaterial.core_pattern.like(like)
             | MaterialLabMaterial.tags_json.like(like)
         )
-    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    rows = db.scalars(
-        stmt.order_by(MaterialLabMaterial.quality_score.desc(), MaterialLabMaterial.id)
-        .limit(min(limit, 200)).offset(offset)
+    legacy_stmt = select(MaterialLabLegacyMaterial)
+    if book_id is not None:
+        legacy_stmt = legacy_stmt.where(False)
+    if genre_slug:
+        legacy_stmt = legacy_stmt.where(MaterialLabLegacyMaterial.genre_slug == genre_slug)
+    if knowledge_role == "domain_reference":
+        legacy_stmt = legacy_stmt.where(False)
+    if material_type:
+        legacy_stmt = legacy_stmt.where(
+            MaterialLabLegacyMaterial.material_type == material_type
+        )
+    if category_key:
+        legacy_stmt = legacy_stmt.where(
+            MaterialLabLegacyMaterial.category_key == category_key
+        )
+    if min_score is not None:
+        legacy_stmt = legacy_stmt.where(
+            MaterialLabLegacyMaterial.quality_score >= min_score
+        )
+    if primary_only:
+        legacy_stmt = legacy_stmt.where(
+            MaterialLabLegacyMaterial.is_primary_variant == 1
+        )
+    if q:
+        like = f"%{q}%"
+        legacy_stmt = legacy_stmt.where(
+            MaterialLabLegacyMaterial.title.like(like)
+            | MaterialLabLegacyMaterial.concise_example.like(like)
+            | MaterialLabLegacyMaterial.core_pattern.like(like)
+            | MaterialLabLegacyMaterial.tags_json.like(like)
+        )
+
+    use_current = source_kind != "legacy_import"
+    use_legacy = source_kind != "whole_book"
+    current_total = (
+        int(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+        if use_current else 0
     )
+    legacy_total = (
+        int(db.scalar(select(func.count()).select_from(legacy_stmt.subquery())) or 0)
+        if use_legacy else 0
+    )
+    top = min(offset + min(limit, 200), current_total + legacy_total)
+    current_candidates = list(db.scalars(
+        stmt.order_by(MaterialLabMaterial.quality_score.desc(), MaterialLabMaterial.id)
+        .limit(top)
+    )) if use_current and top else []
+    legacy_candidates = list(db.scalars(
+        legacy_stmt.order_by(
+            MaterialLabLegacyMaterial.quality_score.desc(),
+            MaterialLabLegacyMaterial.id,
+        ).limit(top)
+    )) if use_legacy and top else []
+    combined: list[tuple[str, MaterialLabMaterial | MaterialLabLegacyMaterial]] = [
+        ("whole_book", row) for row in current_candidates
+    ] + [("legacy_import", row) for row in legacy_candidates]
+    combined.sort(key=lambda pair: (-pair[1].quality_score, pair[0], pair[1].id))
+    selected = combined[offset:offset + min(limit, 200)]
+    rows = [row for origin, row in selected if origin == "whole_book"]
     cats, subs = label_index()
+    source_book_kinds: dict[int, tuple[str, bool]] = {
+        source_book_id: book_material_kind(db, source_book_id)
+        for source_book_id in {m.book_id for m in rows}
+    }
+    source_book_titles = {
+        book.id: book.title
+        for book in db.scalars(
+            select(Book).where(Book.id.in_({m.book_id for m in rows}))
+        )
+    } if rows else {}
+    evidence_ids = {m.evidence_id for m in rows if m.evidence_id is not None}
+    evidence_by_id = {
+        e.id: e for e in db.scalars(
+            select(MaterialLabEvidence).where(MaterialLabEvidence.id.in_(evidence_ids))
+        )
+    } if evidence_ids else {}
+    paragraph_ids = _source_paragraph_ids(db, rows)
     return {
-        "total": total,
-        "items": [_material_dict(m, cats, subs) for m in rows],
+        "total": current_total + legacy_total,
+        "items": [
+            (
+                _material_dict(
+                    m, cats, subs,
+                    evidence=evidence_by_id.get(m.evidence_id),
+                    source_paragraph_ids=paragraph_ids.get(m.id, []),
+                    source_material_kind=source_book_kinds[m.book_id][0],
+                    source_material_kind_confirmed=source_book_kinds[m.book_id][1],
+                    source_book_title=source_book_titles.get(
+                        m.book_id, f"书籍 {m.book_id}"
+                    ),
+                )
+                if origin == "whole_book"
+                else _legacy_material_dict(m)
+            )
+            for origin, m in selected
+        ],
     }
 
 
-def _material_dict(m: MaterialLabMaterial, cats: dict, subs: dict) -> dict:
+def _legacy_material_dict(m: MaterialLabLegacyMaterial) -> dict:
+    is_reference_corpus = (m.source_pattern_id or "").startswith("corpus:")
+    evidence: dict = {}
+    evidence_rows: list[dict] = []
+    if is_reference_corpus:
+        try:
+            parsed_evidence = json.loads(m.source_evidence_ids_json or "{}")
+            evidence = parsed_evidence if isinstance(parsed_evidence, dict) else {}
+            nested = evidence.get("evidence")
+            if isinstance(nested, list):
+                evidence_rows = [row for row in nested if isinstance(row, dict)]
+        except ValueError:
+            evidence = {}
+    primary_evidence = evidence_rows[0] if evidence_rows else evidence
+    pipeline_version = str(evidence.get("pipeline_version") or "")
+    is_structured_reference = pipeline_version.startswith("structured-farming-docx-")
+    source_excerpt = "\n\n".join(
+        str(row.get("text") or row.get("excerpt") or "").strip()
+        for row in (evidence_rows or [evidence])[:3]
+        if str(row.get("text") or row.get("excerpt") or "").strip()
+    )
+    source_paragraph_ids = [
+        str(row.get("evidence_id"))
+        for row in evidence_rows
+        if row.get("evidence_id")
+    ]
+    if not source_paragraph_ids and primary_evidence.get("chapter_index"):
+        source_paragraph_ids = [f"第{int(primary_evidence['chapter_index'])}章"]
+    chapter_labels = list(dict.fromkeys(
+        str(row.get("chapter_title") or f"第{row.get('chapter_index')}章")
+        for row in evidence_rows
+        if row.get("chapter_title") or row.get("chapter_index")
+    ))
+    return {
+        "id": f"legacy:{m.source_material_id}",
+        "origin": "reference_corpus" if is_reference_corpus else "legacy_import",
+        "book_id": None,
+        "source_book_title": m.source_book_title if is_reference_corpus else "旧项目资料库",
+        "chapter_id": None,
+        "scene_seq": int(primary_evidence.get("paragraph_index") or primary_evidence.get("scene_seq") or 0),
+        "place": "",
+        "time_cue": "",
+        "genre_slug": m.genre_slug,
+        "material_type": m.material_type,
+        "category_key": m.category_key,
+        "category_label": m.category_label or m.category_key,
+        "subcategory_key": m.subcategory_key,
+        "subcategory_label": m.subcategory_label or m.subcategory_key,
+        "title": m.title,
+        "source_excerpt": source_excerpt,
+        "source_paragraph_ids": source_paragraph_ids,
+        "source_material_kind": "reference" if is_structured_reference else "fiction",
+        "source_material_kind_confirmed": True,
+        "knowledge_role": "domain_reference" if is_structured_reference else "genre_example",
+        "knowledge_role_label": (
+            "种田资料知识"
+            if is_structured_reference
+            else ("参考小说知识" if is_reference_corpus else "旧库知识")
+        ),
+        "verification_label": (
+            ("本地写作资料 · " if is_structured_reference else "本地参考小说 · ")
+            + (" / ".join(chapter_labels) if chapter_labels else "章节待定位")
+            + (" · 三段资料依据已核对" if is_structured_reference else " · 段落证据已核对")
+            if is_reference_corpus
+            else "旧项目派生层已迁入；未复制小说正文或原文摘录"
+        ),
+        "concise_example": m.concise_example,
+        "core_pattern": m.core_pattern,
+        "mechanism": m.mechanism,
+        "suspense_question": m.suspense_question,
+        "applicable_stage": m.applicable_stage,
+        "applicable_scene": m.applicable_scene,
+        "emotion": m.emotion,
+        "tags": json.loads(m.tags_json or "[]"),
+        "quality_score": m.quality_score,
+        "confidence": m.confidence,
+        "pattern_id": m.source_pattern_id or None,
+        "is_primary_variant": bool(m.is_primary_variant),
+    }
+
+
+def _source_paragraph_ids(
+    db: Session, materials: list[MaterialLabMaterial]
+) -> dict[int, list[str]]:
+    """把场景的章内偏移还原到真实 Paragraph ID，供知识条目溯源。"""
+    chapter_ids = {m.chapter_id for m in materials}
+    if not chapter_ids:
+        return {}
+    paragraphs_by_chapter: dict[int, list[Paragraph]] = {}
+    for paragraph in db.scalars(
+        select(Paragraph)
+        .where(Paragraph.chapter_id.in_(chapter_ids))
+        .order_by(Paragraph.chapter_id, Paragraph.paragraph_index)
+    ):
+        paragraphs_by_chapter.setdefault(paragraph.chapter_id, []).append(paragraph)
+
+    spans_by_chapter: dict[int, list[tuple[str, int, int]]] = {}
+    for chapter_id, paragraphs in paragraphs_by_chapter.items():
+        cursor = 0
+        spans: list[tuple[str, int, int]] = []
+        for paragraph in paragraphs:
+            text_value = paragraph.normalized_text or paragraph.raw_text or ""
+            end = cursor + len(text_value)
+            spans.append((paragraph.id, cursor, end))
+            cursor = end + 1  # chapter_text_from_paragraphs 使用单个换行连接。
+        spans_by_chapter[chapter_id] = spans
+
+    return {
+        material.id: [
+            paragraph_id
+            for paragraph_id, start, end in spans_by_chapter.get(material.chapter_id, [])
+            if end > material.char_start and start < material.char_end
+        ]
+        for material in materials
+    }
+
+
+def _material_dict(
+    m: MaterialLabMaterial,
+    cats: dict,
+    subs: dict,
+    *,
+    evidence: MaterialLabEvidence | None = None,
+    source_paragraph_ids: list[str] | None = None,
+    source_material_kind: str = FICTION,
+    source_material_kind_confirmed: bool = False,
+    source_book_title: str = "",
+) -> dict:
+    is_fiction = source_material_kind == FICTION
     return {
         "id": m.id,
+        "origin": "whole_book",
         "book_id": m.book_id,
+        "source_book_title": source_book_title,
         "chapter_id": m.chapter_id,
         "scene_seq": m.scene_seq,
         "place": m.place,
@@ -474,6 +1005,17 @@ def _material_dict(m: MaterialLabMaterial, cats: dict, subs: dict) -> dict:
         "subcategory_key": m.subcategory_key,
         "subcategory_label": subs.get(m.subcategory_key, m.subcategory_key),
         "title": m.title,
+        "source_excerpt": evidence.snippet if evidence else "",
+        "source_paragraph_ids": source_paragraph_ids or [],
+        "source_material_kind": source_material_kind,
+        "source_material_kind_confirmed": source_material_kind_confirmed,
+        "knowledge_role": "genre_example" if is_fiction else "domain_reference",
+        "knowledge_role_label": "题材案例" if is_fiction else "领域资料",
+        "verification_label": (
+            "原文可核对，但不能作为事实依据"
+            if is_fiction
+            else "原文可核对，来源可信度待确认"
+        ),
         "concise_example": m.concise_example,
         "core_pattern": m.core_pattern,
         "mechanism": m.mechanism,
@@ -497,15 +1039,31 @@ def list_patterns(
     limit: int = 100,
     offset: int = 0,
 ) -> dict:
-    stmt = select(MaterialLabPattern).where(MaterialLabPattern.variant_count > 0)
+    eligible_book_ids = set(eligible_knowledge_source_runs(db))
+    counts = (
+        select(
+            MaterialLabMaterial.pattern_id.label("pattern_id"),
+            func.count().label("variant_count"),
+            func.count(func.distinct(MaterialLabMaterial.book_id)).label("book_count"),
+        )
+        .where(
+            MaterialLabMaterial.book_id.in_(eligible_book_ids),
+            MaterialLabMaterial.pattern_id.is_not(None),
+        )
+        .group_by(MaterialLabMaterial.pattern_id)
+        .subquery()
+    )
+    stmt = select(MaterialLabPattern, counts.c.variant_count, counts.c.book_count).join(
+        counts, counts.c.pattern_id == MaterialLabPattern.id
+    )
     if genre_slug:
         stmt = stmt.where(MaterialLabPattern.genre_slug == genre_slug)
     if category_key:
         stmt = stmt.where(MaterialLabPattern.category_key == category_key)
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     cats, _subs = label_index()
-    rows = db.scalars(
-        stmt.order_by(MaterialLabPattern.variant_count.desc(), MaterialLabPattern.id)
+    rows = db.execute(
+        stmt.order_by(counts.c.variant_count.desc(), MaterialLabPattern.id)
         .limit(min(limit, 500)).offset(offset)
     )
     return {
@@ -518,9 +1076,9 @@ def list_patterns(
                 "category_label": cats.get(p.category_key, p.category_key),
                 "core_pattern": p.core_pattern,
                 "mechanism": p.mechanism,
-                "variant_count": p.variant_count,
-                "book_count": p.book_count,
+                "variant_count": variant_count,
+                "book_count": book_count,
             }
-            for p in rows
+            for p, variant_count, book_count in rows
         ],
     }

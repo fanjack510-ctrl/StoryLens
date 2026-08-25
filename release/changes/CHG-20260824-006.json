@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260824-006",
+  "title": "同步共性视图能力键合同",
+  "type": "fix",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/services/capability",
+    "apps/desktop/src/services/entitlementApi.ts",
+    "scripts/check_capability_keys.py"
+  ],
+  "files": [
+    "apps/desktop/src/services/capability/keys.ts",
+    "apps/desktop/src/services/capability/contractKeys.fixture.ts",
+    "apps/desktop/src/services/capability/types.ts",
+    "apps/desktop/src/services/capability/presentation.ts",
+    "apps/desktop/src/services/entitlementApi.ts",
+    "apps/desktop/src/services/productEdition.ts",
+    "scripts/check_capability_keys.py"
+  ],
+  "user_summary": "让已完成的共性视图被前后端能力系统一致识别，不再落入未知功能状态。",
+  "technical_summary": "Add common_patterns to the desktop canonical capability union, entitlement keys, Phase 1C fixture, product labels, presentation copy, and the cross-stack consistency checker so the frontend contract matches the backend CapabilityKey enum.",
+  "acceptance_criteria": [
+    "前后端 canonical capability keys 完全一致",
+    "共性视图授权响应可被前端 DTO 正常解析",
+    "共性视图具备明确产品名称与未授权文案",
+    "能力键一致性脚本通过"
+  ],
+  "tests": [
+    "apps/desktop/src/services/capability/capabilityClient.test.ts",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx",
+    "apps/api/tests/test_narrative_phase1cp_contract.py::test_capability_keys_unique_match_frontend",
+    "apps/api/tests/test_narrative_phase1c_integration.py::test_15_capability_keys_script"
+  ],
+  "verification_evidence": [
+    "能力相关前端 41 项测试通过",
+    "前后端能力键合同 2 项测试通过",
+    "TypeScript noEmit 类型检查通过"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅补齐已存在后端能力键的前端合同，无数据迁移。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T08:30:00Z",
+  "updated_at": "2026-08-24T08:30:00Z"
+}

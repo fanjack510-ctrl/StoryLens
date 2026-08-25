@@ -1513,18 +1513,18 @@ export function ReaderJourneyWorkspace({
                 disabled={reportBusy}
                 onClick={() => void handleReportExport()}
               >
-                {reportBusy ? "正在生成…" : "导出本章报告 · VIP"}
+                {reportBusy ? "正在生成…" : "导出本章报告 · PRO"}
               </button>
             )}
           </div>
           {vipNotice && (
             <div className="journey-vip-notice" data-testid="journey-vip-notice" role="alert">
-              <b>PDF 导出是 VIP 功能</b>
+              <b>PDF 导出是专业版功能</b>
               <p>{vipNotice.message}</p>
               <p>
                 {vipNotice.url ? (
                   <a href={vipNotice.url} target="_blank" rel="noreferrer">
-                    前往爱发电购买月卡授权 →
+                    前往爱发电购买 StoryLens Pro →
                   </a>
                 ) : (
                   <span>购买入口尚未配置，请联系作者获取授权码。</span>

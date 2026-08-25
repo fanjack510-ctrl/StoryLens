@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260825-002",
+  "title": "知识库按题材分类限量提取",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/genre_templates.py",
+    "apps/api/app/narrative_core/material_lab/materials.py",
+    "apps/api/app/narrative_core/material_lab/bridge.py",
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx"
+  ],
+  "user_summary": "全文小说素材按固化题材目录提炼，经过阶段限制、全书去重和数量上限后再进入知识库。",
+  "technical_summary": "Treat each genre template as the only allowed knowledge taxonomy, enforce narrative-stage eligibility, collapse repeated scene hits by genre/category/subcategory/core pattern, apply per-category and per-book budgets, and persist only the strongest evidence-backed representative from the completed full-book source.",
+  "acceptance_criteria": [
+    "每个题材只允许写入该题材模板中固化的分类和子分类",
+    "开篇、前中段、中后段、后段和结局类知识只从对应全书阶段提取",
+    "同一本书不重复沉淀相同分类、子分类和核心模式",
+    "每个分类有独立限额且每本书最多沉淀 72 条知识",
+    "每条入库知识均可定位真实章节、原文摘录和段落 ID",
+    "知识卡不再展示可复用模式和为什么有效等方法论栏目"
+  ],
+  "tests": [
+    "python -m pytest apps/api/tests/test_material_lab_api.py -q (20 passed)",
+    "npm run test -- --run src/pages/KnowledgeLibraryPage.test.tsx (5 passed)",
+    "apps/desktop npm run typecheck"
+  ],
+  "verification_evidence": [
+    "清除旧算法派生数据：9720 条素材、94231 条原子、2901 条证据、4 次提取运行、56 个模式簇",
+    "《星际校园：五人小队向前冲》扫描 2670 个场景候选，最终仅沉淀 15 条分类知识",
+    "15 条知识分布于 9 个科幻分类，且 15/15 有原文摘录与真实段落 ID",
+    "真实浏览器显示 15 条结果，默认本库全部知识，并确认不再出现方法论栏目"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "清除的是旧素材提取算法产生的可重建派生表；小说、章节、段落及正式全文分析报告均保留。截图中的科幻小说已使用新规则重新提取。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-25T01:59:09Z",
+  "updated_at": "2026-08-25T01:59:09Z"
+}

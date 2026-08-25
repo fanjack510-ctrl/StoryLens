@@ -239,6 +239,24 @@ def load_all_changes(root: Path) -> list[dict[str, Any]]:
     return [read_json(path) for path in list_change_files(root)]
 
 
+def load_release_pool_changes(root: Path) -> list[dict[str, Any]]:
+    """Return only changes that belong to the current baseline's release pool.
+
+    Historical records remain in ``release/changes`` for traceability and older
+    repositories may also keep their ids in ``unreleased.json``.  They must not
+    block a later baseline merely because their legacy
+    ``include_in_next_release`` flag was never cleared.
+    """
+    unreleased = load_unreleased(root)
+    pool_ids = set(unreleased.get("changes") or [])
+    base_version = unreleased.get("base_version")
+    return [
+        change
+        for change in load_all_changes(root)
+        if change.get("id") in pool_ids and change.get("base_version") == base_version
+    ]
+
+
 def validate_change_shape(change: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     required = [
@@ -385,7 +403,7 @@ def commit_entry_sha(entry: Any) -> str | None:
 def registered_commit_map(root: Path) -> dict[str, list[str]]:
     """Map full sha -> list of change ids."""
     mapping: dict[str, list[str]] = {}
-    for change in load_all_changes(root):
+    for change in load_release_pool_changes(root):
         for entry in change.get("commits") or []:
             sha = commit_entry_sha(entry)
             if isinstance(sha, str) and sha:
@@ -567,7 +585,7 @@ def collect_blockers(root: Path) -> list[str]:
     classified = classify_commits(root, baseline.get("git_commit"))
     for item in classified["UNREGISTERED"]:
         blockers.append(f"unregistered commit {item['short']}: {item['subject']}")
-    for change in load_all_changes(root):
+    for change in load_release_pool_changes(root):
         if not change.get("include_in_next_release", True):
             continue
         if change.get("status") == "deferred":
@@ -602,7 +620,7 @@ def collect_blockers(root: Path) -> list[str]:
 def collect_staging_notes(root: Path) -> list[str]:
     """Soft notes for release-preview; must not block freeze / can_prepare alone."""
     notes: list[str] = []
-    for change in load_all_changes(root):
+    for change in load_release_pool_changes(root):
         if not change.get("include_in_next_release", True):
             continue
         if change.get("status") == "ready-for-staging":
@@ -617,7 +635,7 @@ def preview_payload(root: Path) -> dict[str, Any]:
     version = read_version(root)
     baseline = load_baseline(root)
     unreleased = load_unreleased(root)
-    changes = load_all_changes(root)
+    changes = load_release_pool_changes(root)
     included = [c for c in changes if c.get("include_in_next_release") and c.get("status") != "deferred"]
     ready = [c for c in included if is_freeze_ready_status(c.get("status"))]
     classified = classify_commits(root, baseline.get("git_commit"))
@@ -666,7 +684,7 @@ def cmd_status(root: Path) -> int:
     version = read_version(root)
     baseline = load_baseline(root)
     unreleased = load_unreleased(root)
-    changes = load_all_changes(root)
+    changes = load_release_pool_changes(root)
     included = [c for c in changes if c.get("include_in_next_release")]
     ready = [c for c in included if is_freeze_ready_status(c.get("status"))]
     deferred = [c for c in changes if c.get("status") == "deferred"]
@@ -1098,7 +1116,7 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
     if release_mode:
         if unreleased.get("status") != "frozen":
             errors.append("release mode requires unreleased.status=frozen")
-        for change in changes:
+        for change in load_release_pool_changes(root):
             if not change.get("include_in_next_release"):
                 continue
             if change.get("status") == "deferred":
@@ -1164,7 +1182,7 @@ def cmd_freeze(root: Path) -> int:
     dirty = working_tree_dirty(root)
     if dirty:
         errors.append("working tree not clean")
-    changes = load_all_changes(root)
+    changes = load_release_pool_changes(root)
     for change in changes:
         if not change.get("include_in_next_release"):
             continue
@@ -1285,7 +1303,7 @@ def cmd_prepare_next_release(
     next_version = bump_patch(current)
     changes = [
         c
-        for c in load_all_changes(root)
+        for c in load_release_pool_changes(root)
         if c.get("include_in_next_release") and is_freeze_ready_status(c.get("status"))
     ]
     print(

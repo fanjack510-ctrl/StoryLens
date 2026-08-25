@@ -81,10 +81,10 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
     ),
     CapabilityKey.CROSS_BOOK_SEARCH: CapabilityMetadata(
         key=CapabilityKey.CROSS_BOOK_SEARCH,
-        display_name="跨书检索",
+        display_name="找相似写法",
         description=(
             "在所有分析过的书里找东西。关键词检索免费——它确定、即时、可核对，"
-            "而且覆盖全部条目；付费的是「按意思找」：用自己的话描述要找的写法，"
+            "而且覆盖全部条目；付费的是「找相似写法」：用自己的话描述要找的写法，"
             "由模型在写法层里挑出来并说明为什么符合。"
         ),
         shipped=True,
@@ -99,7 +99,7 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
     CapabilityKey.ADVANCED_EXPORT: CapabilityMetadata(
         key=CapabilityKey.ADVANCED_EXPORT,
         display_name="进阶导出",
-        description="全书分析报告 PDF 导出（Pro，支持爱发电月卡授权）。",
+        description="全书分析报告 PDF 导出（Pro，支持爱发电授权）。",
         shipped=True,
         requires_license=True,
         availability=CapabilityAvailability.AVAILABLE,
@@ -124,6 +124,38 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         entry_visible=True,
         # 一次调用，输入是十几本书的技法清单，几千 token。
         estimated_cost_class=CostClass.LOW,
+    ),
+    CapabilityKey.KNOWLEDGE_EXTRACTION: CapabilityMetadata(
+        key=CapabilityKey.KNOWLEDGE_EXTRACTION,
+        display_name="从全书提取素材",
+        description=(
+            "从已经完成全文拆文的小说中，按题材与固定分类提取少量、可核对的知识素材（Pro）。"
+            "浏览、筛选和搜索已经存在的知识保持免费。"
+        ),
+        shipped=True,
+        requires_license=True,
+        availability=CapabilityAvailability.AVAILABLE,
+        preview_visible=True,
+        enabled=True,
+        entry_visible=True,
+        estimated_cost_class=CostClass.LOW,
+        offline_allowed=True,
+    ),
+    CapabilityKey.BOOK_SKILL_GENERATION: CapabilityMetadata(
+        key=CapabilityKey.BOOK_SKILL_GENERATION,
+        display_name="生成作品 Skill",
+        description=(
+            "把一部已完成全文拆文的小说整理为可下载的创作机制 Skill（Pro）。"
+            "只迁移结构与机制，不复制原文和专有设定。"
+        ),
+        shipped=True,
+        requires_license=True,
+        availability=CapabilityAvailability.AVAILABLE,
+        preview_visible=True,
+        enabled=True,
+        entry_visible=True,
+        estimated_cost_class=CostClass.LOW,
+        offline_allowed=True,
     ),
     CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS: CapabilityMetadata(
         key=CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS,

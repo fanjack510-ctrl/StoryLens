@@ -223,6 +223,20 @@ def test_pending_does_not_block_confirm_idempotent(testing_session):
     assert replay2 is True
     assert revision2.id == revision.id
     assert len(scenes2) == len(scenes)
+
+    # 确认会把候选决定固化，确认后重新读取 proposal 得到的指纹可能不同。页面刷新后再次
+    # 点击确认也必须回放既有修订，不能把一次已经成功的操作显示成
+    # ``review is not confirmable``。
+    refreshed = build_final_boundary_proposal(testing_session, review)
+    revision3, scenes3, replay3 = confirm_review_from_final_proposal(
+        testing_session,
+        review,
+        confirmed_by="tester",
+        proposal_fingerprint=refreshed.proposal_fingerprint,
+    )
+    assert replay3 is True
+    assert revision3.id == revision.id
+    assert len(scenes3) == len(scenes)
     all_scenes = list(
         testing_session.scalars(select(Scene).where(Scene.boundary_revision_id == revision.id))
     )

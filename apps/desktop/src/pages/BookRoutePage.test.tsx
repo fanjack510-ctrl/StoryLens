@@ -311,14 +311,25 @@ describe("Book chapter shell", () => {
     expect(screen.queryByText("当前章节尚未生成阅读旅程")).not.toBeInTheDocument();
   });
 
-  it("hides empty analysis pane and exposes shell start analysis", () => {
+  it("hides empty analysis pane and exposes the analysis scope choice", async () => {
     renderBook();
     expect(screen.getByTestId("book-chapter-shell")).toBeInTheDocument();
+    expect(await screen.findByTestId("book-analysis-scope-choice")).toBeInTheDocument();
     expect(screen.getByTestId("shell-start-analysis")).toBeInTheDocument();
     expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("分析本章");
     expect(screen.queryByTestId("reader-journey-entry-analyze")).not.toBeInTheDocument();
     expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
     expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ba-card-material_lab")).not.toBeInTheDocument();
+    expect(screen.queryByText("题材知识库")).not.toBeInTheDocument();
+    expect(screen.getByTestId("ba-go-whole-book")).toHaveAttribute(
+      "href",
+      "/books/1/whole-book",
+    );
+    expect(screen.getByTestId("ba-card-chapter")).toHaveTextContent("单章精析");
+    expect(screen.getByTestId("book-analysis-whole-entry")).toHaveTextContent("全书分析");
+    expect(screen.queryByText("开始评测 →")).not.toBeInTheDocument();
+    expect(screen.queryByText("开始拆文 →")).not.toBeInTheDocument();
     expect(document.querySelector(".analysis-pane .artifact")).toBeNull();
   });
 
@@ -421,14 +432,52 @@ describe("Book chapter shell", () => {
     expect(await screen.findByTestId("chapter-catalog-drawer")).toBeInTheDocument();
   });
 
-  it("reading settings and more menu include boundary review and tasks", () => {
+  it("更多菜单里只剩读书要用的东西，诊断项已经删掉", () => {
+    // 这条原来断言「更多」里有「查看任务记录」。1.3.0 把四个诊断项全删了：
+    // 技术信息（Book ID / Hash）、章节信息（几个分区）、分析信息（Scene 数 / 预估花费）、
+    // 查看任务记录。对一个创作者来说，主菜单里一半是他永远用不到的东西。
+    //
+    // 删掉不等于弄丢：/tasks 另有四个入口（创建分析后、结果页、进度条上两处），
+    // 识别不到章节时还有「查看导入诊断」——需要排查的那一刻各有各的出口。
     renderBook();
     const toolbar = screen.getByTestId("book-shell-toolbar");
     fireEvent.click(within(toolbar).getByTestId("reading-settings-trigger"));
     expect(within(toolbar).getByTestId("reading-settings-panel")).toBeInTheDocument();
     fireEvent.click(within(toolbar).getByTestId("book-more-menu-trigger"));
     expect(screen.getByTestId("book-more-boundary-review")).toBeInTheDocument();
-    expect(screen.getByTestId("book-more-tasks")).toBeInTheDocument();
+    for (const gone of [
+      "book-more-tasks",
+      "book-more-tech",
+      "book-more-chapter-info",
+      "book-more-analysis-info",
+    ]) {
+      expect(screen.queryByTestId(gone), `${gone} 应该已经删掉`).toBeNull();
+    }
+  });
+
+  it("进入章节流程后不再常驻单章/全书入口组", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 77,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "awaiting_scene_boundary_confirmation",
+      progress_current: 1,
+      progress_total: 2,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_scene_count: 0,
+      total_scene_count: 1,
+    } as any);
+
+    renderBook("/books/1?chapter=2&analysisRun=77");
+    expect(await screen.findByTestId("shell-view-analysis-progress")).toBeInTheDocument();
+    expect(screen.queryByTestId("book-analysis-cards")).toBeNull();
+    expect(screen.queryByText("开始评测 →")).toBeNull();
+    expect(screen.queryByText("开始拆文 →")).toBeNull();
   });
 
   it("create analysis stays on book page and writes analysisRun URL", async () => {

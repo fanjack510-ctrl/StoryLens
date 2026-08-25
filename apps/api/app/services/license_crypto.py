@@ -30,22 +30,24 @@ CANONICAL_FEATURES = (
     "advanced_export",
     "common_patterns",
     "cross_book_search",
+    "knowledge_extraction",
+    "book_skill_generation",
     "narrative_asset_library",
     # 把它从清单里删掉，等于对已经买过的人收回一项已经发出去的能力——那是另一回事，
     # 不是「这一轮不做」。它的门和接口都在，留着；清单不撒谎靠的是下面的状态，不是删除。
     "pro_whole_book_insights",
 )
 
-#: available = 今天就能用；planned = 已承诺、这一轮在做。
-#: 界面按这个标状态，不把没做的东西混在能用的里面卖。
-#: available = 今天就能用；planned = 已承诺、这一轮在做；
+#: available = 今天就能用；foundation = 免费基础兼容层；
 #: engine_required = 门和接口都在，但要装了私有引擎才跑得起来，打包版没有它。
 #: 界面按这个标状态，不把跑不起来的东西混在能用的里面卖。
 FEATURE_STATUS: dict[str, str] = {
     "advanced_export": "available",
-    "common_patterns": "planned",
-    "cross_book_search": "planned",
-    "narrative_asset_library": "planned",
+    "common_patterns": "available",
+    "cross_book_search": "available",
+    "knowledge_extraction": "available",
+    "book_skill_generation": "available",
+    "narrative_asset_library": "foundation",
     "pro_whole_book_insights": "engine_required",
 }
 
@@ -53,8 +55,10 @@ FEATURE_STATUS: dict[str, str] = {
 FEATURE_LABELS: dict[str, str] = {
     "advanced_export": "成品报告导出（PDF）",
     "common_patterns": "共性视图：把一组书摆在一起看",
-    "cross_book_search": "跨书检索",
-    "narrative_asset_library": "素材库",
+    "cross_book_search": "找相似写法",
+    "knowledge_extraction": "从全书提取素材",
+    "book_skill_generation": "生成作品 Skill",
+    "narrative_asset_library": "知识库基础层（兼容项）",
     "pro_whole_book_insights": "章节素材聚合洞察（需私有引擎）",
 }
 
@@ -215,7 +219,7 @@ def parse_and_verify(
     # rather than activating into an entitlement that every later check refuses.
     expires = payload_valid_until(payload)
     if expires is not None and expires <= datetime.now(timezone.utc):
-        raise LicenseError("LICENSE_EXPIRED", "该授权已过期。月卡授权自到期后不可再激活。")
+        raise LicenseError("LICENSE_EXPIRED", "该授权已过期。请获取有效授权后重新激活。")
 
     return VerifiedLicense(payload=payload, signed_license=code, key_id=key_id)
 

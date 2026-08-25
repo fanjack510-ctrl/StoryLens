@@ -1,0 +1,54 @@
+{
+  "id": "CHG-20260825-006",
+  "title": "榜单共性挑书工作区重构",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/pages",
+    "apps/desktop/src/styles"
+  ],
+  "files": [
+    "apps/desktop/src/pages/CommonPatternsStartPage.tsx",
+    "apps/desktop/src/pages/CommonPatternsStartPage.test.tsx",
+    "apps/desktop/src/styles/components.css"
+  ],
+  "user_summary": "将长书单改为可搜索、可筛选的独立滚动区，并让比较篮子与开始按钮始终在桌面视野内。",
+  "technical_summary": "Refactor the pattern-comparison entry into a bounded two-column workspace. Add local title search and analysis-state filters, keep an independently scrolling library on the left, and render a sticky selected-book basket with removal, clear, optional naming, readiness progress, and the primary action on the right. Narrow layouts place the basket before the library without overlaying content.",
+  "acceptance_criteria": [
+    "大量书籍只在选择面板内部滚动，不再把开始按钮推到页面最底部",
+    "桌面端比较篮子在滚动选择书籍时保持可见，并展示已选书、最少两本提示和开始按钮",
+    "用户可以按书名搜索并按已分析或未分析状态筛选",
+    "已选书即使被搜索条件隐藏也继续保留在比较篮子中，并可单本移除或全部清空",
+    "工具书仍不可参与小说共性比较，至少选择两本的业务约束保持不变",
+    "窄屏布局不得用浮层遮挡选择列表"
+  ],
+  "tests": [
+    "npm --prefix apps/desktop test -- src/pages/CommonPatternsStartPage.test.tsx (6 passed)",
+    "npm --prefix apps/desktop run typecheck (passed)",
+    "python scripts/check_project.py (passed)"
+  ],
+  "verification_evidence": [
+    "真实浏览器 DOM 验证页面存在独立的选择对比小说区域、搜索框、三个状态筛选以及常驻比较篮子",
+    "定向交互测试验证搜索隐藏左侧条目后，已选小说仍保留在比较篮子中",
+    "真实数据页面显示 19 本小说可选，工具书保持禁用并明确标注无法比较小说共性"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅调整前端页面结构和本地筛选状态，不修改书单、小说或共性分析数据。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-25T06:56:44Z",
+  "updated_at": "2026-08-25T07:02:00Z"
+}

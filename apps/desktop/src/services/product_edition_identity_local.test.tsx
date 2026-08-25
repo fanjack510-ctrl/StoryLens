@@ -118,8 +118,13 @@ function wrapShell(path = "/library") {
             <Route path="/library" element={<div>书库</div>} />
             <Route path="/settings" element={<LicenseSettingsCard />} />
             {/* 只放一个桩：这一组测试问的是「徽章点了以后去哪儿」，
-                不是「专业版说明页长什么样」——后者有它自己的测试文件。 */}
-            <Route path="/pro" element={<div data-testid="pro-capabilities-page">专业版</div>} />
+                不是「那一页长什么样」——后者有它自己的测试文件。
+                目的地从 /pro 改成 /capabilities：徽章说的是「我是什么版本」，
+                点开该看到的是完整能力清单里哪几项带 PRO，而不是一张只列收费项的价目表。 */}
+            <Route
+              path="/capabilities"
+              element={<div data-testid="capabilities-page">能做什么</div>}
+            />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -219,7 +224,7 @@ describe("AppShell product edition identity", () => {
     });
     fireEvent.click(screen.getByTestId("nav-edition-identity"));
     await waitFor(() => {
-      expect(screen.getByTestId("pro-capabilities-page")).toBeInTheDocument();
+      expect(screen.getByTestId("capabilities-page")).toBeInTheDocument();
     });
   });
 
@@ -239,8 +244,11 @@ describe("AppShell product edition identity", () => {
     });
     expect(screen.getByTestId("nav-edition-identity")).toHaveTextContent("StoryLens Pro");
     expect(screen.getByTestId("license-pro-status-heading")).toHaveTextContent("专业版已激活");
-    expect(screen.queryByText("StoryLens Pro 已激活")).not.toBeInTheDocument();
-    expect(screen.getAllByTestId("capability-pending").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("license-message")).toHaveTextContent(
+      "StoryLens Pro 已激活",
+    );
+    expect(screen.getAllByTestId("capability-active")).toHaveLength(5);
+    expect(screen.queryByText("后续开放")).not.toBeInTheDocument();
   });
 
   it("shows soft error when entitlement fails", async () => {

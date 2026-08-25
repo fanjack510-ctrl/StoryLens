@@ -14,7 +14,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -22,6 +22,7 @@ from app.db.models import AnalysisRun, Base, Book, Chapter, LocalLicense, Reader
 from app.db.session import get_db
 from app.api.v1 import reader_journey as chapter_router_module
 from app.narrative_core.whole_book_v2 import router as v2_router_module
+from app.routers import short_form_router as short_form_router_module
 from app.services import entitlement
 from app.services.license_crypto import (
     LicenseError,
@@ -70,6 +71,9 @@ def session() -> Session:
         poolclass=StaticPool,
     )
     Base.metadata.create_all(engine)
+    from app.narrative_core.migrations.runner import apply_narrative_migrations
+
+    apply_narrative_migrations(engine)
     return sessionmaker(bind=engine)()
 
 
@@ -80,6 +84,7 @@ def client(session: Session) -> TestClient:
     # 单章那份报告走同一道门、同一条打印路径（router.render_report_pdf），所以它必须和
     # 全书一起被这套测试盯着——否则「全书收费、单章白送」这种事没人会发现。
     app.include_router(chapter_router_module.router)
+    app.include_router(short_form_router_module.router)
     app.dependency_overrides[get_db] = lambda: session
     return TestClient(app)
 
@@ -111,6 +116,21 @@ def _journey_run(session: Session, run_id: int = 7) -> ReaderJourneyRun:
     session.add(row)
     session.commit()
     return row
+
+
+def _short_form_result(session: Session, *, book_id: int = 2, reading_id: int = 11) -> None:
+    session.add(
+        Book(id=book_id, title="短篇测试", source_file_name="short.txt", source_file_hash="short-h")
+    )
+    session.flush()
+    session.execute(
+        text(
+            "INSERT INTO short_form_results (id, book_id, result_json)"
+            " VALUES (:reading_id, :book_id, '{}')"
+        ),
+        {"reading_id": reading_id, "book_id": book_id},
+    )
+    session.commit()
 
 
 def _code(priv, key_id: str, *, valid_days: int | None = None) -> str:
@@ -227,3 +247,46 @@ def test_chapter_pdf_says_which_run_is_missing_before_talking_about_money(
     r = client.post("/api/v1/reader-journey-runs/999/export-pdf", json={"html": "<p>x</p>"})
     assert r.status_code == 404
     assert r.json()["detail"]["error_code"] == "READER_JOURNEY_RUN_NOT_FOUND"
+
+
+def test_short_form_pdf_is_gated_the_same_way(
+    client: TestClient, session: Session, keypair
+) -> None:
+    """短篇拆稿、单章和全书的 PDF 都使用 advanced_export。"""
+    _short_form_result(session)
+    r = client.post(
+        "/api/v1/books/2/short-form/readings/11/export-pdf",
+        json={"html": "<p>x</p>"},
+    )
+    assert r.status_code == 403
+    assert r.json()["detail"]["error_code"] == "PDF_REQUIRES_VIP"
+
+
+def test_short_form_pdf_checks_the_reading_before_the_pro_gate(
+    client: TestClient, session: Session, keypair
+) -> None:
+    _short_form_result(session)
+    r = client.post(
+        "/api/v1/books/999/short-form/readings/11/export-pdf",
+        json={"html": "<p>x</p>"},
+    )
+    assert r.status_code == 404
+    assert r.json()["detail"]["error_code"] == "SHORT_FORM_RESULT_NOT_FOUND"
+
+
+def test_short_form_pdf_opens_for_pro(
+    client: TestClient,
+    session: Session,
+    keypair,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    priv, key_id = keypair
+    _short_form_result(session)
+    entitlement.activate_license_code(session, _code(priv, key_id, valid_days=31))
+    monkeypatch.setattr(v2_router_module, "_find_pdf_browser", lambda: None)
+    r = client.post(
+        "/api/v1/books/2/short-form/readings/11/export-pdf",
+        json={"html": "<p>x</p>"},
+    )
+    assert r.status_code == 501
+    assert r.json()["detail"]["error_code"] == "PDF_BROWSER_NOT_FOUND"

@@ -1,10 +1,11 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { HomePage } from "../pages/HomePage";
 import { LibraryPage } from "../pages/LibraryPage";
 import { CommonPatternsPage } from "../pages/CommonPatternsPage";
 import { CrossBookSearchPage } from "../pages/CrossBookSearchPage";
-import { ProCapabilitiesPage } from "../pages/ProCapabilitiesPage";
+import { CapabilitiesPage } from "../pages/CapabilitiesPage";
+import { CommonPatternsStartPage } from "../pages/CommonPatternsStartPage";
 import { BookRoutePage } from "../pages/BookRoutePage";
 import { WorkspaceLandingPage } from "../pages/WorkspaceLandingPage";
 import { TasksPage } from "../pages/TasksPage";
@@ -63,15 +64,38 @@ export const router = createBrowserRouter([
       { path: "/", element: <HomePage />, errorElement: routeErrorElement },
       { path: "/library", element: <LibraryPage />, errorElement: routeErrorElement },
       {
-        // 跨书检索不挂在书或书单下面：它的默认问题是「有没有哪本书……」，
-        // 范围是整个书库。
+        // 「能做什么」——这个产品 17 个页面，顶栏只挂 3 个，其余全靠撞见。
+        // 这一页是那份缺失的地图，免费的和付费的排在一起。
+        path: "/capabilities",
+        element: <CapabilitiesPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        // 旧的 /pro 是「专业版能做什么」，只列收费项。它答不了用户真正问的
+        // 「到底能干哪些功能」，所以并进 /capabilities。**保留重定向**：
+        // 界面里到处都是 /pro#pro-item-xxx 的锚点链接，而锚点在新页面里还在。
         path: "/pro",
-        element: <ProCapabilitiesPage />,
+        element: <Navigate to="/capabilities" replace />,
         errorElement: routeErrorElement,
       },
       {
         path: "/search",
         element: <CrossBookSearchPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        path: "/knowledge",
+        lazy: async () => ({
+          Component: (await import("../pages/KnowledgeLibraryPage")).KnowledgeLibraryPage,
+        }),
+        errorElement: routeErrorElement,
+      },
+      {
+        // 共性视图的入口：先挑书，再比较。
+        // 圈书原来在书库筛选条上，用户问「为啥上来要建书单」——他是对的，
+        // 书单是比较的副产物，不是前置条件。
+        path: "/patterns",
+        element: <CommonPatternsStartPage />,
         errorElement: routeErrorElement,
       },
       {
@@ -114,11 +138,9 @@ export const router = createBrowserRouter([
         errorElement: routeErrorElement,
       },
       {
-        // 素材库挂在书下面：它拆的是一本书。本地确定性引擎，免费，不联网。
+        // 旧收藏地址只做兼容。知识库是全局页面，不属于任何一本书。
         path: "/books/:bookId/material-lab",
-        lazy: async () => ({
-          Component: (await import("../pages/MaterialLabPage")).MaterialLabPage,
-        }),
+        element: <Navigate to="/knowledge" replace />,
         errorElement: routeErrorElement,
       },
       {

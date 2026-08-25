@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models import Base, utc_now
@@ -190,4 +190,79 @@ class MaterialLabMaterial(Base):
         Index("ix_material_lab_materials_type", "material_type"),
         Index("ix_material_lab_materials_category", "category_key"),
         Index("ix_material_lab_materials_score", "quality_score"),
+    )
+
+
+class MaterialLabLegacyImport(Base):
+    """一次旧资料库迁移批次。
+
+    源 SQLite 始终只读打开；批次记录文件指纹和数量，让同一份资料可安全重试，
+    也让失败能够被定位而不是留下一个无法解释的半成品状态。
+    """
+
+    __tablename__ = "material_lab_legacy_imports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_fingerprint: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    source_name: Mapped[str] = mapped_column(String(255), default="library.db")
+    source_size: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(32), default="running", index=True)
+    source_material_count: Mapped[int] = mapped_column(Integer, default=0)
+    imported_count: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class MaterialLabLegacyMaterial(Base):
+    """从旧项目派生层迁入的纯知识条目；不保存小说正文或长摘录。"""
+
+    __tablename__ = "material_lab_legacy_materials"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(
+        ForeignKey("material_lab_legacy_imports.id", ondelete="CASCADE"), index=True
+    )
+    source_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    source_material_id: Mapped[str] = mapped_column(String(64))
+    source_pattern_id: Mapped[str] = mapped_column(String(64), default="")
+    source_book_id: Mapped[str] = mapped_column(String(64), default="")
+    source_book_title: Mapped[str] = mapped_column(String(255), default="")
+    source_scene_id: Mapped[str] = mapped_column(String(64), default="")
+    source_evidence_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+
+    genre_slug: Mapped[str] = mapped_column(String(32), default="", index=True)
+    genre_label: Mapped[str] = mapped_column(String(32), default="")
+    material_type: Mapped[str] = mapped_column(String(16), index=True)
+    category_key: Mapped[str] = mapped_column(String(64), index=True)
+    category_label: Mapped[str] = mapped_column(String(64), default="")
+    subcategory_key: Mapped[str] = mapped_column(String(64), default="")
+    subcategory_label: Mapped[str] = mapped_column(String(64), default="")
+    title: Mapped[str] = mapped_column(String(200))
+    concise_example: Mapped[str] = mapped_column(Text)
+    core_pattern: Mapped[str] = mapped_column(String(500))
+    mechanism: Mapped[str] = mapped_column(String(200), default="")
+    suspense_question: Mapped[str] = mapped_column(String(500), default="")
+    applicable_stage: Mapped[str] = mapped_column(String(32), default="")
+    applicable_scene: Mapped[str] = mapped_column(String(64), default="")
+    emotion: Mapped[str] = mapped_column(String(32), default="")
+    tags_json: Mapped[str] = mapped_column(Text, default="[]")
+    quality_score: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    score_json: Mapped[str] = mapped_column(Text, default="{}")
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    is_primary_variant: Mapped[int] = mapped_column(Integer, default=1, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_fingerprint", "source_material_id",
+            name="uq_material_lab_legacy_source_material",
+        ),
+        Index(
+            "ix_material_lab_legacy_genre_category",
+            "genre_slug", "category_key",
+        ),
     )

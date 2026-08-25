@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 from .atoms import Atom, extract_all
 from .lexicon import GENRE_SIGNALS
+from .genre_templates import BOOK_MATERIAL_LIMIT, template_for
 from .materials import Draft, generate_drafts
 from .textseg import Chapter as SegChapter
 from .textseg import _subdivide_oversized, split_scenes, strip_noise
@@ -49,6 +50,83 @@ class BookMaterials:
     @property
     def drafts(self) -> list[Draft]:
         return [d for sc in self.scenes for d in sc.drafts]
+
+
+@dataclass(frozen=True)
+class CuratedMaterial:
+    scene: SceneMaterials
+    draft: Draft
+    rank: int
+
+
+def _draft_rank(scene: SceneMaterials, draft: Draft) -> int:
+    signals = draft.signals
+    return (
+        int(signals.get("cue_hits", 0)) * 20
+        + int(bool(signals.get("owner_conflict"))) * 12
+        + min(int(signals.get("objects", 0)), 3) * 4
+        + min(int(signals.get("characters", 0)), 3) * 2
+        + min(int(signals.get("scene_len", 0)) // 400, 5)
+        + (4 if draft.material_type == "钩子" else 0)
+    )
+
+
+def curate_book_materials(result: BookMaterials) -> list[CuratedMaterial]:
+    """把场景命中压缩为一本书的分类知识，而不是正文倒排索引。
+
+    先在 ``题材/分类/子分类/核心模式`` 内只保留证据最强的一条，再执行
+    分类限额和全书限额。模板既是目录，也是可入库白名单。
+    """
+    template = template_for(result.genre_slug)
+    if not template:
+        return []
+    categories = {item["key"]: item for item in template["categories"]}
+    best: dict[tuple[str, str, str], CuratedMaterial] = {}
+    for scene in result.scenes:
+        for draft in scene.drafts:
+            if draft.category_key not in categories:
+                continue
+            key = (draft.category_key, draft.subcategory_key, draft.core_pattern)
+            candidate = CuratedMaterial(
+                scene=scene, draft=draft, rank=_draft_rank(scene, draft)
+            )
+            previous = best.get(key)
+            if previous is None or (
+                candidate.rank,
+                -candidate.scene.chapter_seq,
+                -candidate.scene.scene_seq,
+            ) > (
+                previous.rank,
+                -previous.scene.chapter_seq,
+                -previous.scene.scene_seq,
+            ):
+                best[key] = candidate
+
+    by_category: dict[str, list[CuratedMaterial]] = {}
+    for candidate in best.values():
+        by_category.setdefault(candidate.draft.category_key, []).append(candidate)
+
+    selected: list[CuratedMaterial] = []
+    for category in template["categories"]:
+        rows = sorted(
+            by_category.get(category["key"], []),
+            key=lambda item: (-item.rank, item.scene.chapter_seq, item.scene.scene_seq),
+        )
+        selected.extend(rows[: int(category.get("max_items", 5))])
+
+    selected.sort(
+        key=lambda item: (-item.rank, item.scene.chapter_seq, item.scene.scene_seq)
+    )
+    selected = selected[:BOOK_MATERIAL_LIMIT]
+    selected.sort(
+        key=lambda item: (
+            item.scene.chapter_seq,
+            item.scene.scene_seq,
+            categories[item.draft.category_key]["sort"],
+            item.draft.subcategory_key,
+        )
+    )
+    return selected
 
 
 def chapter_text_from_paragraphs(paragraphs) -> str:

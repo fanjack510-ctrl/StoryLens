@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ProTag } from "../components/ui/ProTag";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { crossBookApi } from "../services/crossBookApi";
@@ -7,24 +8,24 @@ import { ApiError } from "../services/apiClient";
 import { Loading } from "../components/common/States";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
 
-/** 跨书检索：在所有分析过的书里找东西。
+type SearchMode = "keyword" | "meaning";
+
+/** 找参考：从已经保存的分析产物中，跨书找回原句或相似写法。
  *
- *  一个输入框，两种找法，页面必须让这个差别看得见：
- *   · 关键词——确定、即时、覆盖全部条目（含逐章钩子和原文证据）。免费。
- *   · 按意思——一次模型判断，只覆盖写法层。Pro。
- *
- *  覆盖面不同这件事不能藏起来。用户以为搜过了全部、其实只搜了写法层，
- *  「没找到」就会被读成「这些书里没有」——那是一个错的结论。
+ *  这不是全文搜索，也不是知识库。两种找法必须从入口起就分开：
+ *   · 找原句 / 定位——字面匹配，覆盖全部分析条目。免费。
+ *   · 找相似写法——模型判断，只覆盖写法层。Pro。
  */
 export function CrossBookSearchPage() {
+  const [mode, setMode] = useState<SearchMode>("keyword");
   const [query, setQuery] = useState("");
-  const [submitted, setSubmitted] = useState("");
+  const [submittedKeyword, setSubmittedKeyword] = useState("");
 
   const scope = useQuery({ queryKey: ["cross-book-scope"], queryFn: crossBookApi.scope });
   const keyword = useQuery({
-    queryKey: ["cross-book-search", submitted],
-    queryFn: () => crossBookApi.search(submitted, { limit: 40 }),
-    enabled: submitted.length > 0,
+    queryKey: ["cross-book-search", submittedKeyword],
+    queryFn: () => crossBookApi.search(submittedKeyword, { limit: 40 }),
+    enabled: submittedKeyword.length > 0,
   });
   const meaning = useMutation<MeaningResult, unknown, string>({
     mutationFn: (q: string) => crossBookApi.byMeaning(q),
@@ -34,128 +35,155 @@ export function CrossBookSearchPage() {
     meaning.error instanceof ApiError &&
     meaning.error.code === "CROSS_BOOK_SEARCH_REQUIRES_PRO";
 
-  const run = () => {
-    const q = query.trim();
-    if (!q) return;
-    setSubmitted(q);
+  const selectMode = (next: SearchMode) => {
+    setMode(next);
     meaning.reset();
+  };
+
+  const run = () => {
+    const text = query.trim();
+    if (!text) return;
+    if (mode === "keyword") {
+      setSubmittedKeyword(text);
+      return;
+    }
+    meaning.mutate(text);
   };
 
   return (
     <section className="page cross-book" data-testid="cross-book-page">
       <PageHeader>
         <div>
-          <PageTitle>跨书检索</PageTitle>
+          <PageTitle>找参考</PageTitle>
           <PageSubtitle data-testid="cb-scope">
             {scope.data
-              ? `${scope.data.book_count} 本书 · ${scope.data.item_count.toLocaleString()} 条可检索内容`
-              : "正在统计可检索范围…"}
+              ? `从 ${scope.data.book_count} 本已分析小说的 ${scope.data.item_count.toLocaleString()} 条内容中查找`
+              : "正在统计可查找的分析内容…"}
           </PageSubtitle>
         </div>
-        <Link className="secondary" to="/library" data-testid="cb-back">
-          回书库
-        </Link>
+        <Link className="secondary" to="/library" data-testid="cb-back">回书库</Link>
       </PageHeader>
 
-      <div className="panel cb-search">
-        <form
-          className="cb-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            run();
-          }}
-        >
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="想找什么？比如「反转」，或者「让主角一出场就打破读者预期的写法」"
-            aria-label="检索内容"
-            data-testid="cb-input"
-          />
-          <button type="submit" className="primary" disabled={!query.trim()} data-testid="cb-run">
-            找
-          </button>
-        </form>
-        {scope.data ? (
-          <p className="muted cb-hint" data-testid="cb-hint">
-            关键词检索覆盖全部 {scope.data.item_count.toLocaleString()} 条；
-            「按意思找」只覆盖其中的写法层 {scope.data.craft_count} 条
-            （技法、高光片段、配角功能、主要人物）。
-          </p>
-        ) : null}
+      <div className="cb-purpose">
+        <span className="cb-purpose-mark" aria-hidden="true">⌕</span>
+        <div>
+          <strong>这里找的是分析结果，不是整本小说全文</strong>
+          <p>适合找回“哪本书用过这一招”或“某段分析在哪里”；找到后回原书核对，再决定是否沉淀进知识库。</p>
+        </div>
       </div>
 
-      {submitted ? (
-        <>
-          <div className="panel cb-keyword" data-testid="cb-keyword">
-            <h2>关键词命中</h2>
-            {keyword.isLoading ? (
-              <Loading />
-            ) : keyword.data ? (
-              <KeywordResults data={keyword.data} />
-            ) : null}
+      <section className="cb-workspace" aria-label="选择找参考的方式">
+        <div className="cb-mode-switch" role="tablist" aria-label="找参考方式">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "keyword"}
+            className={mode === "keyword" ? "is-active" : ""}
+            data-testid="cb-mode-keyword"
+            onClick={() => selectMode("keyword")}
+          >
+            <span className="cb-mode-index">01</span>
+            <span><b>找原句 / 定位</b><small>搜确切出现过的词</small></span>
+            <em className="free-tag">免费</em>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "meaning"}
+            className={mode === "meaning" ? "is-active" : ""}
+            data-testid="cb-mode-meaning"
+            onClick={() => selectMode("meaning")}
+          >
+            <span className="cb-mode-index">02</span>
+            <span><b>找相似写法</b><small>描述想达到的创作效果</small></span>
+            <ProTag capability="cross_book_search" />
+          </button>
+        </div>
+
+        <div className="cb-search-area">
+          <div className="cb-mode-copy">
+            <span className="cb-eyebrow">{mode === "keyword" ? "精确定位" : "创作意图匹配"}</span>
+            <h2>{mode === "keyword" ? "输入记得的词或短句" : "描述你想找的写法或效果"}</h2>
+            <p>
+              {mode === "keyword"
+                ? "例如“身份反转”“雨夜”“未报名却入选”。只做字面匹配，适合核对原句和明确概念。"
+                : "例如“让主角一出场就打破读者预期”。模型会从写法层挑选真正符合的案例并解释原因。"}
+            </p>
           </div>
 
-          <div className="panel cb-meaning" data-testid="cb-meaning">
-            <h2>按意思找</h2>
-            {!meaning.data ? (
-              <>
-                <p className="muted cb-source">
-                  关键词答不了「让主角一出场就打破读者预期的写法」这种问题——
-                  「打破读者预期」这几个字可能一次都没出现过。这一步让模型读进每条写法，
-                  挑出真正符合的，并说明为什么。
-                </p>
-                <button
-                  type="button"
-                  className="primary"
-                  data-testid="cb-meaning-run"
-                  disabled={meaning.isPending}
-                  onClick={() => meaning.mutate(submitted)}
-                >
-                  {meaning.isPending ? "正在找……" : "按意思找这一句"}
-                </button>
-                {proBlocked ? <ProNotice error={meaning.error as ApiError} /> : null}
-                {meaning.error && !proBlocked ? (
-                  <p className="wbv2-error" data-testid="cb-meaning-error">
-                    {meaning.error instanceof ApiError
-                      ? meaning.error.message
-                      : "这次检索没能完成，请重试。"}
-                  </p>
-                ) : null}
-              </>
-            ) : (
-              <MeaningResults data={meaning.data} />
-            )}
+          <form className="cb-form" onSubmit={(event) => { event.preventDefault(); run(); }}>
+            <label className="cb-query-field">
+              <span aria-hidden="true">⌕</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={mode === "keyword" ? "输入关键词或记得的短句" : "描述一种写法或想达到的效果"}
+                aria-label="检索内容"
+                data-testid="cb-input"
+              />
+            </label>
+            <button type="submit" className="primary" disabled={!query.trim() || meaning.isPending} data-testid="cb-run">
+              {mode === "meaning" && meaning.isPending
+                ? "正在判断…"
+                : mode === "keyword"
+                  ? "查找出现位置"
+                  : "寻找相似写法"}
+            </button>
+          </form>
+
+          {scope.data ? (
+            <details className="cb-scope-details">
+              <summary data-testid="cb-hint">
+                当前范围：{scope.data.book_count} 本书 · {mode === "keyword"
+                  ? `${scope.data.item_count.toLocaleString()} 条全部分析内容`
+                  : `${scope.data.craft_count.toLocaleString()} 条写法内容`}
+              </summary>
+              <div className="cb-scope-body">
+                <div><b>包含的书</b><p>{scope.data.books.map((book) => `《${book.title}》`).join("、")}</p></div>
+                <div><b>分析内容构成</b><p>{scope.data.kinds.map((kind) => `${kind.label} ${kind.count}`).join(" · ")}</p></div>
+              </div>
+            </details>
+          ) : null}
+        </div>
+      </section>
+
+      {mode === "keyword" && submittedKeyword ? (
+        <section className="panel cb-results" data-testid="cb-keyword">
+          <div className="cb-results-heading"><div><span className="cb-eyebrow">字面匹配结果</span><h2>“{submittedKeyword}”出现在哪里</h2></div></div>
+          {keyword.isLoading ? <Loading /> : keyword.data ? <KeywordResults data={keyword.data} /> : null}
+        </section>
+      ) : null}
+
+      {mode === "meaning" && (meaning.data || meaning.error) ? (
+        <section className="panel cb-results" data-testid="cb-meaning">
+          <div className="cb-results-heading">
+            <div><span className="cb-eyebrow">创作意图匹配结果</span><h2>与“{query.trim()}”相似的写法</h2></div>
+            <ProTag capability="cross_book_search" />
           </div>
-        </>
+          {proBlocked ? <ProNotice error={meaning.error as ApiError} /> : null}
+          {meaning.error && !proBlocked ? <p className="wbv2-error" data-testid="cb-meaning-error">{meaning.error instanceof ApiError ? meaning.error.message : "这次检索没能完成，请重试。"}</p> : null}
+          {meaning.data ? <MeaningResults data={meaning.data} /> : null}
+        </section>
       ) : null}
     </section>
   );
 }
 
 function KeywordResults({ data }: { data: KeywordResult }) {
-  if (data.message) {
-    return <p className="notice">{data.message}</p>;
-  }
+  if (data.message) return <p className="notice">{data.message}</p>;
   if (data.total === 0) {
     return (
-      <p className="notice" data-testid="cb-keyword-none">
-        「{data.query}」在 {data.searched_items.toLocaleString()} 条内容里一次都没出现。
-        换个说法试试，或者用下面的「按意思找」——它不靠字面匹配。
-      </p>
+      <div className="cb-empty-result" data-testid="cb-keyword-none">
+        <b>没有找到完全相同的字词</b>
+        <p>“{data.query}”在 {data.searched_items.toLocaleString()} 条内容里一次都没出现。</p>
+        <p>这不等于书里没有相似写法。切换到上方“找相似写法”，用创作效果来描述。</p>
+      </div>
     );
   }
   return (
     <>
-      <p className="muted cb-source" data-testid="cb-keyword-count">
-        在 {data.searched_items.toLocaleString()} 条里命中 {data.total} 条
-        {data.truncated ? `，显示前 ${data.hits.length} 条` : ""}。
-      </p>
-      <ul className="cb-hits">
-        {data.hits.map((h, i) => (
-          <HitRow key={`${h.book_id}-${h.kind}-${h.title}-${i}`} hit={h} />
-        ))}
-      </ul>
+      <p className="muted cb-source" data-testid="cb-keyword-count">在 {data.searched_items.toLocaleString()} 条内容里命中 {data.total} 条{data.truncated ? `，当前显示前 ${data.hits.length} 条` : ""}。</p>
+      <ul className="cb-hits">{data.hits.map((hit, index) => <HitRow key={`${hit.book_id}-${hit.kind}-${hit.title}-${index}`} hit={hit} />)}</ul>
     </>
   );
 }
@@ -163,14 +191,9 @@ function KeywordResults({ data }: { data: KeywordResult }) {
 function HitRow({ hit }: { hit: SearchHit }) {
   return (
     <li className="cb-hit" data-testid={`cb-hit-${hit.kind}`}>
-      <div className="cb-hit-head">
-        <span className={`cb-kind cb-kind--${hit.kind}`}>{hit.kind_label}</span>
-        <b>{hit.title}</b>
-        <span className="cb-where">
-          《{hit.book_title}》{hit.chapter ? ` 第 ${hit.chapter} 章` : ""}
-        </span>
-      </div>
+      <div className="cb-hit-head"><span className={`cb-kind cb-kind--${hit.kind}`}>{hit.kind_label}</span><b>{hit.title}</b></div>
       {hit.snippet && hit.snippet !== hit.title ? <p>{hit.snippet}</p> : null}
+      <div className="cb-hit-foot"><span>《{hit.book_title}》{hit.chapter ? ` · 第 ${hit.chapter} 章` : ""}</span><Link to={`/books/${hit.book_id}`}>打开原书核对 →</Link></div>
     </li>
   );
 }
@@ -178,22 +201,11 @@ function HitRow({ hit }: { hit: SearchHit }) {
 function MeaningResults({ data }: { data: MeaningResult }) {
   return (
     <>
-      <p className="muted cb-source" data-testid="cb-meaning-scope">
-        {data.scope_note} 本次读了 {data.searched_craft_items} 条
-        {data.truncated ? `（共 ${data.total_craft_items} 条，超出部分未参与）` : ""}
-        ，由 {data.provider_name} / {data.model_name} 判断。
-      </p>
+      <p className="muted cb-source" data-testid="cb-meaning-scope">{data.scope_note} 本次读了 {data.searched_craft_items} 条{data.truncated ? `（共 ${data.total_craft_items} 条，超出部分未参与）` : ""}，由 {data.provider_name} / {data.model_name} 判断。</p>
       {data.matches.length === 0 ? (
-        <p className="notice" data-testid="cb-meaning-none">
-          写法层里没有符合的。这是一个有用的答案——它说明这几本书里没有你要找的那种写法，
-          而不是你问错了。
-        </p>
+        <div className="cb-empty-result" data-testid="cb-meaning-none"><b>写法层里没有足够符合的案例</b><p>模型没有用勉强沾边的结果凑数。可以换一种效果描述后重试。</p></div>
       ) : (
-        <ol className="cb-matches">
-          {data.matches.map((m, i) => (
-            <MatchRow key={`${m.book_id}-${m.title}-${i}`} match={m} />
-          ))}
-        </ol>
+        <ol className="cb-matches">{data.matches.map((match, index) => <MatchRow key={`${match.book_id}-${match.title}-${index}`} match={match} />)}</ol>
       )}
     </>
   );
@@ -202,16 +214,10 @@ function MeaningResults({ data }: { data: MeaningResult }) {
 function MatchRow({ match }: { match: MeaningMatch }) {
   return (
     <li className="cb-match" data-testid={`cb-match-${match.kind}`}>
-      <div className="cb-hit-head">
-        <span className={`cb-kind cb-kind--${match.kind}`}>{match.kind_label}</span>
-        <b>{match.title}</b>
-        <span className="cb-where">
-          《{match.book_title}》{match.chapter ? ` 第 ${match.chapter} 章` : ""}
-        </span>
-      </div>
-      {/* 「为什么符合」不是装饰——没有它，一条结果和一次随机命中没法区分。 */}
-      {match.why ? <p className="cb-why">{match.why}</p> : null}
+      <div className="cb-hit-head"><span className={`cb-kind cb-kind--${match.kind}`}>{match.kind_label}</span><b>{match.title}</b></div>
+      {match.why ? <p className="cb-why"><strong>为什么符合：</strong>{match.why}</p> : null}
       {match.detail ? <p className="muted">{match.detail}</p> : null}
+      <div className="cb-hit-foot"><span>《{match.book_title}》{match.chapter ? ` · 第 ${match.chapter} 章` : ""}</span><Link to={`/books/${match.book_id}`}>打开原书核对 →</Link></div>
     </li>
   );
 }
@@ -221,11 +227,7 @@ function ProNotice({ error }: { error: ApiError }) {
   return (
     <div className="notice cp-pro" data-testid="cb-pro-required" role="alert">
       <b>{error.message}</b>
-      {details.afdian_product_url ? (
-        <a href={details.afdian_product_url} target="_blank" rel="noreferrer">
-          了解 {details.product_label || "Pro"} →
-        </a>
-      ) : null}
+      {details.afdian_product_url ? <a href={details.afdian_product_url} target="_blank" rel="noreferrer">了解 {details.product_label || "Pro"} →</a> : null}
     </div>
   );
 }

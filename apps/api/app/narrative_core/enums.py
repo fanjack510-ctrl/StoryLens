@@ -258,6 +258,10 @@ class CapabilityKey(StrEnum):
     CHAPTER_AGGREGATE_INSIGHTS = "chapter_aggregate_insights"
     #: 共性视图：把一组书摆在一起，看它们共同做对了什么。
     COMMON_PATTERNS = "common_patterns"
+    #: 从已完成全文拆文的小说中沉淀分类知识素材。
+    KNOWLEDGE_EXTRACTION = "knowledge_extraction"
+    #: 将一部已完成全文拆文的小说整理为可下载的创作 Skill。
+    BOOK_SKILL_GENERATION = "book_skill_generation"
 
 
 class CapabilityAvailability(StrEnum):

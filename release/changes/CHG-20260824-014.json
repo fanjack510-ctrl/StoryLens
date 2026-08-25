@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260824-014",
+  "title": "将题材知识库收束为全文拆文小说的全局产物",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab",
+    "apps/api/app/routers/material_lab_router.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/components/books/BookAnalysisCards.tsx"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/app/routers/material_lab_router.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/app/router.tsx",
+    "apps/desktop/src/components/books/BookAnalysisCards.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/services/materialLabApi.ts",
+    "apps/desktop/src/services/capabilityCatalog.ts",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx",
+    "release/evidence/takeover/knowledge-library-global-only-preview.png"
+  ],
+  "user_summary": "题材知识库改为独立全局页面，只从已完成全文拆文的小说提取素材；单本书不再出现提取素材入口。",
+  "technical_summary": "Centralize knowledge extraction in /knowledge, remove the per-book material card and redirect its legacy route, expose eligible completed full-story-breakdown fiction sources, and enforce the same source predicate on extraction, summaries, listings, pattern aggregation, and legacy stored rows.",
+  "acceptance_criteria": [
+    "单本书分析区不出现题材知识库或提取素材入口",
+    "旧的单书素材地址自动跳转到全局 /knowledge",
+    "全局知识库只列完成拆文全文的小说作为可用来源",
+    "评测、进行中、只拆开篇、工具书和 fixture 结果不能成为来源",
+    "历史遗留的不合格素材不进入全局统计、检索与模式聚合",
+    "素材保留来源小说、章节和真实段落 ID，并可回正文核对",
+    "素材提取与重新提取只能从全局知识库页面触发"
+  ],
+  "tests": [
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx"
+  ],
+  "verification_evidence": [
+    "素材库后端定向测试 14 项通过",
+    "知识库、单书入口和能力目录前端定向测试 35 项通过",
+    "前端全量测试 221 个测试文件、1661 项通过，1 项按项目配置跳过",
+    "TypeScript typecheck 通过",
+    "ESLint、scripts/check_project.py 与变更登记校验通过",
+    "真实本地数据只识别 2 本完成全文拆文的小说，旧的 6366 条不合格素材被隔离",
+    "浏览器验证单书页面无题材知识库标签，旧地址跳转 /knowledge",
+    "release/evidence/takeover/knowledge-library-global-only-preview.png"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "不改表结构、不删除历史素材；通过资格查询实时隔离不合格旧数据。已完成全文拆文的小说可在全局知识库重新提取。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T12:34:50Z",
+  "updated_at": "2026-08-24T12:52:00Z"
+}

@@ -1,0 +1,73 @@
+{
+  "id": "CHG-20260824-022",
+  "title": "迁移旧项目素材知识库",
+  "type": "database",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab",
+    "apps/api/app/narrative_core/migrations",
+    "apps/api/app/db/material_lab_models.py",
+    "apps/api/app/routers/material_lab_router.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx"
+  ],
+  "files": [
+    "apps/api/app/db/material_lab_models.py",
+    "apps/api/app/narrative_core/material_lab/legacy_import.py",
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/routers/material_lab_router.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/services/materialLabApi.ts",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/knowledgeLibrary.css",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx"
+  ],
+  "user_summary": "把旧项目的40967条派生素材安全迁入独立知识层，并在知识库统一检索。",
+  "technical_summary": "Add a separate legacy-import batch and material schema, inspect the source SQLite in immutable read-only mode, hash it before confirmation, copy only derived knowledge fields in a single retry-safe transaction, and merge imported rows into library counts/search without fabricating StoryLens book/chapter/paragraph foreign keys.",
+  "acceptance_criteria": [
+    "旧 library.db 只读打开且迁移前后源文件字节完全一致",
+    "检查结果准确显示 28 本、40967 条素材、120 个模式、10 个题材、97 个一级分类和 200 个二级分类",
+    "迁移只复制派生知识、分类和旧库来源标识，不复制小说正文、证据摘录或原文件路径",
+    "迁移写入独立表并由文件指纹保证重复执行不重复写入",
+    "知识库统计和检索同时包含旧项目资料与当前全书拆解沉淀",
+    "素材卡明确区分旧库来源，不伪造当前项目的段落 ID 或正文链接",
+    "用户界面不展示旧项目、迁移层或旧库来源等开发信息",
+    "知识目录按题材及题材内分类两级浏览，例如悬疑下的开篇异常、实物线索、人物疑点等",
+    "用户可在 120 个去重代表与 40967 条完整素材间切换"
+  ],
+  "tests": [
+    "python -m pytest apps/api/tests/test_material_lab_api.py -q (18 passed)",
+    "npm run test -- --run src/pages/KnowledgeLibraryPage.test.tsx (5 passed)",
+    "apps/desktop npm run typecheck"
+  ],
+  "verification_evidence": [
+    "真实旧库 SHA-256 f85e7bab3ac55efefaa243a47f85d679405e62deb251d8d580766dc4a1d40dd6",
+    "当前工作区数据库副本成功迁入 40967/40967 条，主代表素材 120 条",
+    "API 抽样验证悬疑钥匙、种田经营发家等中文知识字段可检索且 source_excerpt 为空",
+    "真实浏览器显示已迁移 40967 条、120 个代表模式，并显示旧库/全书来源筛选",
+    "真实浏览器切换到全部素材后显示 40967 条结果",
+    "真实浏览器验证悬疑题材下显示 18 个题材内分类，旧库素材卡不再出现来源信息",
+    "release/evidence/takeover/legacy-material-migration.png",
+    "release/evidence/takeover/knowledge-taxonomy.png"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "新增 20260825_026_material_lab_legacy_import；只新增独立表，不改写现有书籍、章节、段落或素材表。旧库迁移需用户先检查并确认；当前开发验收写入的是工作区数据库副本，不是 LocalAppData 生产库。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T16:42:56Z",
+  "updated_at": "2026-08-25T01:24:00Z"
+}

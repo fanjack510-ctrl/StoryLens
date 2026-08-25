@@ -42,7 +42,15 @@ def _find_pdf_browser()->str|None:
         if c and os.path.isfile(c): return c
     return None
 _FOOTER_CSS="font-family:'Microsoft YaHei','PingFang SC',sans-serif;font-size:7.5px;color:#6f7d74;"
-def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=90.0)->bytes|None:
+def _print_via_devtools(
+    browser:str,
+    profile:str,
+    url:str,
+    title:str,
+    timeout:float=90.0,
+    *,
+    report_label:str="全书分析报告",
+)->bytes|None:
     """Print through DevTools, so the footer can carry a real page number.
 
     ``--print-to-pdf`` has no way to supply a header or footer template: it either omits them
@@ -103,6 +111,7 @@ def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=
                     if (r.get("result") or {}).get("value")=="complete": break
                     await asyncio.sleep(0.1)
                 safe=title.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+                safe_label=report_label.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
                 res=await call("Page.printToPDF",{
                     "paperWidth":8.27,"paperHeight":11.69,
                     "marginTop":0.71,"marginBottom":0.63,"marginLeft":0.67,"marginRight":0.67,
@@ -111,7 +120,7 @@ def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=
                     "footerTemplate":(
                         f"<div style=\"{_FOOTER_CSS}width:100%;padding:0 17mm;display:flex;"
                         "justify-content:space-between;align-items:center;\">"
-                        f"<span>{safe} · 全书分析报告</span>"
+                        f"<span>{safe} · {safe_label}</span>"
                         "<span><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></span>"
                         "</div>"),
                 })
@@ -130,7 +139,12 @@ def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=
     if pdf is None:
         _log.warning("pdf_devtools_path_returned_nothing 回落到无页码的 --print-to-pdf")
     return pdf
-def render_report_pdf(db:Session,html:str)->Response:
+def render_report_pdf(
+    db:Session,
+    html:str,
+    *,
+    report_label:str="全书分析报告",
+)->Response:
     """把客户端渲染好的报告 HTML 打成 PDF。全书和单章共用这一条。
 
     客户端负责报告长什么样（它拥有版式与所有标签），这里只负责变成纸。同步执行：一份
@@ -144,7 +158,7 @@ def render_report_pdf(db:Session,html:str)->Response:
         commerce=commerce_config()
         raise HTTPException(status_code=403,detail={
             "error_code":"PDF_REQUIRES_VIP",
-            "message":"PDF 导出是 VIP（Pro）功能。可在爱发电购买月卡授权，在设置中激活后使用；HTML 导出保持免费。",
+            "message":"PDF 导出是 StoryLens Pro 功能。可在爱发电购买授权，在设置中激活后使用；HTML 导出保持免费。",
             "details":{"feature_key":"advanced_export","reason":str(gate.get("reason") or ""),
                        "edition":str(gate.get("edition") or "free"),
                        "afdian_product_url":str(commerce.get("afdian_product_url") or ""),
@@ -157,8 +171,13 @@ def render_report_pdf(db:Session,html:str)->Response:
         with open(src,"w",encoding="utf-8") as f: f.write(html)
         url="file:///"+src.replace("\\","/")
         m=re.search(r"<title>(.*?)</title>",html,re.S|re.I)
-        pdf=_print_via_devtools(browser,os.path.join(td,"cdp-profile"),url,
-                                (m.group(1) if m else "").split("·")[0].strip())
+        pdf=_print_via_devtools(
+            browser,
+            os.path.join(td,"cdp-profile"),
+            url,
+            (m.group(1) if m else "").split("·")[0].strip(),
+            report_label=report_label,
+        )
         if pdf: return Response(content=pdf,media_type="application/pdf")
         last_err=b""
         for headless_flag in ("--headless=new","--headless"):

@@ -43,10 +43,10 @@ a {
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
-  padding: 0 22px;
-  gap: 16px;
-  min-height: 60px;
-  height: 60px;
+  padding: 0 18px;
+  gap: 12px;
+  min-height: 52px;
+  height: 52px;
 }
 .brand {
   border: 0;
@@ -58,14 +58,14 @@ a {
   align-items: center;
 }
 .brand-with-mark {
-  gap: 12px;
+  gap: 9px;
 }
 .brand-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--color-brand);
   border-radius: var(--radius-sm);
   color: var(--color-brand);
@@ -152,6 +152,12 @@ a {
   margin-left: 8px;
   font-size: 12px;
   color: var(--color-text-secondary);
+}
+.capability-active {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-success-text, #2f735d);
 }
 .brand-text b {
   font-size: var(--text-md);
@@ -590,14 +596,6 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 
 /* 「打开」按钮已从界面去掉——书名本身就是那个链接。这个链接只留给验收脚本，
    不占位、不可见、不参与 Tab。 */
-.book-row-open-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 
 .book-row-more .overflow-menu-trigger {
   min-width: 36px;
@@ -1768,7 +1766,7 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 .app-shell-simplified {
   /* 单列。导航搬进顶栏之后，左边那条 200px 没有理由继续占着——尤其是打开一本书时，
      它会和书籍面板并排，两条竖栏一共 450px，而那一屏本来是用来读小说的。 */
-  grid-template: 60px 1fr / 1fr;
+  grid-template: 52px 1fr / 1fr;
   /* Definite height so the 1fr main row fills the viewport (min-height alone
      leaves 1fr content-sized, and nested height:100% then collapses). */
   height: 100vh;
@@ -2657,11 +2655,13 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 }
 
 .library-page-compact {
-  max-width: 1240px;
+  max-width: 1360px;
+  padding-top: 20px;
+  padding-bottom: 36px;
 }
 .library-page-compact .library-title-compact {
-  margin-bottom: 14px;
-  padding-top: 4px;
+  margin-bottom: 16px;
+  padding-top: 0;
   align-items: center;
 }
 .library-page-compact .library-title-compact h1 {
@@ -2675,11 +2675,11 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
      换行由这一层控制，每个块自己 `white-space: nowrap`，就不会再断词。 */
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
+  gap: 0;
   /* 卡片要立起来：原来它贴在页面底色上、四周几乎没有留白，读起来是页面的一部分，
      而不是一组可以动的控件。 */
-  margin-bottom: 18px;
-  padding: 14px 16px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
   background: var(--color-bg-surface);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -3626,14 +3626,14 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   text-decoration: none;
   /* 选中态用下划线而不是填充胶囊：胶囊把每一项都框成一个按钮，三个并排时
      整条顶栏读起来像一排控件；下划线只标「你在这儿」，那才是导航要说的事。 */
-  padding: 0 4px;
-  margin: 0 8px;
+  padding: 0 3px;
+  margin: 0 5px;
   height: 100%;
   border-bottom: 2px solid transparent;
-  font-size: 14.5px;
+  font-size: 13.5px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   white-space: nowrap;
 }
 .app-topbar .primary-nav-links a:hover {

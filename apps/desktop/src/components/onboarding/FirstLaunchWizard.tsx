@@ -131,8 +131,26 @@ export function FirstLaunchWizard() {
         {step === 1 && (
           <div data-testid="onboarding-step-welcome" className="onboarding-welcome onboarding-welcome--v2">
             <h2 className="onboarding-welcome-title">欢迎使用 StoryLens</h2>
-            <p className="onboarding-welcome-lead">拆解场景、追踪钩子，理解整本故事。</p>
-            <p className="muted onboarding-welcome-privacy">书籍与分析结果默认保存在本机。</p>
+            {/* 原来这里写的是「拆解场景、追踪钩子，理解整本故事」——三个内部词，
+                新用户读不出这是三件事还是一件事，更读不出自己能拿它做什么。
+                这是全产品的第一屏，也是唯一一次能一句话说清「这是什么」的机会，
+                而它被用来做了一句口号。换成三种读法各一行：说的是**你能拿它做什么**，
+                而且和后面真正要选的那三个选项用的是同一套词。 */}
+            <p className="onboarding-welcome-lead">导入一本书，选一种读法。</p>
+            <ul className="onboarding-welcome-readings">
+              <li>
+                <b>评测</b>看自己的书：该改哪里、为什么
+              </li>
+              <li>
+                <b>拆文</b>看别人的书：起承转合、钩子怎么下
+              </li>
+              <li>
+                <b>读懂</b>看不是小说的书：专著、教材、工具书
+              </li>
+            </ul>
+            <p className="muted onboarding-welcome-privacy">
+              书籍与分析结果默认保存在本机。装好之后顶栏的「能做什么」里有完整清单。
+            </p>
             <div className="onboarding-welcome-actions">
               <Button
                 variant="primary"

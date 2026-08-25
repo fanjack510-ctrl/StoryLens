@@ -545,3 +545,32 @@ def test_check_rejects_included_without_valid_integrated_into(fixture_repo: Path
     result = _run(fixture_repo, "check")
     assert result.returncode != 0
     assert "head_inclusion=INCLUDED but commit not ancestor of HEAD" in result.stdout
+
+
+def test_historical_baseline_changes_do_not_block_current_release_pool(
+    fixture_repo: Path,
+) -> None:
+    historical_id = "CHG-20260701-001"
+    historical = _minimal_change(historical_id, commits=[])
+    historical["base_version"] = "1.0.1"
+    historical["status"] = "registered"
+    _write(
+        fixture_repo / "release" / "changes" / f"{historical_id}.json",
+        json.dumps(historical, indent=2) + "\n",
+    )
+    pool_path = fixture_repo / "release" / "unreleased.json"
+    pool = json.loads(pool_path.read_text(encoding="utf-8"))
+    pool["changes"].append(historical_id)
+    _write(pool_path, json.dumps(pool, indent=2) + "\n")
+    _git(fixture_repo, "add", "release")
+    _git(fixture_repo, "commit", "-m", "preserve historical registry record")
+
+    preview = _run(fixture_repo, "release-preview")
+    assert preview.returncode == 0, preview.stdout + preview.stderr
+    payload = json.loads(preview.stdout)
+    assert payload["change_count"] == 0
+    assert payload["ready_count"] == 0
+    assert payload["can_freeze"] is True
+
+    freeze = _run(fixture_repo, "freeze")
+    assert freeze.returncode == 0, freeze.stdout + freeze.stderr

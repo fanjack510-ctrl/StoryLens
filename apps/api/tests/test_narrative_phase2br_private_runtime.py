@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+
+from app import __version__
 from fastapi.testclient import TestClient
 
 from app.main import create_app, mount_private_engine_lab_if_enabled
@@ -87,7 +89,7 @@ def _provider_request(*, provider_kind: str = "fake") -> ProviderInferenceReques
 
 
 def test_gates_remain_closed() -> None:
-    assert Path(REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.2.0"
+    assert Path(REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == __version__
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False
@@ -235,6 +237,10 @@ def test_private_lab_router_mount_and_dry_create() -> None:
         json={
             "book_id": 1,
             "book_snapshot_id": 1,
+            "preflight_fingerprint": "preflight-test",
+            "estimate_fingerprint": "estimate-test",
+            "consent_fingerprint": "consent-test",
+            "data_transfer_manifest_hash": "manifest-test",
             "dry_run": True,
             "auto_start": False,
         },

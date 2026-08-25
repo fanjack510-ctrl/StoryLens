@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,8 +11,6 @@ import { BookProfileEntry } from "../components/books/BookProfileEntry";
 import { ReadingSettingsPopover } from "../components/layout/ReadingSettingsPopover";
 import { WorkspaceViewSwitcher } from "../components/layout/WorkspaceViewSwitcher";
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
-import { BoundaryReviewPanel } from "../components/analysis/BoundaryReviewPanel";
-import { ConfirmBoundaryDivisionPanel } from "../components/analysis/ConfirmBoundaryDivisionPanel";
 import { SceneBoundaryReviewPanel } from "../components/analysis/SceneBoundaryReviewPanel";
 import { ReparseDialog } from "../components/books/ReparseDialog";
 import { ChapterNavigatorDrawer } from "../components/books/ChapterNavigatorDrawer";
@@ -27,15 +24,14 @@ import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/Chap
 import { ReaderJourneyProgressCard } from "../components/chapterAnalysis/ReaderJourneyProgressCard";
 import { EmbeddedAnalysisResultShell } from "../components/chapterResult/EmbeddedAnalysisResultShell";
 import { WorkspaceJourneyPane } from "../components/readerJourney/WorkspaceJourneyPane";
-import { ProNativeOverviewEntry } from "../components/proNativeOverview/ProNativeOverviewEntry";
 import { WholeBookFreeEntry } from "../components/wholeBookFree/WholeBookFreeEntry";
-import { ShortFormEntry } from "../components/shortForm/ShortFormEntry";
+import { BookAnalysisCards } from "../components/books/BookAnalysisCards";
+import { ProNativeOverviewEntry } from "../components/proNativeOverview/ProNativeOverviewEntry";
 import { StateView } from "../components/ui/StateView";
 import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisProgress";
 import { analysisApi } from "../services/analysisApi";
 import { analysisRecoveryApi } from "../services/analysisRecoveryApi";
 import { booksApi } from "../services/booksApi";
-import { isConfirmOnlyBoundaryReview } from "../services/boundaryReviewMode";
 import {
   getOrCreateJourneyClientRequestId,
   isAwaitingSceneBoundaryConfirmation,
@@ -67,7 +63,6 @@ import {
 } from "../services/discoverActiveChapterRun";
 import { normalizeRunLifecycle } from "../services/runLifecycle";
 import {
-  mergeBoundJourneyStatus,
   resolveCurrentJourneyExecutionState,
 } from "../services/currentJourneyExecutionState";
 import {
@@ -120,9 +115,6 @@ export function BookRoutePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialog, setDialog] = useState(false);
   const [reparseOpen, setReparseOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [techOpen, setTechOpen] = useState(false);
-  const [chapterInfoOpen, setChapterInfoOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [emptyDiagnostics, setEmptyDiagnostics] = useState<{
     encoding: string;
@@ -130,7 +122,6 @@ export function BookRoutePage() {
     final_chapter_count: number;
     warning?: string | null;
   } | null>(null);
-  const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   /** CHG-023: HTTP click-lock only — must not drive page view / sidebar / progress card. */
@@ -835,7 +826,7 @@ export function BookRoutePage() {
   }, [catalogOpen]);
 
   useEffect(() => {
-    if (catalogOpen || dialog || reparseOpen || chapterInfoOpen || budgetModalOpen) return;
+    if (catalogOpen || dialog || reparseOpen || budgetModalOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return;
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -874,7 +865,6 @@ export function BookRoutePage() {
     catalogOpen,
     dialog,
     reparseOpen,
-    chapterInfoOpen,
     budgetModalOpen,
     chapters.data,
     chapterId,
@@ -907,20 +897,6 @@ export function BookRoutePage() {
             },
           },
           {
-            id: "analysis-info",
-            label: "分析信息",
-            group: "查看",
-            testId: "book-more-analysis-info",
-            onSelect: () => setAnalysisInfoOpen(true),
-          },
-          {
-            id: "tech",
-            label: "技术信息",
-            group: "查看",
-            testId: "book-more-tech",
-            onSelect: () => setTechOpen(true),
-          },
-          {
             id: "export-png",
             label: "导出旅程PNG",
             group: "导出",
@@ -951,21 +927,11 @@ export function BookRoutePage() {
             onSelect: () => clickResults('[data-testid="export-journey-json"]'),
           },
           {
-            id: "tasks",
-            label: "查看任务记录",
-            group: "操作",
-            testId: "book-more-tasks",
-            onSelect: () => navigate(analysisRunId ? `/tasks?run_id=${analysisRunId}` : "/tasks"),
-          },
-          {
             id: "boundary",
             label: "确认场景划分",
             group: "操作",
             testId: "book-more-boundary-review",
-            onSelect: () => {
-              if (sceneBoundaryReviewActive) openSceneBoundaryReview();
-              else setReviewOpen(true);
-            },
+            onSelect: () => openSceneBoundaryReview(),
           },
         ]
       : [
@@ -990,6 +956,12 @@ export function BookRoutePage() {
                 },
               ]
             : []),
+          // 诊断项已经删干净了：技术信息（Book ID / Hash）、章节信息（几个分区）、
+          // 分析信息（Scene 数 / 预估花费）、查看任务记录。
+          // 我上一轮的做法是把它们归到一个「排查」组里——**那只是把没人用的东西排整齐**。
+          // 这是给创作者用的产品，这几样一条都不该在主菜单里。
+          // 真正需要排查的那一刻另有出口：识别不到章节时会出现「查看导入诊断」，
+          // 分析出错时进度条上有「查看任务记录」，/tasks 另有四个入口，一个都没弄丢。
           {
             id: "full-text",
             label: "完整正文",
@@ -1009,17 +981,7 @@ export function BookRoutePage() {
             label: "确认场景划分",
             group: "查看",
             testId: "book-more-boundary-review",
-            onSelect: () => {
-              if (sceneBoundaryReviewActive) openSceneBoundaryReview();
-              else setReviewOpen(true);
-            },
-          },
-          {
-            id: "tasks",
-            label: "查看任务记录",
-            group: "查看",
-            testId: "book-more-tasks",
-            onSelect: () => navigate(analysisRunId ? `/tasks?run_id=${analysisRunId}` : "/tasks"),
+            onSelect: () => openSceneBoundaryReview(),
           },
           {
             id: "reparse",
@@ -1027,20 +989,6 @@ export function BookRoutePage() {
             group: "操作",
             testId: "book-more-reparse",
             onSelect: () => setReparseOpen(true),
-          },
-          {
-            id: "chapter-info",
-            label: "章节信息",
-            group: "查看",
-            testId: "book-more-chapter-info",
-            onSelect: () => setChapterInfoOpen(true),
-          },
-          {
-            id: "tech",
-            label: "技术信息",
-            group: "查看",
-            testId: "book-more-tech",
-            onSelect: () => setTechOpen(true),
           },
         ];
 
@@ -1572,19 +1520,6 @@ export function BookRoutePage() {
                 }
               : primaryAction;
 
-  // 画像没确认时，「开始」开不了——那这就是当下唯一该做的事，主按钮让给它。
-  // 但任务已经在跑、或者已经有结果时，主按钮仍属于那件事：都跑起来了，
-  // 再把人拽去确认画像没有意义。
-  //
-  // 抽成一个值是因为它有两个用处：决定主按钮是什么，以及决定次要栏里那个画像入口
-  // 要不要出现。两处各写一遍的时候，它们不同步过一次——于是画像未确认时，
-  // 「确认作品画像」和「作品画像 · 待确认」两个按钮并排站着，指向同一个页面。
-  const showConfirmProfilePrimary =
-    profileUnconfirmed &&
-    (effectivePrimaryAction.kind === "none" ||
-      effectivePrimaryAction.kind === "start" ||
-      effectivePrimaryAction.kind === "reanalyze");
-
   const onPrimaryAction = () => {
     if (effectivePrimaryAction.kind === "start" || effectivePrimaryAction.kind === "reanalyze") {
       setDialog(true);
@@ -1597,12 +1532,7 @@ export function BookRoutePage() {
     const targetRun = lifecycleChapterRun;
     if (!targetRun || !chapterId) return;
     if (effectivePrimaryAction.kind === "confirm") {
-      if (sceneBoundaryReviewActive || awaitingSceneBoundaryConfirmation) {
-        openSceneBoundaryReview();
-        return;
-      }
-      setReviewOpen(true);
-      setPanelCollapsed(false);
+      openSceneBoundaryReview();
       return;
     }
     if (effectivePrimaryAction.kind === "progress") {
@@ -1728,18 +1658,7 @@ export function BookRoutePage() {
           )
         }
         primary={
-          noChapters || bootstrappingChapter ? null : showConfirmProfilePrimary ? (
-            // 没确认画像，「开始」开不了——那这就是当下唯一该做的事。
-            // 但任务已经在跑、或者已经有结果时，主按钮仍属于那件事：都跑起来了，
-            // 再把人拽去确认画像没有意义。
-            <Link
-              className="primary"
-              data-testid="shell-confirm-profile"
-              to={profileHref(bookId, chapterId ? { from: "chapter", chapterId } : undefined)}
-            >
-              确认作品画像
-            </Link>
-          ) : effectivePrimaryAction.kind === "none" ||
+          noChapters || bootstrappingChapter ? null : effectivePrimaryAction.kind === "none" ||
             effectivePrimaryAction.kind === "start" ||
             effectivePrimaryAction.kind === "reanalyze" ? null : (
             // 这里只剩状态性的动作（进行中 / 待确认场景 / 看结果）——那确实是当下唯一
@@ -1760,41 +1679,26 @@ export function BookRoutePage() {
             {!noChapters && !bootstrappingChapter && view !== "result" ? (
               <ReadingSettingsPopover />
             ) : null}
-            {/* 画像的入口必须一直够得着。它是一道门：没确认，两种分析都开不了；确认之后，
-                人也还需要能回去改（一本书的类型判断不是一次就永远对）。
-                改版时我把它从这一排删掉了，只留主按钮上的「确认作品画像」——于是一旦查询
-                失败或状态未知，画像就彻底没有入口，只能靠点分析撞 409 才知道它存在。 */}
-            {/* 主按钮已经是「确认作品画像」时不再重复：那两个是同一个页面的两个入口，
-                并排放着让人以为是两件事。工具书也不显示——它根本没有这道门。 */}
-            {!noChapters && !bootstrappingChapter && !isReference && !showConfirmProfilePrimary ? (
+            {/* 工具条只保留画像状态入口；未确认时的唯一主动作在下方第一步卡片中，
+                避免同一件事同时出现两个按钮。确认后这里成为随时可修改的状态入口。 */}
+            {!noChapters && !bootstrappingChapter && !isReference ? (
               <BookProfileEntry bookId={bookId} chapterId={chapterId} />
             ) : null}
             {/* 「分析本章」和「全书分析」是并列的选择——它们回答不同的问题，没有哪个更主。
                 成一组放在一起，而不是一个抢主色、一个混在其余入口里。 */}
-            {!noChapters &&
-            !bootstrappingChapter &&
-            !isShortForm &&
-            (effectivePrimaryAction.kind === "start" ||
-              effectivePrimaryAction.kind === "reanalyze") ? (
-              <button
-                type="button"
-                className="secondary"
-                data-testid={effectivePrimaryAction.testId}
-                disabled={startAnalysisDisabled || profileUnconfirmed}
-                title={profileUnconfirmed ? "先确认作品画像，分析才能开始" : undefined}
-                onClick={onPrimaryAction}
-              >
-                {effectivePrimaryAction.label}
-              </button>
-            ) : null}
-            {!noChapters && !bootstrappingChapter ? (
-              <ProNativeOverviewEntry bookId={bookId} />
-            ) : null}
-            {!noChapters && !bootstrappingChapter ? (
+            {/* 分析入口**移**到了下面的「这本书可以怎么分析」，不是复制过去的——
+                工具条上不再有它们。工具条留给读正文本身：目录、阅读设置、场景、更多。
+
+                一个例外：从全书分析的证据点进原文时，URL 上带着 returnTo/returnModule，
+                这个入口是那条回程路。它和其余几个长得一样，但干的不是同一件事，
+                撤那一排的时候差点把它一起弄丢。 */}
+            {searchParams.get("returnTo") === "whole-book" ? (
               <WholeBookFreeEntry bookId={bookId} />
             ) : null}
+            {/* 私有引擎的入口。它自己有开关（`isProNativeOverviewUiEnabled`），
+                打包版里根本不渲染——留着不占地方，删掉反而弄丢了开发期的入口。 */}
             {!noChapters && !bootstrappingChapter ? (
-              <ShortFormEntry bookId={bookId} />
+              <ProNativeOverviewEntry bookId={bookId} />
             ) : null}
             {!noChapters &&
             !bootstrappingChapter &&
@@ -1852,49 +1756,39 @@ export function BookRoutePage() {
         }
         tertiary={<OverflowMenu data-testid="book-more-menu" items={moreItems} />}
       />
+      {/* 单章入口只属于正文阅读。进入进度、场景调整或结果后，当前任务已经明确，
+          不再让全书评测/拆文常驻头顶抢注意力。 */}
+      {view === "reading" && !sceneBoundaryReviewView && !noChapters && !bootstrappingChapter ? (
+        <BookAnalysisCards
+          bookId={bookId}
+          isReference={isReference}
+          isShortForm={isShortForm}
+          profileUnconfirmed={profileUnconfirmed}
+          profilePending={!isReference && bookProfile.isPending}
+          profileHref={profileHref(bookId, chapterId ? { from: "chapter", chapterId } : undefined)}
+          chapterTitle={chapterTitle}
+          chapterCount={bodyChapters(chapters.data).length}
+          chapterAction={
+            journeyNavIsPrimary
+              ? { label: "看本章结果", disabled: false, onClick: openReaderJourneyResult }
+              : effectivePrimaryAction.kind === "start" ||
+                  effectivePrimaryAction.kind === "reanalyze"
+                ? {
+                    label: effectivePrimaryAction.label,
+                    // 「开始 / 重新分析」已经从工具条移走，卡片是控件唯一的家。
+                    // 查看进度 / 继续 / 确认场景仍由工具条承担，不能再复制到卡片。
+                    testId: effectivePrimaryAction.testId,
+                    disabled: startAnalysisDisabled || profileUnconfirmed,
+                    hint: profileUnconfirmed ? "先确认作品画像，分析才能开始" : undefined,
+                    onClick: onPrimaryAction,
+                  }
+                : null
+          }
+        />
+      ) : null}
 
-      {chapterInfoOpen && (
-        <div className="shell-banner" data-testid="chapter-info-banner">
-          <span>
-            {book.data?.title || "书籍"} · {(chapters.data || []).length} 个分区
-          </span>
-          <button type="button" onClick={() => setChapterInfoOpen(false)}>
-            关闭
-          </button>
-        </div>
-      )}
 
-      {techOpen && (
-        <div className="shell-banner tech-info" data-testid="book-tech-info">
-          <span>
-            Book ID {bookId}
-            {analysisRunId ? ` · analysisRun ${analysisRunId}` : ""}
-            {book.data?.source_file_hash
-              ? ` · Hash ${book.data.source_file_hash.slice(0, 12)}…`
-              : ""}
-          </span>
-          <button type="button" onClick={() => setTechOpen(false)}>
-            关闭
-          </button>
-        </div>
-      )}
 
-      {analysisInfoOpen && progress.run && (
-        <div className="shell-banner tech-info" data-testid="book-analysis-info">
-          <span>
-            Scene {progress.run.total_scene_count ?? "—"}
-            {progress.run.completed_at
-              ? ` · 完成 ${new Date(progress.run.completed_at).toLocaleString()}`
-              : ""}
-            {typeof progress.run.budget_required?.estimated_cost === "number"
-              ? ` · 预估 ${progress.run.budget_required.estimated_cost} CNY`
-              : ""}
-          </span>
-          <button type="button" onClick={() => setAnalysisInfoOpen(false)}>
-            关闭
-          </button>
-        </div>
-      )}
 
       {showRunningBanner && (
         <div className="book-shell-running-banner" data-testid="chapter-analysis-running-banner">
@@ -1961,7 +1855,7 @@ export function BookRoutePage() {
               (journey.data as { scene_revision_id?: number } | null | undefined)
                 ?.scene_revision_id ?? null
             }
-            onExit={() => setView("reading", "user")}
+            onExit={() => setView(analysisRunId ? "progress" : "reading", "user")}
             onConfirmed={({ journeyStarted, journeyRunId: confirmedJourneyRunId }) => {
               void qc.invalidateQueries({ queryKey: ["reader-journey"] });
               void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
@@ -1989,55 +1883,6 @@ export function BookRoutePage() {
               }
             }}
           />
-        </div>
-      ) : reviewOpen && chapterId && !noChapters && !bootstrappingChapter ? (
-        <div className="shell-review-focus" data-testid="shell-boundary-review">
-          {isConfirmOnlyBoundaryReview() ? (
-            <ConfirmBoundaryDivisionPanel
-              bookId={bookId}
-              chapterId={chapterId}
-              chapterTitle={chapterTitle}
-              onExit={() => {
-                setReviewOpen(false);
-                void progress.refresh();
-              }}
-              onReidentify={() => {
-                setReviewOpen(false);
-                setDialog(true);
-              }}
-              onConfirmed={({ runId, budgetBlocked }) => {
-                if (runId) bindAnalysisRun(runId);
-                setReviewOpen(false);
-                setPanelCollapsed(false);
-                setView("progress");
-                if (budgetBlocked && runId) {
-                  seenBudgetModalRef.current.add(runId);
-                  setBudgetModalRunId(runId);
-                  setBudgetModalOpen(true);
-                }
-                void progress.refresh();
-              }}
-            />
-          ) : (
-            <BoundaryReviewPanel
-              bookId={bookId}
-              chapterId={chapterId}
-              chapterTitle={chapterTitle}
-              onExit={() => setReviewOpen(false)}
-              onConfirmed={({ runId, budgetBlocked }) => {
-                if (runId) bindAnalysisRun(runId);
-                setReviewOpen(false);
-                setPanelCollapsed(false);
-                setView("progress");
-                if (budgetBlocked && runId) {
-                  seenBudgetModalRef.current.add(runId);
-                  setBudgetModalRunId(runId);
-                  setBudgetModalOpen(true);
-                }
-                void progress.refresh();
-              }}
-            />
-          )}
         </div>
       ) : (
         <div
@@ -2420,10 +2265,7 @@ export function BookRoutePage() {
                   progress.resume();
                 }}
                 onReanalyze={() => setDialog(true)}
-              onReviewBoundary={() => {
-                if (sceneBoundaryReviewActive) openSceneBoundaryReview();
-                else setReviewOpen(true);
-              }}
+                onReviewBoundary={openSceneBoundaryReview}
                 onDismiss={() => setPanelCollapsed(true)}
                 onContinueReading={() => setView("reading", "user")}
                 onViewResults={() => {

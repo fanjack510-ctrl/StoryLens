@@ -64,6 +64,11 @@ vi.mock("../components/onboarding/FirstLaunchWizard", () => ({
   FirstLaunchWizard: () => null,
 }));
 
+// 这些用例验证画像确认后的全书入口和全书工作台，不测试画像门本身。
+vi.mock("../features/bookProfile/api", () => ({
+  getBookProfile: vi.fn(async () => ({ status: "confirmed" })),
+}));
+
 const prepareSpy = vi.spyOn(freeApiMod.wholeBookFreeProductApi, "prepare");
 const createRunSpy = vi.spyOn(freeApiMod.wholeBookFreeProductApi, "createRun");
 const createFixtureSpy = vi.spyOn(freeApiMod.wholeBookFreeProductApi, "createFixtureRun");
@@ -441,32 +446,33 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
   });
 
   it("hides entry when feature flag is off", async () => {
+    // 关掉开关时，工具条上的回程入口和卡片上的两张读法卡都不该出现。
     productFlagState.enabled = false;
     renderPage("/books/1");
     await screen.findByTestId("book-shell-toolbar");
     expect(screen.queryByTestId("whole-book-free-entry")).not.toBeInTheDocument();
   });
 
-  it("shows compact 全书分析 entry without toolbar description or start CTA", async () => {
+  it("书页把单章和全书作为平级范围选择，但不提前展开评测或拆文", async () => {
+    // 评测 / 拆文是全书读法，选择发生在全书分析页；书页只选择分析范围。
     renderPage("/books/1?chapter=1&view=reading");
-    const entry = await screen.findByTestId("whole-book-free-entry");
-    expect(entry).toHaveTextContent("全书分析");
-    expect(entry).toHaveAttribute("href", "/books/1/whole-book");
-    // 这条测的是「入口是紧凑的」：说明文字只作为 tooltip，不占工具条的位置。
-    // 原来这里钉的是那句话的逐字内容，于是模块改名（关键事件 → 悬念/节奏/综合诊断）
-    // 时它就断了——而入口的形状一点没变。钉形状，不钉文案。
-    expect(entry.getAttribute("title")).toMatch(/^从完整原文出发/);
-    expect(entry.textContent?.trim()).toBe("全书分析");
-    expect(entry).not.toHaveTextContent("开始全书分析");
-    expect(entry).not.toHaveTextContent("从完整原文出发");
-    expect(screen.getAllByTestId("whole-book-free-entry")).toHaveLength(1);
-    // Chapter primary CTA may still exist; whole-book entry must not duplicate start wording.
-    expect(entry).not.toHaveTextContent("开始分析");
+    const wholeBook = await screen.findByTestId("ba-go-whole-book");
+    expect(wholeBook.getAttribute("href")).toBe("/books/1/whole-book");
+    expect(screen.getByTestId("book-analysis-scope-choice")).toContainElement(
+      screen.getByTestId("ba-card-chapter"),
+    );
+    expect(screen.getByTestId("book-analysis-scope-choice")).toContainElement(
+      screen.getByTestId("book-analysis-whole-entry"),
+    );
+    expect(screen.queryByTestId("ba-go-diagnostic")).toBeNull();
+    expect(screen.queryByTestId("ba-go-story_breakdown")).toBeNull();
+    expect(screen.queryByTestId("whole-book-free-entry")).toBeNull();
   });
+
 
   it("navigates from entry to whole-book page with page title", async () => {
     renderPage("/books/1?chapter=1&view=reading");
-    const entry = await screen.findByTestId("whole-book-free-entry");
+    const entry = await screen.findByTestId("ba-go-whole-book");
     fireEvent.click(entry);
     expect(await screen.findByTestId("whole-book-free-product-page")).toBeInTheDocument();
     expect(screen.getByTestId("whole-book-free-page-title")).toHaveTextContent("全书分析");
@@ -882,12 +888,12 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(screen.queryByTestId("whole-book-free-progress")).not.toBeInTheDocument();
   });
 
-  it("keeps compact entry label even when a run is already running", async () => {
+  it("全书运行状态不把评测或拆文卡塞回章节阅读页", async () => {
     prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("running") }));
-    renderPage("/books/1");
-    const entry = await screen.findByTestId("whole-book-free-entry");
-    expect(entry.textContent?.trim()).toBe("全书分析");
-    expect(entry).not.toHaveTextContent("查看分析进度");
+    renderPage("/books/1?chapter=1&view=reading");
+    expect(await screen.findByTestId("ba-go-whole-book")).toBeInTheDocument();
+    expect(screen.queryByTestId("ba-card-story_breakdown")).toBeNull();
+    expect(screen.queryByTestId("ba-card-diagnostic")).toBeNull();
   });
 
   it("returns to chapter_functions with restore filters from reader entry", async () => {

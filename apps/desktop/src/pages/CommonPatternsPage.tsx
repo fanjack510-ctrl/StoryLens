@@ -6,6 +6,10 @@ import { collectionsApi } from "../services/collectionsApi";
 import { ApiError } from "../services/apiClient";
 import { ErrorState, Loading } from "../components/common/States";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
+import {
+  CommonPatternsPdfError,
+  downloadCommonPatternsPdf,
+} from "../features/commonPatterns/commonPatternsExport";
 
 /** 共性视图：把一组书摆在一起，看它们共同做对了什么。
  *
@@ -32,6 +36,14 @@ export function CommonPatternsPage() {
   const synth = useMutation<PatternsResult, unknown, void>({
     mutationFn: () => commonPatternsApi.synthesize(collectionId),
   });
+  const exportPdf = useMutation<void, unknown, void>({
+    mutationFn: () =>
+      downloadCommonPatternsPdf(
+        collectionId,
+        collection.data?.name ?? "未命名榜单",
+        synth.data!,
+      ),
+  });
 
   if (overview.isLoading) return <Loading />;
   if (overview.error) return <ErrorState error={overview.error} />;
@@ -46,14 +58,14 @@ export function CommonPatternsPage() {
     <section className="page common-patterns" data-testid="common-patterns-page">
       <PageHeader>
         <div>
-          <PageTitle>共性视图</PageTitle>
+          <PageTitle>榜单共性</PageTitle>
           <PageSubtitle data-testid="cp-subtitle">
             《{collection.data?.name ?? "书单"}》 · {data.usable_count} 本可比 · 共{" "}
             {data.technique_total} 条技法
           </PageSubtitle>
         </div>
-        <Link className="secondary" to="/library" data-testid="cp-back">
-          回书库
+        <Link className="secondary" to="/knowledge" data-testid="cp-back">
+          回知识库
         </Link>
       </PageHeader>
 
@@ -101,7 +113,25 @@ export function CommonPatternsPage() {
 
       {/* ——— 归纳出来的那一半 ——— */}
       <div className="panel cp-synth" data-testid="cp-synth">
-        <h2>它们共同做了什么</h2>
+        <div className="cp-result-heading">
+          <div>
+            <h2>它们共同做了什么</h2>
+            {result ? <span>已形成可核对的结构化结论</span> : null}
+          </div>
+          {result ? (
+            <button
+              type="button"
+              className="secondary cp-export-pdf"
+              data-testid="cp-export-pdf"
+              disabled={exportPdf.isPending}
+              onClick={() => exportPdf.mutate()}
+            >
+              {exportPdf.isPending ? "正在生成 PDF…" : "导出结构化 PDF · Pro"}
+            </button>
+          ) : null}
+        </div>
+
+        {exportPdf.error ? <PdfExportNotice error={exportPdf.error} /> : null}
 
         {!data.can_synthesize ? (
           <p className="notice" data-testid="cp-blocked">
@@ -222,6 +252,20 @@ function ProNotice({ error }: { error: ApiError }) {
       {details.afdian_product_url ? (
         <a href={details.afdian_product_url} target="_blank" rel="noreferrer">
           了解 {details.product_label || "Pro"} →
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function PdfExportNotice({ error }: { error: unknown }) {
+  const pdfError = error instanceof CommonPatternsPdfError ? error : null;
+  return (
+    <div className="notice cp-pdf-error" role="alert" data-testid="cp-pdf-error">
+      <b>{pdfError?.message || "PDF 没能生成，请重试。"}</b>
+      {pdfError?.proRequired && pdfError.upgradeUrl ? (
+        <a href={pdfError.upgradeUrl} target="_blank" rel="noreferrer">
+          了解 StoryLens Pro →
         </a>
       ) : null}
     </div>

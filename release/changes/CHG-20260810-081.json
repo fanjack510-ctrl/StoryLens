@@ -1,7 +1,7 @@
 {
   "id": "CHG-20260810-081",
   "title": "V2 reanalysis runtime crash + hierarchical planner cutover",
-  "type": "bugfix",
+  "type": "fix",
   "base_version": "1.2.0",
   "status": "verified",
   "include_in_next_release": true,

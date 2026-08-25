@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CrossBookSearchPage } from "./CrossBookSearchPage";
 import { ApiError } from "../services/apiClient";
 
-/** 跨书检索：在所有分析过的书里找东西。
+/** 找参考：从所有分析过的书里找回原句或相似写法。
  *
  *  这一页最要紧的一条不是「能不能搜到」，是**两种找法的覆盖面不一样这件事有没有说出来**。
  *  用户以为搜过了全部、其实只搜了写法层，「没找到」就会被读成「这些书里没有」——
@@ -50,7 +50,7 @@ async function runSearch(text = "反转") {
 
 afterEach(cleanup);
 
-describe("跨书检索", () => {
+describe("找参考", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     scope.mockResolvedValue(SCOPE);
@@ -76,13 +76,15 @@ describe("跨书检索", () => {
     });
   });
 
-  it("搜之前就说清楚两种找法各覆盖多少", async () => {
+  it("搜之前就将两种找法拆开，并说清楚各自覆盖多少", async () => {
     // 「没找到」在「搜了 12388 条」和「搜了 195 条」之下是完全不同的两个结论。
     renderPage();
     const hint = await screen.findByTestId("cb-hint");
     expect(hint).toHaveTextContent("12,388");
+    fireEvent.click(screen.getByTestId("cb-mode-meaning"));
     expect(hint).toHaveTextContent("195");
-    expect(hint).toHaveTextContent("写法层");
+    expect(screen.getByTestId("cb-mode-keyword")).toHaveTextContent("找原句 / 定位");
+    expect(screen.getByTestId("cb-mode-meaning")).toHaveTextContent("找相似写法");
   });
 
   it("关键词结果说清楚在多大范围里命中了几条", async () => {
@@ -107,7 +109,7 @@ describe("跨书检索", () => {
     await runSearch("打破读者预期");
     const none = await screen.findByTestId("cb-keyword-none");
     expect(none).toHaveTextContent("一次都没出现");
-    expect(none).toHaveTextContent("按意思找");
+    expect(none).toHaveTextContent("找相似写法");
   });
 
   it("按意思找的结果带着「为什么符合」", async () => {
@@ -135,8 +137,9 @@ describe("跨书检索", () => {
       model_name: "deepseek-v4-flash",
     });
     renderPage();
-    await runSearch();
-    fireEvent.click(await screen.findByTestId("cb-meaning-run"));
+    fireEvent.click(await screen.findByTestId("cb-mode-meaning"));
+    fireEvent.change(screen.getByTestId("cb-input"), { target: { value: "开场就打破预期" } });
+    fireEvent.click(screen.getByTestId("cb-run"));
     const match = await screen.findByTestId("cb-match-technique");
     expect(match).toHaveTextContent("用一句反常识的话立住人物");
     expect(match).toHaveTextContent("正是打破读者预期的核心手段");
@@ -155,8 +158,9 @@ describe("跨书检索", () => {
       model_name: "m",
     });
     renderPage();
-    await runSearch();
-    fireEvent.click(await screen.findByTestId("cb-meaning-run"));
+    fireEvent.click(await screen.findByTestId("cb-mode-meaning"));
+    fireEvent.change(screen.getByTestId("cb-input"), { target: { value: "x" } });
+    fireEvent.click(screen.getByTestId("cb-run"));
     const note = await screen.findByTestId("cb-meaning-scope");
     expect(note).toHaveTextContent("只覆盖「写法」层");
     // 一条都没有时，说的是「写法层里没有」，不是「没有」。
@@ -173,12 +177,20 @@ describe("跨书检索", () => {
       ),
     );
     renderPage();
-    await runSearch();
-    fireEvent.click(await screen.findByTestId("cb-meaning-run"));
+    fireEvent.click(await screen.findByTestId("cb-mode-meaning"));
+    fireEvent.change(screen.getByTestId("cb-input"), { target: { value: "反常识开场" } });
+    fireEvent.click(screen.getByTestId("cb-run"));
     const notice = await screen.findByTestId("cb-pro-required");
     expect(notice).toHaveTextContent("关键词检索保持免费");
     expect(notice.querySelector("a")).toHaveAttribute("href", "https://example.test/pro");
-    expect(screen.getByTestId("cb-keyword")).toBeInTheDocument();
+    expect(screen.getByTestId("cb-mode-keyword")).toBeInTheDocument();
+  });
+
+  it("命中结果可以回到原书核对，而不是停在一张孤立卡片上", async () => {
+    renderPage();
+    await runSearch();
+    const hit = await screen.findByTestId("cb-hit-technique");
+    expect(hit.querySelector('a[href="/books/1"]')).toHaveTextContent("打开原书核对");
   });
 
   it("空输入不发请求", async () => {

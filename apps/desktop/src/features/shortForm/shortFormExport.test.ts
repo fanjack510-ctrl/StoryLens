@@ -1,6 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { buildShortFormHtml, shortFormFileName } from "./shortFormExport";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  buildShortFormHtml,
+  downloadShortFormPdf,
+  shortFormFileName,
+  VipRequiredError,
+} from "./shortFormExport";
 import type { ShortFormReading } from "../../services/shortFormApi";
+
+vi.mock("../../services/apiClient", () => ({ getApiBase: () => "http://127.0.0.1:8000" }));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 /** The sheet is a worksheet, not a report — it is read beside the text, so nothing in it may
  *  be truncated. These pin that, and the charset, which is the difference between a printable
@@ -78,6 +90,37 @@ describe("shortFormExport", () => {
 
   it("names the file after the piece", () => {
     expect(shortFormFileName(reading(3))).toBe("老屋-短篇精读.html");
+  });
+
+  it("sends the stored reading to its own PDF endpoint", async () => {
+    const fetchMock = vi.fn(async () => new Response(new Blob(["%PDF-"]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("URL", { createObjectURL: () => "blob:x", revokeObjectURL: () => undefined });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+
+    await downloadShortFormPdf(19, reading(3));
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "http://127.0.0.1:8000/api/v1/books/19/short-form/readings/1/export-pdf",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).html).toContain("逐段拆稿");
+  });
+
+  it("keeps the Pro gate distinct from a rendering failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            error_code: "PDF_REQUIRES_VIP",
+            message: "PDF 导出是 VIP 功能",
+            details: { afdian_product_url: "https://afdian.com/item/x" },
+          }),
+          { status: 403 },
+        )),
+    );
+
+    await expect(downloadShortFormPdf(19, reading(3))).rejects.toBeInstanceOf(VipRequiredError);
   });
 });
 

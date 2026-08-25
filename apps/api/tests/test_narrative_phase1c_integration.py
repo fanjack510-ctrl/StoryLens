@@ -476,10 +476,13 @@ def test_16_flags_unchanged() -> None:
 def test_17_openapi_routes_registered() -> None:
     from app.main import app
 
-    paths = {route.path for route in app.routes}
+    # FastAPI 0.117+ may keep included routers as lazy _IncludedRouter entries
+    # without a direct ``path`` attribute. OpenAPI is the public route contract
+    # and expands those routers into the effective paths.
+    schema = app.openapi()
+    paths = set(schema["paths"])
     assert "/api/v1/capabilities" in paths
     assert "/api/v1/capabilities/{capability_key}" in paths
     assert "/api/v1/books/{book_id}/whole-book-runs/preflight" in paths
-    schema = app.openapi()
     assert "/api/v1/capabilities" in schema["paths"]
     assert "/api/v1/books/{book_id}/whole-book-runs/preflight" in schema["paths"]

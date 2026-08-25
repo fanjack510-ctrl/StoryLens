@@ -1,11 +1,12 @@
-"""Stage 2: CREATIVE ABSTRACTION.
+"""Stage 2: EVIDENCE-BOUND KNOWLEDGE CLASSIFICATION.
 
-Atoms + GenreTemplate -> Material rows carrying an abstracted `core_pattern`.
-Nothing produced here copies a run of source prose: `concise_example` is
-re-composed from extracted slots, never spliced from the original text.
+Atoms + GenreTemplate -> Material rows carrying an abstracted ``core_pattern``
+and one directly verifiable evidence sentence. The abstract pattern is used for
+deduplication; the user-facing summary is never filled with a fabricated template.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from .atoms import Atom
@@ -14,8 +15,6 @@ from .lexicon import (CLASS_MEASURE, MASS_OBJECTS, TRACE_CLASSES, measure_word,
                       object_class)
 
 # ------------------------------------------------------------------ helpers
-ROLE_POOL = ["一名调查者", "一位家属", "一个旁观者", "一名当事人", "一位管理者"]
-
 STRATEGY_TYPE = {
     "object_anomaly": "线索",
     "behavior": "行为",
@@ -63,7 +62,65 @@ def _first(atoms: list[Atom], t: str, default=None):
 
 
 def _hits(text: str, cues: list[str]) -> list[str]:
-    return [c for c in cues if c and c in text]
+    # 单字词在长篇正文里几乎必然误报：例如科幻“制度”曾用“法”，于是
+    # “无法”也被识别成法规；玄幻的“级”同样会命中普通的“高级”。
+    return [c for c in cues if c and len(c.strip()) >= 2 and c in text]
+
+
+def _knowledge_sentence(
+    text: str,
+    *,
+    anchors: list[str],
+    prefer_last: bool = False,
+) -> str:
+    """从命中位置附近选真实证据句，不再用分类槽位拼模板句。
+
+    这里只做抽取，不生成新的文学判断。找不到足够完整的证据句就返回空串，
+    调用方会放弃该候选。人物名保留在本地证据句中，避免不可靠的词法姓名
+    识别把普通短语替换成“相关人物”并破坏句意。
+    """
+    raw_sentences = re.split(r"(?<=[。！？!?])|[\r\n]+", text.replace("　", " "))
+    sentences = [re.sub(r"\s+", " ", item).strip() for item in raw_sentences]
+    sentences = [item for item in sentences if 12 <= len(item) <= 180]
+    if not sentences:
+        return ""
+
+    anchored = [
+        item for item in sentences
+        if anchors and any(anchor in item for anchor in anchors if anchor)
+    ]
+    candidates = anchored or (list(reversed(sentences)) if prefer_last else [])
+    if not candidates:
+        return ""
+    sentence = max(
+        candidates,
+        key=lambda item: (
+            sum(1 for anchor in anchors if anchor and anchor in item),
+            -abs(len(item) - 64),
+        ),
+    )
+
+    sentence = sentence.strip(" \t\r\n\"'“”‘’")
+    return sentence if len(sentence) <= 180 else sentence[:178].rstrip() + "……"
+
+
+def _stage_allows(category_stage: str, actual_stage: str) -> bool:
+    """限制只在有意义的全书阶段提取该分类。
+
+    “全书/主线/章末”不额外限制；章末仍由 ``is_chapter_end`` 单独控制。
+    其余标签是模板声明的知识位置，不允许把第 500 章的普通设定误当开篇。
+    """
+    if category_stage in {"", "全书", "主线", "章末"}:
+        return True
+    allowed = {
+        "开篇": {"开篇"},
+        "前中段": {"开篇", "前中段"},
+        "中段": {"前中段", "中段"},
+        "中后段": {"中段", "后段"},
+        "后段": {"后段", "结局"},
+        "结局": {"结局"},
+    }
+    return actual_stage in allowed.get(category_stage, {actual_stage})
 
 
 # ------------------------------------------------------ core pattern engine
@@ -176,45 +233,6 @@ def abstract_generic(label: str, sub_label: str, genre_label: str,
     return (pat.format(sub=sub_label or label), mech)
 
 
-# ------------------------------------------------------------- example text
-def compose_example(strategy: str, *, obj: str = "", place: str = "",
-                    role: str = "", cue: str = "", sub_label: str = "",
-                    emotion: str = "") -> str:
-    """Compose a short original illustration from extracted slots.
-
-    This never returns source prose - only a re-composed sentence.
-    """
-    place = place or "现场"
-    role = role or "在场的人"
-    if strategy == "object_anomaly" and obj:
-        cls = object_class(obj)
-        if cls in NON_PORTABLE_CLASSES:
-            return f"{obj}对外的用途和它内部的样子对不上，{role}一时说不出它到底归谁管。"
-        mw = measure_word(obj, cls)
-        if cls in TRACE_CLASSES:
-            return (f"{place}里留下一{mw}{obj}，{role}逐个比对之后确认，"
-                    f"它和在场的每一个人都对不上。")
-        return (f"在{place}发现一{mw}{obj}，{role}确认它不属于这里的任何人，"
-                f"也说不出它的来路。")
-    if strategy == "behavior":
-        return f"{role}在被问到同一件事时，第二次的说法和第一次对不上，而且回避了{sub_label or '关键细节'}。"
-    if strategy == "person_doubt":
-        return f"{role}的公开身份在一份旧记录里对不上，落差正好覆盖{sub_label or '一段经历'}。"
-    if strategy == "env_anomaly":
-        return f"{place}的其余部分都很正常，唯独{sub_label or '一处细节'}和所有人的说法都不一致。"
-    if strategy == "time_memory":
-        return f"围绕{place}的时间线出现{sub_label or '一处错位'}，两份记录无法同时成立。"
-    if strategy == "event":
-        return f"{place}发生了一次{sub_label or '突发事件'}，它改变了{role}接下来能做的事。"
-    if strategy == "state":
-        return f"{sub_label or '设定'}在{place}被明确下来，并限制了后续可以发生什么。"
-    if strategy == "relation":
-        return f"{role}与另一方的关系被重新定义为{sub_label or '新的位置'}，双方都没有说破。"
-    if strategy == "hook":
-        return f"这一段停在{role}发现{obj or '一处不对劲'}的瞬间，解释留到下一段。"
-    return f"{place}中出现一处{sub_label or '结构性变化'}，{role}的处境随之改变。"
-
-
 def suspense_questions(strategy: str, obj: str, sub_label: str) -> str:
     if strategy == "object_anomaly" and obj:
         return f"这{measure_word(obj)}{obj}属于谁？它为什么在这里？它还能指向什么？"
@@ -251,16 +269,11 @@ def generate_drafts(genre_slug: str, atoms: list[Atom], scene_text: str,
     chars = _pick(atoms, "CHARACTER")
     emo_atom = _first(atoms, "EMOTION")
     emotion = emo_atom.value if emo_atom else ""
-    # Public examples must not carry a source character name, so the label
-    # is generic; the detected name only decides how specific it can be.
-    has_named_character = bool(chars)
-    role_generic = ("一名调查者" if genre_slug == "xuanyi"
-                    else "主要人物" if has_named_character
-                    else ROLE_POOL[len(scene_text) % len(ROLE_POOL)])
-
     drafts: list[Draft] = []
     for cat in tpl["categories"]:
         strategy = cat["strategy"]
+        if not _stage_allows(cat.get("stage", ""), stage_hint):
+            continue
         if strategy == "hook" and not is_chapter_end:
             continue
         # Per-category budget so late categories in the template are never
@@ -299,11 +312,17 @@ def generate_drafts(genre_slug: str, atoms: list[Atom], scene_text: str,
                 cp, mech = abstract_generic(cat["label"], sub["label"],
                                             genre_label, strategy)
 
-            example = compose_example(
-                strategy, obj=obj, place=place, role=role_generic,
-                cue=hit[0] if hit else "", sub_label=sub["label"], emotion=emotion,
+            example = _knowledge_sentence(
+                scene_text,
+                anchors=hit + ([obj] if obj else []),
+                prefer_last=(strategy == "hook"),
             )
-            title = _make_title(strategy, obj, sub["label"], cat["label"])
+            if not example:
+                continue
+            title = _make_title(
+                strategy, obj, sub["label"], cat["label"],
+                owner_conflict=owner_conflict, placed=placed,
+            )
             tags = _make_tags(genre_label, cat["label"], sub["label"], obj, emotion, place)
             drafts.append(Draft(
                 material_type=STRATEGY_TYPE.get(strategy, "资料"),
@@ -325,6 +344,7 @@ def generate_drafts(genre_slug: str, atoms: list[Atom], scene_text: str,
                     "owner_conflict": owner_conflict,
                     "strategy": strategy,
                     "scene_len": len(scene_text),
+                    "summary_source": "matched_evidence_sentence",
                 },
             ))
             cat_made += 1
@@ -333,9 +353,21 @@ def generate_drafts(genre_slug: str, atoms: list[Atom], scene_text: str,
     return drafts
 
 
-def _make_title(strategy: str, obj: str, sub_label: str, cat_label: str) -> str:
+def _make_title(
+    strategy: str,
+    obj: str,
+    sub_label: str,
+    cat_label: str,
+    *,
+    owner_conflict: bool = False,
+    placed: bool = False,
+) -> str:
     if strategy == "object_anomaly" and obj:
-        return f"来路不明的{obj}"
+        # owner/placement cues are detected at scene scope while the displayed
+        # evidence is one sentence.  Claiming “归属异常/位置异常” in the title
+        # can therefore outrun the visible sentence.  The taxonomy already
+        # carries the intended knowledge class; keep the title evidence-safe.
+        return f"{cat_label}·{sub_label}"
     if strategy == "hook":
         return f"{cat_label}·停在解释之前"
     return f"{cat_label}·{sub_label}"

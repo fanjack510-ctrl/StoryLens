@@ -13,6 +13,18 @@ import {
 
 type Props = {
   bookId: number;
+  /** 工具书按节读，那条路叫「读懂」不叫「全书分析」。
+   *
+   *  同一个入口对不同类型的书说不同的话，是因为它们本来就是不同的事：
+   *  小说走的是评测/拆文，工具书走的是读懂。用一个「全书分析」盖住三种，
+   *  等于让人自己进去猜这本书会得到什么。 */
+  label?: string;
+  /** 进去之后默认哪一种读法。
+   *
+   *  不带的话页面默认「评测」——于是一本专著的分析页顶上写着「评测 · 看自己的书：
+   *  该改哪里」，还挂着「作品画像」和「改用短篇精读」。**书的类型这一层知道，
+   *  分析页那一层不知道**，所以由这里把它带过去。 */
+  mode?: "diagnostic" | "story_breakdown" | "comprehend";
 };
 
 const ENTRY_TITLE = "全书分析";
@@ -37,7 +49,7 @@ const MODULE_KEYS = new Set<string>(WHOLE_BOOK_FREE_MODULES.map((m) => m.key));
  * When Evidence deep-link carries returnModule, re-enter that Free module
  * and forward restore* query state (filters / cursor / detail).
  */
-export function WholeBookFreeEntry({ bookId }: Props) {
+export function WholeBookFreeEntry({ bookId, label: labelOverride, mode }: Props) {
   const [searchParams] = useSearchParams();
   // Hidden for books that take 短篇精读 instead. The two entries are exclusive rather than
   // side by side: which pipeline a book gets is a fact about the book, and offering both would
@@ -63,8 +75,10 @@ export function WholeBookFreeEntry({ bookId }: Props) {
   const restore = returnModule ? readEvidenceRestoreState(searchParams) : undefined;
   const href = returnModule
     ? wholeBookFreeModuleHref(bookId, returnModule, restore)
-    : `/books/${bookId}/whole-book`;
-  const label = returnModule ? RETURN_TITLE : ENTRY_TITLE;
+    : mode
+      ? `/books/${bookId}/whole-book?mode=${mode}`
+      : `/books/${bookId}/whole-book`;
+  const label = returnModule ? RETURN_TITLE : labelOverride || ENTRY_TITLE;
 
   return (
     <Link

@@ -1,0 +1,25 @@
+{
+  "id": "CHG-20260824-010",
+  "title": "补登记长篇资产体积与授权解锁修复",
+  "type": "fix",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {"sha": "599c0825b4cdbb5ff6086622c547d723fa2a7cf6", "message": "fix(storage): 避免每章资产重复保存全书内容", "primary": true, "multi_change_reason": null},
+    {"sha": "c2c8151673a6451a4fb97ce1cc6ecfe0ae687658", "message": "fix(license): 付费期内的新功能正确解锁", "primary": false, "multi_change_reason": "同属接管前的正式功能完整性修复"}
+  ],
+  "modules": ["apps/api/app/narrative_core/services"],
+  "files": ["apps/api/app/narrative_core/services/whole_book_minimal_chapter_functions_v1_service.py", "apps/api/app/narrative_core/services/capability_service.py"],
+  "user_summary": "长篇分析不再把全书正文重复写入每章资产，付费有效期内的新能力可正确解锁。",
+  "technical_summary": "Register the existing storage deduplication and capability entitlement fixes discovered during takeover.",
+  "acceptance_criteria": ["章节资产不重复嵌入全书正文", "有效授权可解锁对应能力"],
+  "tests": ["apps/api/tests/test_chapter_function_asset_size.py", "apps/api/tests/test_pro_features_actually_unlock.py"],
+  "verification_evidence": ["相关测试及全量后端测试通过"],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "不改变既有表结构。"},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": true, "updater_impact": false, "breaking_change": false},
+  "blocker_level": "none",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-24T09:22:00Z",
+  "updated_at": "2026-08-24T09:22:00Z"
+}

@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260824-013",
+  "title": "重排书库首页并压缩全局顶栏",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/src/styles"
+  ],
+  "files": [
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/pages/LibraryPage.collections.test.tsx",
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/src/styles/components.css",
+    "release/evidence/takeover/library-home-redesign-preview.png"
+  ],
+  "user_summary": "书库从放大的列表重排为真正的首页：先看书库现状与最近工作，再进入完整书单；全局顶栏同时缩短。",
+  "technical_summary": "Add a data-backed library overview strip, move active/recent work above the full list, compact telemetry into a secondary notice, consolidate search/type/count/sort into one toolbar, and reduce the global top bar from 60px to 52px while preserving all existing routes and actions.",
+  "acceptance_criteria": [
+    "首页首屏展示真实书籍、完成、运行、等待和书单数量",
+    "最近或正在分析的书位于完整列表之前且可直接打开",
+    "遥测邀请不再占据主视觉横幅",
+    "搜索、类型筛选、数量和排序收为一条工具栏",
+    "顶栏高度降低且导航、版本、主题和服务状态仍可使用",
+    "导入、筛选、书单、删除及书籍打开行为保持不变"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/LibraryPage.test.tsx",
+    "apps/desktop/src/pages/LibraryPage.collections.test.tsx",
+    "apps/desktop/src/components/layout/AppShell.test.tsx"
+  ],
+  "verification_evidence": [
+    "书库与顶栏定向测试 24 项通过",
+    "前端全量 1661 项通过、1 项环境条件跳过",
+    "TypeScript typecheck 通过",
+    "本地 /library 浏览器验收无控制台错误",
+    "release/evidence/takeover/library-home-redesign-preview.png"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "只调整前端信息架构与样式，沿用现有书库、分析和书单数据。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T12:20:00Z",
+  "updated_at": "2026-08-24T12:20:00Z"
+}

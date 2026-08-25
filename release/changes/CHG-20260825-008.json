@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260825-008",
+  "title": "知识库全书来源管理器分页优化",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/pages"
+  ],
+  "files": [
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx",
+    "apps/desktop/src/pages/knowledgeLibrary.css"
+  ],
+  "user_summary": "将大量全文来源收进可折叠、可搜索、可按状态筛选并分页的管理器，避免来源列表持续推低知识目录。",
+  "technical_summary": "Bound the full-book source manager independently from the knowledge catalog. Keep the existing collapsed details entry, add extracted and pending summary counts, title search, extraction-status filters, six-item client-side pagination, explicit row status badges, empty-filter feedback, and responsive two-row controls. Extraction requests and source genre overrides retain their existing API contract.",
+  "acceptance_criteria": [
+    "全书来源管理器默认保持收起，不得推低知识目录",
+    "摘要必须直接显示来源总数、已提取数和待提取数",
+    "展开后必须可以按书名搜索并按全部、已提取、待提取筛选",
+    "来源超过六本时必须分页，每页最多显示六本",
+    "切换搜索或状态筛选时必须回到第一页",
+    "每本来源必须保留题材选择、提取或重新提取操作以及原书入口",
+    "窄屏下来源行和筛选工具不得产生横向溢出"
+  ],
+  "tests": [
+    "npm --prefix apps/desktop test -- src/pages/KnowledgeLibraryPage.test.tsx (7 passed)",
+    "npm --prefix apps/desktop run typecheck (passed)",
+    "targeted ESLint for KnowledgeLibraryPage files (passed)",
+    "python scripts/check_project.py (passed)"
+  ],
+  "verification_evidence": [
+    "真实浏览器验证当前3本来源摘要为已提取2、待提取1",
+    "真实浏览器点击待提取筛选后仅显示星际校园：五人小队向前冲并显示1本结果",
+    "组件测试使用15本来源验证每页6本、共3页、下一页切换和书名搜索",
+    "组件测试验证已提取状态筛选不会混入待提取来源"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅增加前端列表管理状态，不修改全文分析、素材数据、来源记录或提取 API。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-25T08:35:25Z",
+  "updated_at": "2026-08-25T08:38:00Z"
+}

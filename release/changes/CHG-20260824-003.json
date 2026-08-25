@@ -1,0 +1,67 @@
+{
+  "id": "CHG-20260824-003",
+  "title": "将素材库纠正为题材知识库",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab",
+    "apps/desktop/src/pages/MaterialLabPage.tsx",
+    "apps/desktop/src/services/materialLabApi.ts",
+    "release/evidence/takeover/material-knowledge-library-preview.png"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/genre_templates.py",
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/components/books/BookAnalysisCards.tsx",
+    "apps/desktop/src/pages/MaterialLabPage.tsx",
+    "apps/desktop/src/pages/MaterialLabKnowledgePage.test.tsx",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx",
+    "apps/desktop/src/services/capabilityCatalog.ts",
+    "apps/desktop/src/services/materialLabApi.ts"
+  ],
+  "user_summary": "素材库不再展示写作方法论，改为按题材沉淀可检索、可溯源的领域知识。",
+  "technical_summary": "Reframe Material Lab as a genre knowledge base. Add farming-domain categories for weather, seasons, cultivation, soil, irrigation, livestock and processing. Material responses now include evidence excerpts and real paragraph IDs. The desktop surface hides legacy method-oriented pattern, mechanism and suspense-question fields while retaining storage compatibility.",
+  "acceptance_criteria": [
+    "产品入口统一称为题材知识库，不再承诺抽取写法素材",
+    "知识卡展示题材分类、来源摘要和真实段落 ID",
+    "知识卡不展示构型、机制和可挂问题等方法论字段",
+    "小说来源标记为题材案例并明确不能作为事实依据",
+    "工具书来源标记为领域资料并提示来源可信度待确认",
+    "悬疑模板保留开篇、实物证据和调查线索分类",
+    "种田模板覆盖天气节气、作物种植、土壤水利、养殖加工",
+    "旧资料表无需迁移且现有数据仍可读取"
+  ],
+  "tests": [
+    "apps/api/tests/test_material_lab_bridge.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/pages/MaterialLabKnowledgePage.test.tsx",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx"
+  ],
+  "verification_evidence": [
+    "素材库后端 19 项测试通过",
+    "题材知识库前端定向 10 项测试通过",
+    "TypeScript noEmit 类型检查通过",
+    "本地真实页面展示知识摘要和 Paragraph ID，且无方法论字段",
+    "release/evidence/takeover/material-knowledge-library-preview.png"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "新增字段在 API 查询时由现有 evidence 与 paragraph 数据计算；旧存储字段保留。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T03:20:00Z",
+  "updated_at": "2026-08-24T03:20:00Z"
+}

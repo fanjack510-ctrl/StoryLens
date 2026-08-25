@@ -16,6 +16,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -51,6 +52,12 @@ class AnalyseRequest(BaseModel):
     #: settled on. Off by default: re-reading is for a better reading, and re-cutting renumbers
     #: every segment, which invalidates every callback the previous reading wrote.
     resegment: bool = False
+
+
+class PdfExportRequest(BaseModel):
+    """The printable document is built by the desktop client that owns its layout."""
+
+    html: str
 
 
 def _stored(session: Session, book_id: int) -> dict[str, Any] | None:
@@ -215,6 +222,37 @@ def analyse(
         report.callbacks_dropped_bad_content,
     )
     return {"reused": False, **(_stored(db, int(book_id)) or {})}
+
+
+@router.post("/{book_id}/short-form/readings/{reading_id}/export-pdf")
+def export_short_form_pdf(
+    book_id: int,
+    reading_id: int,
+    body: PdfExportRequest,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Render one stored short-form worksheet with the shared Pro PDF pipeline."""
+    exists = db.execute(
+        text(
+            "SELECT 1 FROM short_form_results"
+            " WHERE id = :reading_id AND book_id = :book_id"
+        ),
+        {"reading_id": int(reading_id), "book_id": int(book_id)},
+    ).scalar()
+    if not exists:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error_code": "SHORT_FORM_RESULT_NOT_FOUND",
+                "message": "找不到这份短篇拆稿，请刷新页面后重试。",
+                "details": {"book_id": int(book_id), "reading_id": int(reading_id)},
+            },
+        )
+
+    # Full-book, chapter and short-form PDF exports are one product and one renderer.
+    from app.narrative_core.whole_book_v2.router import render_report_pdf
+
+    return render_report_pdf(db, body.html)
 
 
 class AnalysisFormRequest(BaseModel):

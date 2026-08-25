@@ -88,6 +88,11 @@ apps/api/data/
 uploads/
 user-data/
 
+# Local reference-corpus scans and loose working documents
+# The scanner output may contain local source paths and must never ship.
+data/reference-corpus/
+/*.docx
+
 # Local VIP license files (never commit; live under %LOCALAPPDATA%/StoryLens/license/)
 *.license
 **/license/storylens.license

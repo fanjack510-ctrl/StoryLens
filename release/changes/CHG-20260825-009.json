@@ -1,0 +1,62 @@
+{
+  "id": "CHG-20260825-009",
+  "title": "榜单共性结构化 PDF 导出",
+  "type": "feature",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/routers",
+    "apps/api/app/narrative_core/whole_book_v2",
+    "apps/desktop/src/features/commonPatterns",
+    "apps/desktop/src/pages"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/router.py",
+    "apps/api/app/routers/common_patterns_router.py",
+    "apps/api/tests/test_common_patterns_pdf_export.py",
+    "apps/desktop/src/features/commonPatterns/commonPatternsExport.ts",
+    "apps/desktop/src/features/commonPatterns/commonPatternsExport.test.ts",
+    "apps/desktop/src/pages/CommonPatternsPage.tsx",
+    "apps/desktop/src/pages/CommonPatternsPage.test.tsx",
+    "apps/desktop/src/styles/components.css"
+  ],
+  "user_summary": "在榜单共性结果中增加 Pro 结构化 PDF 导出，完整保留比较范围、共同手法、逐书依据和独有做法。",
+  "technical_summary": "复用现有 Chromium PDF 打印链路新增榜单共性 Pro 导出接口；前端将当前共性结果整理为 A4 结构化报告，覆盖比较范围、书目、共同模式、方法解释、逐书依据、独有做法和核对说明，并提供权限错误反馈与下载。",
+  "acceptance_criteria": [
+    "共性分析完成后显示“导出结构化 PDF · Pro”操作，分析前不显示。",
+    "导出报告包含比较范围、书目、共同模式、逐书依据、独有做法与核对说明。",
+    "PDF 导出复用 advanced_export 权限，免费版得到明确的 Pro 提示。",
+    "不存在的榜单组先返回 404，不将资源不存在误报为权限不足。",
+    "中文 A4 报告分页完整，长模式卡片不会在分页时丢失或截断。"
+  ],
+  "tests": [
+    "npm --prefix apps/desktop test -- src/features/commonPatterns/commonPatternsExport.test.ts src/pages/CommonPatternsPage.test.tsx",
+    "PYTHONPATH=apps/api python -m pytest apps/api/tests/test_common_patterns_pdf_export.py -q",
+    "npm --prefix apps/desktop run typecheck",
+    "npx eslint src/features/commonPatterns/commonPatternsExport.ts src/features/commonPatterns/commonPatternsExport.test.ts src/pages/CommonPatternsPage.tsx src/pages/CommonPatternsPage.test.tsx",
+    "python scripts/check_project.py"
+  ],
+  "verification_evidence": [
+    "桌面端 2 个目标测试文件共 12 项测试通过；API 目标测试 3 项通过。",
+    "TypeScript 类型检查、目标 ESLint、项目脚手架与变更登记检查通过。",
+    "使用包含 2 本书、5 个共同模式和独有项的代表数据生成 4 页 A4 PDF；首轮视觉检查发现跨页卡片丢失，修正分页 CSS 后复检页面内容完整且无裁切。"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "未修改数据库结构；导出使用当前共性分析结果，不影响既有榜单数据。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-25T09:35:52Z",
+  "updated_at": "2026-08-25T09:39:31Z"
+}

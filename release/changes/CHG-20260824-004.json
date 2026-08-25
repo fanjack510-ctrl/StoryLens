@@ -1,0 +1,66 @@
+{
+  "id": "CHG-20260824-004",
+  "title": "新增跨书题材知识库",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/app/routers/material_lab_router.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/app/routers/material_lab_router.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/app/router.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/src/components/layout/AppShell.test.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx",
+    "apps/desktop/src/services/capabilityCatalog.ts",
+    "apps/desktop/src/services/materialLabApi.ts"
+  ],
+  "user_summary": "增加全局知识库入口，把多本小说与工具书整理出的知识集中搜索、筛选和溯源。",
+  "technical_summary": "Add a cross-book knowledge library summary endpoint and a global /knowledge surface. Existing material rows are aggregated without migration or reanalysis. Users can filter genre examples versus domain references, filter by genre, search across the library, and navigate every result back to its source book and paragraph IDs.",
+  "acceptance_criteria": [
+    "顶部导航提供知识库一级入口",
+    "全局页面显示知识总数、来源书数量以及题材案例/领域资料数量",
+    "支持按来源性质、题材和关键词筛选",
+    "每条结果展示来源书名并链接回单本书知识库",
+    "每条结果保留真实 Paragraph ID 与可信度提示",
+    "现有单本书知识库和存量数据无需迁移"
+  ],
+  "tests": [
+    "apps/api/tests/test_material_lab_bridge.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx",
+    "apps/desktop/src/pages/MaterialLabKnowledgePage.test.tsx",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx",
+    "apps/desktop/src/components/layout/AppShell.test.tsx"
+  ],
+  "verification_evidence": [
+    "素材库后端 20 项测试通过",
+    "跨书知识库相关前端 16 项测试通过",
+    "TypeScript noEmit 类型检查通过",
+    "本地真实书库页面显示 4979 条知识、2 本来源书，来源类型筛选可用"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "全库统计与来源书名均从现有 Book、Material 和 Paragraph 数据实时读取。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T08:00:00Z",
+  "updated_at": "2026-08-24T08:00:00Z"
+}

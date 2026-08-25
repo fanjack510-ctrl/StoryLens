@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260825-007",
+  "title": "找参考双入口体验重构",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/pages",
+    "apps/desktop/src/components/layout",
+    "apps/desktop/src/services",
+    "apps/desktop/src/styles",
+    "apps/api/app/narrative_core",
+    "apps/api/app/services",
+    "apps/api/app/routers"
+  ],
+  "files": [
+    "apps/desktop/src/pages/CrossBookSearchPage.tsx",
+    "apps/desktop/src/pages/CrossBookSearchPage.test.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/services/capabilityCatalog.ts",
+    "apps/desktop/src/services/productEdition.ts",
+    "apps/desktop/src/services/capability/presentation.ts",
+    "apps/desktop/src/styles/components.css",
+    "apps/api/app/narrative_core/capability_registry.py",
+    "apps/api/app/services/license_crypto.py",
+    "apps/api/app/routers/cross_book_router.py"
+  ],
+  "user_summary": "将跨书检索改为找参考，并把免费原句定位与 Pro 相似写法拆成两个清晰入口，结果可返回原书核对。",
+  "technical_summary": "Reframe the cross-book search surface as reference retrieval and split its keyword and semantic workflows into explicit tabs. Keyword lookup remains free and covers every indexed analysis item; semantic matching remains Pro and covers only the craft layer. Surface the active scope and corpus composition, preserve evidence-aware result metadata, and add navigation back to the source book. Align navigation, capability, entitlement, and license presentation labels without changing stable capability keys or API routes.",
+  "acceptance_criteria": [
+    "顶栏和页面必须使用用户能理解的找参考命名，不再把跨书作为主概念",
+    "找原句或定位与找相似写法必须在首次操作前作为两个独立入口展示",
+    "免费定位必须明确只做字面匹配并展示全部分析内容的覆盖范围",
+    "Pro 相似写法必须明确只读取技法、高光片段、配角功能和主要人物等写法层",
+    "页面必须说明检索对象是分析结果而非整本小说全文",
+    "每条命中结果必须显示来源书籍和章节信息，并允许返回原书核对",
+    "空结果不得被表述为小说中绝对不存在，必须指引用户切换另一种找法",
+    "授权功能键、API 路由和既有数据结构必须保持兼容"
+  ],
+  "tests": [
+    "npm --prefix apps/desktop test -- src/pages/CrossBookSearchPage.test.tsx (8 passed)",
+    "python -m pytest apps/api/tests/test_cross_book_search.py -q (17 passed)",
+    "npm --prefix apps/desktop run typecheck (passed)",
+    "targeted ESLint for changed desktop files (passed)",
+    "python scripts/check_project.py (passed)"
+  ],
+  "verification_evidence": [
+    "真实浏览器首屏同时显示找原句或定位和找相似写法两个入口，并明确当前范围为8本书、13083条分析内容",
+    "真实浏览器关键词检索反转命中14条，结果包含分析类型、书名、章节和打开原书核对链接",
+    "真实浏览器切换找相似写法后，范围同步切换为430条写法内容，按钮和示例文案同步变化",
+    "定向组件测试覆盖双入口、范围差异、零命中提示、Pro 门禁、语义理由和原书链接"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "只重构入口、文案和结果导航；不修改分析文档、检索索引、授权键、API 路由或用户数据。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-25T07:19:54Z",
+  "updated_at": "2026-08-25T07:24:00Z"
+}

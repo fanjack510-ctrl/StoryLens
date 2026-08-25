@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
+from app import __version__
 from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -789,13 +791,20 @@ def test_static_security_scan_paths() -> None:
                 continue
             if "providerexecutionauthorization" in lower.replace("_", ""):
                 continue
+            if re.search(
+                r'os\.environ\.get\(["\']STORYLENS_[A-Z0-9_]+_API_KEY["\']',
+                line,
+            ):
+                # Environment variable *names* are the required public credential
+                # boundary. This scan protects secret values, not documented lookup keys.
+                continue
             hits.append(f"{path.relative_to(REPO_ROOT)}:{i}:{line.strip()}")
     assert not hits, "unexpected sensitive hits:\n" + "\n".join(hits[:20])
 
 
 def test_version_and_gates_locked() -> None:
     version = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    assert version == "1.2.0"
+    assert version == __version__
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False

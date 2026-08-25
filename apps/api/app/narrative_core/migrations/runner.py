@@ -37,6 +37,7 @@ from app.narrative_core.migrations import (
     MIGRATION_RUN_CHAPTER_LIMIT,
     MIGRATION_COLLECTIONS,
     MIGRATION_MATERIAL_LAB,
+    MIGRATION_MATERIAL_LAB_LEGACY_IMPORT,
     MIGRATION_SHORT_FORM_RESULTS,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
@@ -1163,6 +1164,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260823_023_run_chapter_limit(engine)
     migrate_narrative_20260823_024_collections(engine)
     migrate_narrative_20260823_025_material_lab(engine)
+    migrate_narrative_20260825_026_material_lab_legacy_import(engine)
 
 
 SQL_012 = """
@@ -2950,3 +2952,87 @@ def migrate_narrative_20260823_025_material_lab(engine: Engine) -> None:
             if statement.strip():
                 connection.execute(text(statement))
     _record_applied(engine, MIGRATION_MATERIAL_LAB, checksum)
+
+
+SQL_026 = """
+CREATE TABLE material_lab_legacy_imports (
+    id INTEGER PRIMARY KEY,
+    source_fingerprint VARCHAR(64) NOT NULL UNIQUE,
+    source_name VARCHAR(255) NOT NULL DEFAULT 'library.db',
+    source_size INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'running',
+    source_material_count INTEGER NOT NULL DEFAULT 0,
+    imported_count INTEGER NOT NULL DEFAULT 0,
+    skipped_count INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    created_at DATETIME NOT NULL,
+    finished_at DATETIME
+);
+CREATE INDEX ix_material_lab_legacy_imports_source_fingerprint
+    ON material_lab_legacy_imports(source_fingerprint);
+CREATE INDEX ix_material_lab_legacy_imports_status
+    ON material_lab_legacy_imports(status);
+CREATE TABLE material_lab_legacy_materials (
+    id INTEGER PRIMARY KEY,
+    import_id INTEGER NOT NULL REFERENCES material_lab_legacy_imports(id) ON DELETE CASCADE,
+    source_fingerprint VARCHAR(64) NOT NULL,
+    source_material_id VARCHAR(64) NOT NULL,
+    source_pattern_id VARCHAR(64) NOT NULL DEFAULT '',
+    source_book_id VARCHAR(64) NOT NULL DEFAULT '',
+    source_book_title VARCHAR(255) NOT NULL DEFAULT '',
+    source_scene_id VARCHAR(64) NOT NULL DEFAULT '',
+    source_evidence_ids_json TEXT NOT NULL DEFAULT '[]',
+    genre_slug VARCHAR(32) NOT NULL DEFAULT '',
+    genre_label VARCHAR(32) NOT NULL DEFAULT '',
+    material_type VARCHAR(16) NOT NULL,
+    category_key VARCHAR(64) NOT NULL,
+    category_label VARCHAR(64) NOT NULL DEFAULT '',
+    subcategory_key VARCHAR(64) NOT NULL DEFAULT '',
+    subcategory_label VARCHAR(64) NOT NULL DEFAULT '',
+    title VARCHAR(200) NOT NULL,
+    concise_example TEXT NOT NULL,
+    core_pattern VARCHAR(500) NOT NULL,
+    mechanism VARCHAR(200) NOT NULL DEFAULT '',
+    suspense_question VARCHAR(500) NOT NULL DEFAULT '',
+    applicable_stage VARCHAR(32) NOT NULL DEFAULT '',
+    applicable_scene VARCHAR(64) NOT NULL DEFAULT '',
+    emotion VARCHAR(32) NOT NULL DEFAULT '',
+    tags_json TEXT NOT NULL DEFAULT '[]',
+    quality_score INTEGER NOT NULL DEFAULT 0,
+    score_json TEXT NOT NULL DEFAULT '{}',
+    confidence FLOAT NOT NULL DEFAULT 0,
+    is_primary_variant INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL,
+    CONSTRAINT uq_material_lab_legacy_source_material
+        UNIQUE (source_fingerprint, source_material_id)
+);
+CREATE INDEX ix_material_lab_legacy_materials_import_id
+    ON material_lab_legacy_materials(import_id);
+CREATE INDEX ix_material_lab_legacy_materials_source_fingerprint
+    ON material_lab_legacy_materials(source_fingerprint);
+CREATE INDEX ix_material_lab_legacy_materials_genre_slug
+    ON material_lab_legacy_materials(genre_slug);
+CREATE INDEX ix_material_lab_legacy_materials_material_type
+    ON material_lab_legacy_materials(material_type);
+CREATE INDEX ix_material_lab_legacy_materials_category_key
+    ON material_lab_legacy_materials(category_key);
+CREATE INDEX ix_material_lab_legacy_materials_quality_score
+    ON material_lab_legacy_materials(quality_score);
+CREATE INDEX ix_material_lab_legacy_materials_is_primary_variant
+    ON material_lab_legacy_materials(is_primary_variant);
+CREATE INDEX ix_material_lab_legacy_genre_category
+    ON material_lab_legacy_materials(genre_slug, category_key);
+"""
+
+
+def migrate_narrative_20260825_026_material_lab_legacy_import(engine: Engine) -> None:
+    """旧项目派生素材的独立、可重试迁移层。"""
+    checksum = migration_checksum(SQL_026)
+    if "material_lab_legacy_materials" in _table_names(engine):
+        _record_applied(engine, MIGRATION_MATERIAL_LAB_LEGACY_IMPORT, checksum)
+        return
+    with engine.begin() as connection:
+        for statement in SQL_026.strip().split(";"):
+            if statement.strip():
+                connection.execute(text(statement))
+    _record_applied(engine, MIGRATION_MATERIAL_LAB_LEGACY_IMPORT, checksum)

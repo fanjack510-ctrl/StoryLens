@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260824-019",
+  "title": "为短篇拆文增加Pro PDF导出",
+  "type": "feature",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/routers/short_form_router.py",
+    "apps/desktop/src/features/shortForm"
+  ],
+  "files": [
+    "apps/api/app/routers/short_form_router.py",
+    "apps/api/tests/test_pdf_export_vip_gate.py",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/features/shortForm/shortForm.css",
+    "apps/desktop/src/features/shortForm/shortFormExport.ts",
+    "apps/desktop/src/features/shortForm/shortFormExport.test.ts"
+  ],
+  "user_summary": "短篇拆文现在可直接导出真实PDF，并与全书、单章共享同一套Pro授权和错误提示。",
+  "technical_summary": "Add a stored-reading-scoped short-form PDF endpoint that validates book ownership and delegates to the shared advanced_export-gated Chromium renderer. Add separate HTML and Pro PDF controls, busy state, truthful entitlement and renderer errors, and a PDF filename derived from the work title.",
+  "acceptance_criteria": [
+    "已有短篇拆文显示独立的导出 HTML 与导出 PDF · PRO 按钮",
+    "PDF 请求只允许导出属于当前书籍的已存拆稿",
+    "短篇 PDF 与全书、单章 PDF 共享 advanced_export 授权门",
+    "生成期间按钮禁用并显示正在生成 PDF",
+    "免费版显示 Pro 授权提示，其他渲染错误显示真实后端消息",
+    "成功下载以作品标题命名的 .pdf 文件"
+  ],
+  "tests": [
+    "apps/desktop/src/features/shortForm/shortFormExport.test.ts (8 tests)",
+    "apps/api/tests/test_pdf_export_vip_gate.py (12 tests)",
+    "apps/desktop TypeScript typecheck"
+  ],
+  "verification_evidence": [
+    "定向前端测试 8 项通过",
+    "定向后端 PDF 授权与归属校验测试 12 项通过",
+    "TypeScript typecheck 通过",
+    "真实浏览器验证书籍 19 显示导出 PDF · PRO 并完成生成",
+    "实际下载 C:/Users/msi/Downloads/破烂家电封神-短篇精读.pdf（600197 bytes）"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "未修改数据库结构；复用已有 short_form_results 与 PDF 渲染能力。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T14:48:49Z",
+  "updated_at": "2026-08-24T14:48:59Z"
+}

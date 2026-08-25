@@ -98,13 +98,16 @@ export const PRO_CAPABILITY_LABELS: Record<string, string> = {
   whole_book_analysis: "整书分析（Legacy）",
   narrative_asset_library: "叙事资产库",
   story_lab: "故事实验台",
-  cross_book_search: "跨书检索",
+  cross_book_search: "找相似写法",
   advanced_export: "进阶导出",
   pro_whole_book_insights: "章节精细分析覆盖（Legacy）",
   whole_book_native: "原生全书分析",
   whole_book_enhanced: "精细增强分析",
   chapter_aggregate_insights: "章节精细分析覆盖",
+  common_patterns: "共性视图",
+  knowledge_extraction: "从全书提取素材",
+  book_skill_generation: "生成作品 Skill",
 };
 
-/** V1 Pro capabilities are unlocked by license but not yet shipped as product features. */
+/** 历史私有分析引擎的总开关；当前五项产品级 Pro 权限不依赖此开关。 */
 export const PRO_CAPABILITIES_SHIPPED = false;

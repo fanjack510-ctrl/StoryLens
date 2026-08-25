@@ -1,0 +1,28 @@
+{
+  "id": "CHG-20260824-011",
+  "title": "补登记素材库本地引擎迁入",
+  "type": "feature",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {"sha": "a0a6b553c069cf8927fcd5b007f861d30a7ccf99", "message": "feat(material-lab): 引擎迁入与合同对齐", "primary": true, "multi_change_reason": null},
+    {"sha": "afce3c083c6a86a3909efdca4cbab99c09105aa4", "message": "feat(material-lab): 表定义与迁移 025", "primary": false, "multi_change_reason": "素材库迁入的数据库阶段"},
+    {"sha": "c304e37cd7f904e07e4529c51e62ef8bcbf7fbd6", "message": "feat(material-lab): 落库层与路由", "primary": false, "multi_change_reason": "素材库迁入的 API 阶段"},
+    {"sha": "a13be0420950b9cc19fd8d3a37f6e2f981ce4866", "message": "test(material-lab): 落库层与路由测试", "primary": false, "multi_change_reason": "素材库迁入的验收阶段"},
+    {"sha": "eb7c7867ff5db420620f6218021e962ce15ad6bc", "message": "feat(material-lab): 素材库浏览界面", "primary": false, "multi_change_reason": "素材库迁入的界面阶段"}
+  ],
+  "modules": ["apps/api/app/narrative_core/material_lab", "apps/desktop/src/pages/MaterialLabPage.tsx"],
+  "files": ["apps/api/app/narrative_core/material_lab", "apps/api/app/routers/material_lab_router.py", "apps/api/tests/test_material_lab_api.py", "apps/desktop/src/pages/MaterialLabPage.tsx"],
+  "user_summary": "素材库完成本地引擎、数据表、路由、测试和浏览界面的基础迁入。",
+  "technical_summary": "Register the five existing Material Lab migration commits discovered during takeover.",
+  "acceptance_criteria": ["素材可本地落库与查询", "迁移可重复执行", "前端可浏览素材"],
+  "tests": ["apps/api/tests/test_material_lab_api.py"],
+  "verification_evidence": ["素材库 API 与前端测试通过"],
+  "data_compatibility": {"database_changed": true, "migration_required": true, "user_data_compatible": true, "notes": "使用既有迁移 025 增量建表。"},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": true, "updater_impact": false, "breaking_change": false},
+  "blocker_level": "none",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-24T09:23:00Z",
+  "updated_at": "2026-08-24T09:23:00Z"
+}

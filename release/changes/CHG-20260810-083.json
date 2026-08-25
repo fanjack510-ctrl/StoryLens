@@ -1,7 +1,7 @@
 {
   "id": "CHG-20260810-083",
   "title": "Whole-Book V2 real execution authenticity audit",
-  "type": "audit",
+  "type": "documentation",
   "base_version": "1.2.0",
   "status": "registered",
   "include_in_next_release": true,

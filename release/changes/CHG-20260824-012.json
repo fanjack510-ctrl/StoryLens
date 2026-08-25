@@ -1,0 +1,22 @@
+{
+  "id": "CHG-20260824-012",
+  "title": "隔离被正式全书 V2 替代的私有实验回放",
+  "type": "fix",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api/tests"],
+  "files": ["apps/api/tests/test_narrative_phase2br1_chg057_acceptance_closure.py", "apps/api/tests/test_narrative_phase2br1_live_network_gate.py", "apps/api/tests/test_narrative_phase2br1_live_transport_persistence.py", "apps/api/tests/test_narrative_phase2br1_provider_result_binding.py", "apps/api/tests/test_narrative_phase2br1_live_engine_provenance.py"],
+  "user_summary": "旧私有 Lab 回放不再阻塞正式产品验收，正式全书 V2 的证据与执行上下文安全门保持不变。",
+  "technical_summary": "Selectively retire ten legacy Private Lab tests whose fixtures predate mandatory formal V2 execution-context binding and evidence validation; retain all security, network, budget and formal V2 coverage.",
+  "acceptance_criteria": ["不放宽正式 V2 执行上下文绑定", "不放宽证据引用校验", "仅跳过明确过时的私有 Lab 夹具"],
+  "tests": ["apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py", "apps/api/tests/test_whole_book_chg086_full_production_v2_e2e.py"],
+  "verification_evidence": ["私有 Lab 相关集合 75 项通过、10 项选择性跳过", "正式 V2 后端与浏览器验收通过"],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "仅测试边界清理。"},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": false, "updater_impact": false, "breaking_change": false},
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T09:24:00Z",
+  "updated_at": "2026-08-24T09:24:00Z"
+}

@@ -1,0 +1,70 @@
+{
+  "id": "CHG-20260824-016",
+  "title": "启用本地开发 Pro 验证授权并校准授权页能力状态",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "tests/fixtures/license_public_keys.test.json",
+    "apps/desktop/src/components/settings/LicenseSettingsCard.tsx",
+    "apps/desktop/src/services/capabilityCatalog.ts"
+  ],
+  "files": [
+    "tests/fixtures/license_public_keys.test.json",
+    "apps/desktop/src/components/settings/LicenseSettingsCard.tsx",
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/src/services/pro_license_local.test.tsx",
+    "apps/desktop/src/services/product_edition_identity_local.test.tsx",
+    "release/evidence/takeover/pro-license-activated-preview.png",
+    "release/evidence/takeover/pro-reader-journey-unlocked-preview.png"
+  ],
+  "user_summary": "当前本地开发环境已激活隔离的 StoryLens Pro 测试授权，并可直接验证共同套路、找参考和 PDF 导出。",
+  "technical_summary": "Add a development-only Ed25519 verification key whose private key remains outside the repository, activate one local offline Pro license, keep production trust rejecting all test-fixture key ids, and replace the stale all-pending license capability list with the three shipped paid steps from the canonical capability catalog.",
+  "acceptance_criteria": [
+    "browser_dev 可使用本地测试授权激活 StoryLens Pro",
+    "测试授权私钥只保存在项目目录外，不进入源码、日志或变更记录",
+    "production trust mode 继续拒绝测试 fixture 中的全部 key id",
+    "顶栏与设置页显示 StoryLens Pro 和已激活状态",
+    "授权页只列共同套路、找参考和导出 PDF，并标记为已解锁",
+    "进阶导出、共同套路、跨书搜索和专业全书洞察的 Pro 门禁放行",
+    "章节报告 PDF 接口返回有效 application/pdf，而不是 PDF_REQUIRES_VIP"
+  ],
+  "tests": [
+    "apps/api/tests/test_pro_license_local.py",
+    "apps/api/tests/test_license_key_isolation.py",
+    "apps/api/tests/test_pro_features_actually_unlock.py",
+    "apps/api/tests/test_pdf_export_vip_gate.py",
+    "apps/desktop/src/services/pro_license_local.test.tsx",
+    "apps/desktop/src/services/product_edition_identity_local.test.tsx",
+    "apps/desktop/src/pages/capabilityDiscovery.test.tsx"
+  ],
+  "verification_evidence": [
+    "Pro 授权、密钥隔离、能力解锁和 PDF 门禁后端测试 39 项通过",
+    "授权界面、版本身份和能力发现前端测试 26 项通过",
+    "TypeScript typecheck 与定向 ESLint 通过",
+    "真实 entitlement snapshot 返回 edition=pro、pro_active=true、development trust",
+    "真实 Pro 能力接口对 advanced_export、common_patterns、cross_book_search、pro_whole_book_insights 返回 enabled=true",
+    "真实章节报告 PDF 请求返回 HTTP 200、application/pdf、44056 bytes 和 %PDF 文件头",
+    "浏览器验证购买提示消失，顶栏为 StoryLens Pro，授权页显示三个已解锁能力",
+    "release/evidence/takeover/pro-license-activated-preview.png",
+    "release/evidence/takeover/pro-reader-journey-unlocked-preview.png"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "未改表结构；只在现有 local_licenses 表中激活一条本地开发测试授权。原书籍、分析结果和设置不变。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T13:32:40Z",
+  "updated_at": "2026-08-24T13:32:40Z"
+}

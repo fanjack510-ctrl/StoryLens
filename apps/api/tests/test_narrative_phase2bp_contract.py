@@ -1071,8 +1071,32 @@ def test_58_no_new_migration() -> None:
 # --- VERSION + docs ---
 
 
-def test_version_is_1_2_0() -> None:
-    assert VERSION_FILE.read_text(encoding="utf-8").strip() == "1.2.0"
+def test_version_matches_release_baseline() -> None:
+    """VERSION、发布基线、未发布池三处必须是同一个版本号。
+
+    这条测试原来叫 `test_version_is_1_2_0`，把版本号写死在断言里——于是每次发版
+    它都必红一次，而修它的唯一办法是改这行字面量。**一个每次发版都要手改的测试
+    没有在测任何东西**：它只是在复述 VERSION 文件里已经写着的那个数。
+
+    真正值得钉的是三处的一致性。1.2.0 → 1.3.0 那次就是只改了 VERSION，
+    没动 release/baseline.json 和 release/unreleased.json，于是治理检查恒红。
+    改成断言一致性之后，下次发版这条测试仍然会红——但它红的时候指的是
+    「你漏了台账」，而不是「你该来改我了」。
+    """
+    import json
+
+    version = VERSION_FILE.read_text(encoding="utf-8").strip()
+    root = REPO_ROOT
+    baseline = json.loads((root / "release" / "baseline.json").read_text(encoding="utf-8"))
+    unreleased = json.loads((root / "release" / "unreleased.json").read_text(encoding="utf-8"))
+
+    assert baseline["version"] == version, (
+        f"release/baseline.json 停在 {baseline['version']}，而 VERSION 已经是 {version}"
+    )
+    assert unreleased["base_version"] == version, (
+        f"release/unreleased.json 停在 {unreleased['base_version']}，"
+        f"而 VERSION 已经是 {version}"
+    )
 
 
 def test_phase2b_docs_exist() -> None:
@@ -1136,8 +1160,8 @@ def test_60_change_registry_check() -> None:
         check=False,
     )
     if result.returncode != 0:
-        # Prefer soft skip until CHG-036 is registered; still assert VERSION stable.
-        assert VERSION_FILE.read_text(encoding="utf-8").strip() == "1.2.0"
+        # Registry debt is reported by its dedicated gate. Keep this historical
+        # contract suite version-agnostic; version consistency is asserted above.
         pytest.skip(f"change_registry check not green yet: {result.stderr or result.stdout}")
     assert result.returncode == 0
 

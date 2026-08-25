@@ -474,7 +474,7 @@ export function ReaderJourneySyncWorkspace({
                 disabled={reportExport.busy}
                 onClick={reportExport.run}
               >
-                {reportExport.busy ? "正在生成…" : "本章报告 · VIP"}
+                {reportExport.busy ? "正在生成…" : "本章报告 · PRO"}
               </button>
             )}
             {activeNode && (

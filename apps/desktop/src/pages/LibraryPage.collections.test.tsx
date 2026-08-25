@@ -7,9 +7,15 @@ import { useOnboardingStore } from "../stores/onboardingStore";
 
 /** 书单：一组可以被反复回到的书。
  *
- *  扫榜是「一次过十几本新书、横着比」。那批书需要一个名字才能被反复回到——否则每次都要在
- *  书库里重新挑一遍。这里钉的是「用起来会疼」的地方：一次加一批而不是一本一本、
- *  选中的状态看得见、加进去以后说清楚加了几本。
+ *  扫榜是「一次过十几本新书、横着比」。那批书需要一个名字才能被反复回到。
+ *
+ *  **但书单不再是书库首页上的一行。**用户看完的原话是「这里两个书单是什么意思？
+ *  为啥上来要建书单？这个功能最终不就是为了提炼共性，那是不是应该统一在共性分析大功能下？」
+ *  他是对的：一个刚装好、一个书单都没有的库里，那两行合起来只干了一件事，
+ *  催他去建一个还不知道有什么用的东西。圈书搬去了共性视图页（见
+ *  `CommonPatternsStartPage.test.tsx`），这里只剩两件事：
+ *   1. 存过组的人能「只看某一组」——降级进「更多筛选」，没存过的人看不见这个词
+ *   2. 勾几本一次性加进已有的组
  */
 const list = vi.fn();
 const library = vi.fn();
@@ -102,60 +108,61 @@ describe("书库里的书单", () => {
     });
   });
 
-  it("书单和类型筛选并排，是同一层的取景方式", async () => {
+  it("书单降级进「更多筛选」，不再占首页一行", async () => {
+    // 它原来和类型筛选并排，还带一个「+ 新建书单」。对一个还没有任何书单的人，
+    // 那一行只是在催他建一个不知道有什么用的东西。
     renderLibrary();
-    expect(await screen.findByTestId("library-collection-all")).toBeInTheDocument();
-    const chip = await screen.findByTestId("library-collection-7");
-    expect(chip).toHaveTextContent("2026 秋·扫榜");
-    // 数量直接写在标签上：不点进去就知道这个单子攒了多少本。
-    expect(chip).toHaveTextContent("2");
+    const sel = await screen.findByTestId("library-collection-filter");
+    expect(sel).toBeInTheDocument();
+    // 数量写在选项上：不点进去就知道这一组攒了多少本。
+    expect(sel).toHaveTextContent("2026 秋·扫榜");
+    expect(sel).toHaveTextContent("2");
+  });
+
+  it("首页先给真实概览和继续入口，再进入完整书单", async () => {
+    library.mockResolvedValue([
+      {
+        ...libRow(1, "甲书"),
+        analysis_state: "done",
+        analysis_state_label: "已评测",
+        last_activity_at: "2026-08-24T08:00:00Z",
+      },
+      {
+        ...libRow(2, "乙书"),
+        analysis_state: "running",
+        analysis_state_label: "进行中",
+        last_activity_at: "2026-08-24T09:00:00Z",
+      },
+      libRow(3, "丙书"),
+    ]);
+
+    renderLibrary();
+
+    const metrics = await screen.findByTestId("library-home-metrics");
+    await waitFor(() => {
+      expect(metrics).toHaveTextContent("3全部书籍");
+      expect(metrics).toHaveTextContent("1已完成分析");
+      expect(metrics).toHaveTextContent("1正在运行");
+      expect(metrics).toHaveTextContent("1等待开始");
+      expect(metrics).toHaveTextContent("1已存书单");
+    });
+
+    const spotlight = await screen.findByTestId("library-spotlight");
+    const filters = screen.getByTestId("library-filter-bar");
+    expect(spotlight.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("选中书单后，列表只剩它里面的书", async () => {
     renderLibrary();
-    fireEvent.click(await screen.findByTestId("library-collection-7"));
+    fireEvent.change(await screen.findByTestId("library-collection-filter"), {
+      target: { value: "7" },
+    });
     await waitFor(() => expect(collectionsRead).toHaveBeenCalledWith(7));
     await waitFor(() => {
       expect(screen.queryByTestId("book-row-2")).toBeNull();
     });
     expect(screen.getByTestId("book-row-1")).toBeInTheDocument();
     expect(screen.getByTestId("book-row-3")).toBeInTheDocument();
-  });
-
-  it("共性视图的入口一直在，没选书单时说清缺什么", async () => {
-    // 原来是「选中书单才渲染」——后果是一个没建过书单的人永远不会知道共性视图存在：
-    // 他得先建单、再选中，那个按钮才第一次出现。一个看不见的功能和不存在没有区别，
-    // 而这是要卖钱的功能。
-    renderLibrary();
-    const bar = await screen.findByTestId("library-collection-actions");
-    expect(bar).toHaveTextContent("看这组书的共性");
-    // 灰着，但在。并且说的是缺什么，不是「不可用」——前者是一句他能照做的话。
-    expect(screen.getByTestId("library-open-patterns-blocked")).toBeInTheDocument();
-    expect(screen.queryByTestId("library-open-patterns")).toBeNull();
-    // 等书单查询回来之后，文案才该断言「有书单但没选」。
-    // 加载中说「先建一个书单」是把「还不知道」当成了「没有」。
-    await waitFor(() => expect(bar).toHaveTextContent("先选上面一个书单"));
-  });
-
-  it("一个书单都没有时，说的是「先建一个」", async () => {
-    // 缺的东西不一样，该说的话就不一样：没书单要先建，有书单要先选。
-    collectionsList.mockResolvedValue([]);
-    renderLibrary();
-    const bar = await screen.findByTestId("library-collection-actions");
-    // 同样要等查询回来——加载中的文案是中性的那一句。
-    await waitFor(() => expect(bar).toHaveTextContent("先建一个书单"));
-  });
-
-  it("选中书单后入口变成可点的", async () => {
-    renderLibrary();
-    fireEvent.click(await screen.findByTestId("library-collection-7"));
-    await waitFor(() =>
-      expect(screen.getByTestId("library-open-patterns")).toHaveAttribute(
-        "href",
-        "/collections/7/patterns",
-      ),
-    );
-    expect(screen.queryByTestId("library-open-patterns-blocked")).toBeNull();
   });
 
   it("没选书时不出现工具条", async () => {
@@ -207,7 +214,9 @@ describe("书库里的书单", () => {
       books: [],
     });
     renderLibrary();
-    fireEvent.click(await screen.findByTestId("library-collection-7"));
+    fireEvent.change(await screen.findByTestId("library-collection-filter"), {
+      target: { value: "7" },
+    });
     const empty = await screen.findByTestId("library-collection-empty");
     expect(empty).toHaveTextContent("还没有书");
     expect(empty).toHaveTextContent("加入书单");
@@ -217,33 +226,10 @@ describe("书库里的书单", () => {
     await waitFor(() => expect(screen.queryByTestId("library-collection-empty")).toBeNull());
   });
 
-  it("新建书单用内联表单，建完直接切进去", async () => {
-    collectionsCreate.mockResolvedValue({
-      id: 9,
-      name: "新单子",
-      note: "",
-      book_count: 0,
-      created_at: null,
-      updated_at: null,
-    });
-    collectionsRead.mockResolvedValue({
-      id: 9,
-      name: "新单子",
-      note: "",
-      book_count: 0,
-      created_at: null,
-      updated_at: null,
-      books: [],
-    });
+  it("书库里不再有「新建书单」", () => {
+    // 在书库里建一个空书单，等于要求人在还不知道要比什么之前先给一个组命名。
+    // 建组的动作搬去了共性视图页：先勾书，再决定这组值不值得留个名字。
     renderLibrary();
-    fireEvent.click(await screen.findByTestId("library-collection-new"));
-    const form = await screen.findByTestId("library-collection-form");
-    fireEvent.change(form.querySelector("input") as HTMLInputElement, {
-      target: { value: "新单子" },
-    });
-    fireEvent.submit(form);
-    await waitFor(() => expect(collectionsCreate).toHaveBeenCalledWith({ name: "新单子" }));
-    // 新建书单几乎总是为了马上往里放书——建完停在原地，用户还得再点一次。
-    await waitFor(() => expect(collectionsRead).toHaveBeenCalledWith(9));
+    expect(screen.queryByTestId("library-collection-new")).toBeNull();
   });
 });

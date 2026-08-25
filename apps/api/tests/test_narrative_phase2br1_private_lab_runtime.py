@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
+from app import __version__
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, select
@@ -715,4 +717,4 @@ def test_contract_and_mock_unaffected() -> None:
 
 
 def test_version_unchanged() -> None:
-    assert (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.2.0"
+    assert (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == __version__

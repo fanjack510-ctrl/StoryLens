@@ -15,6 +15,8 @@ import pytest
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app import __version__
+
 from app.db.models import (
     AnalysisArtifact,
     AnalysisRun,
@@ -162,7 +164,7 @@ def _contract(**overrides: Any) -> CandidatePersistenceContract:
 
 
 def test_gates_remain_frozen() -> None:
-    assert VERSION == "1.2.0"
+    assert VERSION == __version__
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False
     assert PRODUCTION_DEFAULT_ENGINE_ID is None

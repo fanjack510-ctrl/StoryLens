@@ -71,7 +71,13 @@ FEATURES_BEFORE_COMMON_PATTERNS = (
 )
 
 #: 这一轮做出来的、要卖钱的东西。
-PRO_FEATURES_SHIPPED_NOW = ("advanced_export", "common_patterns", "cross_book_search")
+PRO_FEATURES_SHIPPED_NOW = (
+    "advanced_export",
+    "common_patterns",
+    "cross_book_search",
+    "knowledge_extraction",
+    "book_skill_generation",
+)
 
 
 def _activate(session, license_keypair, features=None) -> None:
@@ -122,8 +128,11 @@ def test_an_older_licence_still_opens_what_it_was_sold_with(
         assert gate.get("enabled") is True, f"老授权打不开 {feature}：{gate}"
 
 
+@pytest.mark.parametrize(
+    "feature", ("common_patterns", "knowledge_extraction", "book_skill_generation")
+)
 def test_an_older_licence_also_opens_features_added_after_it_was_issued(
-    client, license_keypair
+    client, license_keypair, feature
 ) -> None:
     """在付费期内的人，点新功能不该被拒。
 
@@ -136,8 +145,8 @@ def test_an_older_licence_also_opens_features_added_after_it_was_issued(
     """
     session = _session(client)
     _activate(session, license_keypair, features=FEATURES_BEFORE_COMMON_PATTERNS)
-    gate = entitlement.can_use_feature(session, "common_patterns")
-    assert gate.get("enabled") is True, f"付费期内却被拒：{gate}"
+    gate = entitlement.can_use_feature(session, feature)
+    assert gate.get("enabled") is True, f"付费期内却被拒 {feature}：{gate}"
 
 
 def test_an_expired_licence_opens_nothing(client, license_keypair) -> None:

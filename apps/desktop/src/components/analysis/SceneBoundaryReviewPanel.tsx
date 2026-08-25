@@ -122,6 +122,11 @@ export function SceneBoundaryReviewPanel({
   const overviewQuery = useQuery({
     queryKey: ["scene-boundaries", chapterId],
     queryFn: () => analysisApi.sceneBoundariesOverview(chapterId),
+    // Boundary confirmation is a transition gate, so the app-wide 10-second
+    // freshness window is unsafe here: the backend may have created a proposal
+    // moments after the cached empty overview was read by BookRoutePage.
+    staleTime: 0,
+    refetchOnMount: "always",
     retry: false,
   });
 
@@ -644,10 +649,24 @@ export function SceneBoundaryReviewPanel({
     void enqueuePersist(next, successText);
   };
 
-  if (overviewQuery.isLoading) {
+  // This query is also mounted by BookRoutePage. When analysis first reaches the
+  // boundary gate, React Query can therefore have a stale "nothing to confirm"
+  // snapshot while it refetches the newly-created proposal. Treat that narrow
+  // transition as loading; otherwise the empty state flashes before the real
+  // confirmation screen and looks like an analysis failure.
+  const refreshingPotentiallyEmptyOverview =
+    overviewQuery.isFetching &&
+    !editorOpen &&
+    !overview?.awaiting_confirmation &&
+    !overview?.draft_revision &&
+    !overview?.confirmed_revision;
+
+  if (overviewQuery.isLoading || refreshingPotentiallyEmptyOverview) {
     return (
       <section className="scene-boundary-review" data-testid="scene-boundary-review">
-        <p data-testid="scene-boundary-loading">正在加载场景划分…</p>
+        <p data-testid="scene-boundary-loading" role="status">
+          正在准备场景划分，请稍候…
+        </p>
       </section>
     );
   }

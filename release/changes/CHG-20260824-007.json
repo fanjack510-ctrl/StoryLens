@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260824-007",
+  "title": "校准后端正式安全与启动合同",
+  "type": "fix",
+  "base_version": "1.3.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/tests",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "scripts/check_public_provider_boundary.py"
+  ],
+  "files": [
+    "apps/api/tests/test_narrative_phase1c_integration.py",
+    "apps/api/tests/test_phase_1c_a4.py",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/tests/test_start_storylens_web_build_gate.py",
+    "apps/api/tests/test_narrative_phase2b_integration.py",
+    "apps/api/tests/test_narrative_phase2br_integration.py",
+    "apps/api/tests/test_narrative_phase2br_real_modules.py",
+    "apps/api/tests/test_narrative_phase2br_private_runtime.py",
+    "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py"
+  ],
+  "user_summary": "恢复正式 API、预算、Provider 边界和本地启动保护的可信自动验收。",
+  "technical_summary": "Align historical backend tests with the current FastAPI lazy router representation, cost-only hard budget gate, environment-variable credential boundary, current repository version, and UTF-8 PowerShell output. Remove a false-positive provider-shape token from the deterministic long-novel adapter without changing its output.",
+  "acceptance_criteria": [
+    "OpenAPI 正式路径合同通过",
+    "预算只以明确费用上限作为硬门，请求和 Token 保留为预估",
+    "公共代码不解析 Provider 私有响应结构且只从环境变量或凭据存储读取密钥",
+    "失败构建和过期 dist 均不得启动服务",
+    "版本门禁验证代码版本与根 VERSION 一致"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1c_integration.py",
+    "apps/api/tests/test_budget_gate_estimated.py",
+    "apps/api/tests/test_phase_1c_a4.py",
+    "apps/api/tests/test_public_provider_boundary.py",
+    "apps/api/tests/test_narrative_phase2br1_output_contract_boundary.py",
+    "apps/api/tests/test_start_storylens_web_build_gate.py"
+  ],
+  "verification_evidence": [
+    "API 路由与能力合同 3 项测试通过",
+    "预算合同 5 项测试通过",
+    "Provider 公私边界 4 项测试通过",
+    "本地启动构建保护 3 项通过、1 项环境条件跳过",
+    "版本与安全门禁 7 项测试通过"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "正式运行规则未改变；更新历史验收并消除静态扫描误报。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T09:00:00Z",
+  "updated_at": "2026-08-24T09:00:00Z"
+}

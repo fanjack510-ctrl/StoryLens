@@ -1,0 +1,61 @@
+{
+  "id": "CHG-20260825-005",
+  "title": "结构化种田写作资料入库",
+  "type": "feature",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "scripts"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/genre_templates.py",
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/app/narrative_core/material_lab/structured_farming_corpus.py",
+    "apps/api/tests/test_structured_farming_corpus.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx",
+    "scripts/import_structured_farming_corpus.py"
+  ],
+  "user_summary": "将五册古代种田文写作资料按纯知识原则补入种田知识库，并保留生活依据、可直接写和避坑三段可展开资料依据。",
+  "technical_summary": "Parse structured DOCX paragraph styles directly from OOXML, validate every field with Pydantic, map 24 fixed sections into the farming taxonomy, and persist stable document paragraph evidence ids through the isolated reference-corpus layer. The deterministic import is fingerprinted and replaceable. Section 25 is intentionally excluded because it is a plot-event template rather than domain knowledge.",
+  "acceptance_criteria": [
+    "五份 DOCX 必须全部完成结构校验，缺失适用、生活依据、可直接写、避坑或依据方向任一字段时拒绝该条",
+    "农家人物、村庄房屋、土地作物、农事渔猎、饮食储藏、交易副业、婚育宗族、灾荒医疗和节庆致富资料必须映射到固定种田分类",
+    "剧情事件库和写作方法说明不得作为纯知识入库",
+    "每条知识必须保存生活依据、可直接写和避坑三段稳定 DOCX 证据编号",
+    "结构化资料在页面上必须标为本地写作资料，不得冒充本地参考小说",
+    "重复运行相同资料目录不得重复插入；资料发生变化时只替换对应结构化资料批次"
+  ],
+  "tests": [
+    "python -m pytest apps/api/tests/test_structured_farming_corpus.py apps/api/tests/test_material_lab_api.py::test_legacy_materials_join_global_catalog_without_fake_storylens_evidence apps/api/tests/test_semantic_reference_corpus.py -q (22 passed)",
+    "npm test -- --run src/pages/KnowledgeLibraryPage.test.tsx (6 passed)",
+    "python scripts/check_project.py (passed)",
+    "真实浏览器检查种田数量、七个主分类、资料来源标题和三段稳定证据编号"
+  ],
+  "verification_evidence": [
+    "读取 5 册 DOCX 共 500 条结构化素材，导入 24 个纯知识章节的 480 条，排除种田剧情事件库 20 条",
+    "种田知识由 24 条增加到 504 条：日常细节 183、谋生手艺 103、经营发家 84、天气节气 45、养殖加工 42、作物种植 25、土壤水利 22",
+    "浏览器抽查当家主妇：来源显示为古代种田文写作素材库·第一册，并展开 BASIS、EXAMPLE、PITFALL 三个稳定资料编号",
+    "页面验证标签为本地写作资料 · 农家人物 · 三段资料依据已核对"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "新增可重建的结构化资料派生批次，不修改小说正文、章节、全文分析或既有参考小说知识。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-25T06:35:00Z",
+  "updated_at": "2026-08-25T06:35:00Z"
+}

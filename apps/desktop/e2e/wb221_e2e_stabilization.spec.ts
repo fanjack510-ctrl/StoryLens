@@ -531,7 +531,11 @@ async function openEvidenceAndAssert(page: Page, trigger: () => Promise<void>) {
   return url;
 }
 
-test.describe("WB-2.2.1 Free product E2E stabilization", () => {
+// Retired product surface: CHG-20260810-078 replaced this four-card page at the
+// formal /whole-book route with the shared seven-module V2 report. The individual
+// legacy modules still have focused harness coverage (WB-2.1/WB-2.2); keeping these
+// route assertions active would test a page that users can no longer open.
+test.describe.skip("WB-2.2.1 retired Free product route", () => {
   test("overview / characters / structure / chapter_functions evidence + restore", async ({
     page,
   }) => {

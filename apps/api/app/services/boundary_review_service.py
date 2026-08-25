@@ -396,26 +396,19 @@ def confirm_review_from_final_proposal(
         )
         if existing is None:
             raise ValueError("review is confirmed without revision")
-        run = session.get(AnalysisRun, review.analysis_run_id)
-        run_marker: dict = {}
-        if run is not None:
-            try:
-                run_marker = json.loads(run.raw_output or "{}")
-                if not isinstance(run_marker, dict):
-                    run_marker = {}
-            except json.JSONDecodeError:
-                run_marker = {}
-        prior_fp = run_marker.get("final_proposal_fingerprint")
-        if prior_fp == proposal_fingerprint:
-            scenes = list(
-                session.scalars(
-                    select(Scene)
-                    .where(Scene.boundary_revision_id == existing.id)
-                    .order_by(Scene.ordinal)
-                )
+        # 已确认的修订不可变，再次确认只能回放既有结果。确认动作会把 pending 决定写成
+        # accept/reject，因此确认后重新请求 final-proposal 时算出的指纹可能和首次提交的指纹
+        # 不同。旧页面正是先重新取了这份指纹，再点击确认，于是明明已经成功却得到英文
+        # ``review is not confirmable``。这里不再拿一个确认后的派生指纹否定已落库的事实；
+        # 未确认状态仍在下方严格校验指纹。
+        scenes = list(
+            session.scalars(
+                select(Scene)
+                .where(Scene.boundary_revision_id == existing.id)
+                .order_by(Scene.ordinal)
             )
-            return existing, scenes, True
-        raise ValueError("review is not confirmable")
+        )
+        return existing, scenes, True
 
     if review.status in {"cancelled", "superseded"}:
         raise ValueError("review is not confirmable")

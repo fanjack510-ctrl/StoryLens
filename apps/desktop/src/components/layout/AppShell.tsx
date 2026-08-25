@@ -19,7 +19,7 @@ import { AppearanceThemeMenu } from "./AppearanceThemeMenu";
  *  原来用的是 `▤ ⌕ ◉` 这类几何符号——它们在不同系统上字重、基线、大小都不一样，
  *  跟旁边的中文对不齐，看起来像占位符而不是图标。改画成 SVG：线宽和尺寸自己说了算。
  */
-function NavIcon({ name }: { name: "library" | "search" | "settings" }) {
+function NavIcon({ name }: { name: "library" | "knowledge" | "search" | "capabilities" | "settings" }) {
   const common = {
     width: 17,
     height: 17,
@@ -36,6 +36,23 @@ function NavIcon({ name }: { name: "library" | "search" | "settings" }) {
       <svg {...common}>
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-3.5-3.5" />
+      </svg>
+    );
+  }
+  if (name === "knowledge") {
+    return (
+      <svg {...common}>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5Z" />
+        <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5Z" />
+      </svg>
+    );
+  }
+  if (name === "capabilities") {
+    // 罗盘：这一页回答的是「这儿都有什么、我该往哪走」。
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8.6" />
+        <path d="m15.4 8.6-2 4.8-4.8 2 2-4.8z" />
       </svg>
     );
   }
@@ -56,11 +73,20 @@ function NavIcon({ name }: { name: "library" | "search" | "settings" }) {
   );
 }
 
-const PRIMARY_NAV: Array<[string, string, "library" | "search" | "settings"]> = [
+const PRIMARY_NAV: Array<
+  [string, string, "library" | "knowledge" | "search" | "capabilities" | "settings"]
+> = [
   ["/library", "我的书库", "library"],
-  // 跨书检索的范围是整个书库，不属于任何一本书——所以它在应用级导航里，
+  ["/knowledge", "知识库", "knowledge"],
+  // 找参考的范围是整个书库，不属于任何一本书——所以它在应用级导航里，
   // 而不是某本书的页面上。
-  ["/search", "搜索", "search"],
+  ["/search", "找参考", "search"],
+  // 「能做什么」不挂顶栏。用户的原话是「不要把这个我能做什么挂在主页上，那玩意太垃圾了」。
+  //
+  // 它当初是为了解决「17 个页面顶栏只挂 3 个」而加的一张地图。但地图是给坏结构打的补丁：
+  // 三层结构（书库 / 书籍页 / 知识库）成立之后，每一层自己说清自己，不需要第四个页面
+  // 来解释前三个。**路由保留**——版本徽章点进去仍然是它，那是「我买了什么」的去处；
+  // 但它不再占一个一级入口。
   ["/settings", "设置", "settings"],
 ];
 
@@ -186,11 +212,10 @@ export function AppShell() {
               className={`nav-edition-identity ${edition.is_pro ? "nav-edition-identity--pro" : ""}`}
               data-testid="nav-edition-identity"
               data-edition={edition.edition}
-              // 版本状态和「专业版能做什么」是同一件事，一个入口就够。
-              // 此前它们分成两处：顶栏这个徽章，和书库筛选条里一条「专业版能做什么」——
-              // 后者是为了解决「找不到 PRO」临时加的，加完就和这里重复了，
-              // 而两处说同一件事比一处都没有更让人困惑。
-              onClick={() => navigate("/pro")}
+              // 这个徽章说的是「我是什么版本」，点开该看到的是「那都包含什么」——
+              // 和顶栏的「能做什么」是同一页。免费版点进去看到的是完整清单里
+              // 哪几项带 PRO，而不是一张只列收费项的价目表。
+              onClick={() => navigate("/capabilities")}
               title={
                 edition.is_pro
                   ? "查看你买到了什么、授权状态与有效期"

@@ -120,9 +120,9 @@ export function LibraryPage() {
   const [collectionFilter, setCollectionFilter] = useState<number | null>(null);
   //: 勾中的书。选够了再一次性加进书单——一本一本加，十五本要点十五次。
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
+  // 建书单的状态没有了：圈书那一步搬去了共性视图页。
+  // 在书库里建一个空书单，等于要求人在还不知道要比什么之前先给一个组命名。
   const [collectionError, setCollectionError] = useState<string | null>(null);
-  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
-  const [newCollectionName, setNewCollectionName] = useState("");
   const activeCollection = useQuery({
     queryKey: ["collection", collectionFilter],
     queryFn: () => collectionsApi.read(collectionFilter as number),
@@ -213,6 +213,17 @@ export function LibraryPage() {
       .join(" · ");
   }, [library.data]);
 
+  const libraryOverview = useMemo(() => {
+    const rows = library.data || [];
+    return {
+      total: rows.length,
+      analysed: rows.filter((row) => row.analysis_state === "done").length,
+      running: rows.filter((row) => row.analysis_state === "running").length,
+      waiting: rows.filter((row) => row.analysis_state === "idle").length,
+      collections: (collections.data || []).length,
+    };
+  }, [library.data, collections.data]);
+
   const hasActiveFilter =
     Boolean(search) ||
     kindFilter !== "all" ||
@@ -263,26 +274,30 @@ export function LibraryPage() {
   return (
     <section className="page library-page-compact" data-testid="library-page">
       {onboardingStatus === "pending" && <FirstLaunchWizard />}
-      {onboardingStatus !== "pending" && <TelemetryInviteCard />}
-      <AiSetupBanner />
-      <PageHeader className="library-title-compact">
-        <div>
-          {/* 标题从「我的书库」换成一句问候。书库是这个页面**是什么**，
-              而人每天回到这里不是来看它叫什么名字的。真正有用的信息（几本、跑过几本）
-              移到副标题，标题这一行让给「你回来了，接着上次那件事」。 */}
-          <PageTitle>{greeting}，欢迎回来</PageTitle>
-          <PageSubtitle data-testid="library-subtitle">{librarySummary}</PageSubtitle>
+      <section className="library-home-hero" data-testid="library-home-hero">
+        <PageHeader className="library-title-compact">
+          <div>
+          {/* 标题换回「我的书库」。
+              上一版改成了一句问候（「晚上好，欢迎回来」），理由是「人每天回到这里不是
+              来看它叫什么名字的」——那个理由只在这一页孤立看时成立。
+              放回三层结构里就不成立了：**顶栏三项各是一个空间，标题要说清你在哪个空间**。
+              一句问候说不清这里是书库还是知识库。
+              问候本身不删，降到副标题里，和「几本、跑过几本」放一起。 */}
+          <PageTitle>我的书库</PageTitle>
+          <PageSubtitle data-testid="library-subtitle">
+            {greeting}　·　{librarySummary}
+          </PageSubtitle>
           {webShell ? (
             <p className="muted library-local-upload-hint" data-testid="library-local-upload-hint">
               文件仅发送到本机 StoryLens 服务，不会上传互联网。
             </p>
           ) : null}
-        </div>
-        <Button
-          variant="primary"
-          data-testid="import-book"
-          onClick={() => input.current?.click()}
-        >
+          </div>
+          <Button
+            variant="primary"
+            data-testid="import-book"
+            onClick={() => input.current?.click()}
+          >
           <svg
             width="16"
             height="16"
@@ -298,16 +313,44 @@ export function LibraryPage() {
             <path d="m7 9 5-5 5 5" />
             <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
           </svg>
-          导入书籍
-        </Button>
-        <input
-          ref={input}
-          hidden
-          type="file"
-          accept=".txt,.docx,.epub,.pdf,.md,.markdown,.tex,.latex,.html,.htm,.odt"
-          onChange={(event) => accept(event.target.files)}
-        />
-      </PageHeader>
+            导入书籍
+          </Button>
+          <input
+            ref={input}
+            hidden
+            type="file"
+            accept=".txt,.docx,.epub,.pdf,.md,.markdown,.tex,.latex,.html,.htm,.odt"
+            onChange={(event) => accept(event.target.files)}
+          />
+        </PageHeader>
+        <div className="library-home-metrics" aria-label="书库概览" data-testid="library-home-metrics">
+          <div className="library-home-metric">
+            <b>{libraryOverview.total}</b>
+            <span>全部书籍</span>
+          </div>
+          <div className="library-home-metric library-home-metric--success">
+            <b>{libraryOverview.analysed}</b>
+            <span>已完成分析</span>
+          </div>
+          <div className="library-home-metric library-home-metric--active">
+            <b>{libraryOverview.running}</b>
+            <span>正在运行</span>
+          </div>
+          <div className="library-home-metric">
+            <b>{libraryOverview.waiting}</b>
+            <span>等待开始</span>
+          </div>
+          <div className="library-home-metric">
+            <b>{libraryOverview.collections}</b>
+            <span>已存书单</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="library-home-notices">
+        {onboardingStatus !== "pending" && <TelemetryInviteCard />}
+        <AiSetupBanner />
+      </div>
 
       {preview.isPending && (
         <div className="import-panel import-panel--info" data-testid="import-panel-parsing">
@@ -496,11 +539,14 @@ export function LibraryPage() {
         </div>
       )}
 
-      {/* 最近动过的三本。有正在跑的就显示它们，否则显示最近分析过的——
-          见 `spotlight` 的注释：跑完的书没有百分比，编一个出来是这一屏最容易犯的错。 */}
       {spotlight.items.length > 0 ? (
-        <section className="library-spotlight" data-testid="library-spotlight">
-          <h2>{spotlight.running ? "正在分析" : "最近分析"}</h2>
+        <section className="library-spotlight library-home-spotlight" data-testid="library-spotlight">
+          <div className="library-section-heading">
+            <div>
+              <h2>{spotlight.running ? "正在分析" : "继续上次工作"}</h2>
+              <p>{spotlight.running ? "任务仍在运行，可以随时回来查看进度。" : "最近处理过的书，直接回到上次的位置。"}</p>
+            </div>
+          </div>
           <div className="library-spotlight-cards">
             {spotlight.items.map((item) => (
               <Link
@@ -530,9 +576,7 @@ export function LibraryPage() {
                     <span className="book-chapters">{item.chapter_count} 章</span>
                   ) : null}
                 </span>
-                <span className="spotlight-when">
-                  最近更新：{relativeTime(item.last_activity_at)}
-                </span>
+                <span className="spotlight-when">{relativeTime(item.last_activity_at)}</span>
                 <span className="spotlight-go">
                   {spotlight.running ? "查看进度" : "打开"}
                   <i aria-hidden="true">›</i>
@@ -542,34 +586,15 @@ export function LibraryPage() {
           </div>
         </section>
       ) : null}
+
       {/* 列表区的标题。
           筛选条原来夹在卡片区和列表之间，上不着下不着——没有任何东西说它管的是谁。
           给列表一个标题之后，它就从「中间的浮块」变成「这个列表的工具条」。
-          （顶栏那个「搜索」是跨书检索，搜的是分析出来的内容；这里搜的是书名。
+          （顶栏那个「找参考」搜的是分析出来的内容；这里搜的是书名。
           两个搜索框都悬空时，更分不清哪个是哪个。） */}
-      <div className="library-list-head">
-        <h2>全部作品</h2>
-        <span className="library-list-count">
-          {visible.length === (books.data?.length ?? 0)
-            ? `${visible.length} 本`
-            : `${visible.length} / ${books.data?.length ?? 0} 本`}
-        </span>
-        {/* 排序放在标题这一行，不放筛选条里。
-            筛选条已经装了搜索框、四个类型、书单、更多筛选——再塞一个带下拉的排序，
-            挤不下就把它顶到单独一行，整条变成四行高的一坨。
-            排序管的是「这个列表怎么排」，本来就属于列表的标题行。 */}
-        <label className="library-sort-field">
-          排序
-          <select
-            data-testid="library-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as "recent" | "title")}
-          >
-            <option value="recent">最近导入</option>
-            <option value="title">书名</option>
-          </select>
-        </label>
-      </div>
+      {/* 这一行原来还有个「全部作品」的标题。页面标题已经是「我的书库」了，
+          紧接着再说一次「全部作品」是同一句话讲两遍——留下计数和排序就够，
+          它们本来就是这个列表的工具，不是一个新的章节。 */}
       {/* 两行是结构，不是挤不下的妥协。
           第一行筛的是**书的属性**（书名、类型、跑没跑过）；第二行选的是**一个命名集合**。
           它们回答的不是同一个问题，抢同一行时既挤（实测 917px 容器塞 922px 内容）
@@ -625,6 +650,30 @@ export function LibraryPage() {
         </div>
         <details className="library-format-fold">
           <summary>更多筛选</summary>
+          {/* 按书单筛选。它原来在筛选条上独占一行，旁边还站着共性视图的入口——
+              用户看完的原话是「这里两个书单是什么意思？为啥上来要建书单？」
+              他是对的：一个刚装好的库里一个书单都没有，那两行合起来只干了一件事，
+              催他去建一个还不知道有什么用的东西。
+
+              书单真正的用途是喂给共性视图，所以圈书那一步搬去了共性视图页。
+              留在这里的只是「我存过几组，想只看其中一组」——**存过的人才看得见**。 */}
+          {(collections.data || []).length > 0 ? (
+            <div className="library-filter-collections" role="group" aria-label="书单">
+              <span>只看书单</span>
+              <select
+                value={collectionFilter ?? ""}
+                data-testid="library-collection-filter"
+                onChange={(e) => setCollectionFilter(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">全部书</option>
+                {(collections.data || []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}（{c.book_count} 本）
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="library-filter-types" role="group" aria-label="格式">
             {FORMAT_OPTIONS.map((type) => (
               <label key={type} className="library-format-chip">
@@ -638,137 +687,26 @@ export function LibraryPage() {
             ))}
           </div>
         </details>
-        </div>
-        {/* 书单条。放在类型筛选下面而不是另开一页：书单是看书库的一种取景方式，
-            不是一个独立的地方——分成两页，用户要在两处之间来回对照才知道哪本在哪个单子里。 */}
-        <div className="library-collections" role="group" aria-label="书单">
-          <span className="library-collections-label">书单</span>
-          <button
-            type="button"
-            className="library-kind-chip"
-            data-on={collectionFilter == null ? "1" : undefined}
-            data-testid="library-collection-all"
-            onClick={() => setCollectionFilter(null)}
-          >
-            全部书
-          </button>
-          {(collections.data || []).map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="library-kind-chip"
-              data-on={collectionFilter === c.id ? "1" : undefined}
-              data-testid={`library-collection-${c.id}`}
-              title={c.note || undefined}
-              onClick={() => setCollectionFilter(collectionFilter === c.id ? null : c.id)}
+        <div className="library-filter-summary">
+          <span className="library-list-count">
+            {visible.length === (books.data?.length ?? 0)
+              ? `${visible.length} 本`
+              : `${visible.length} / ${books.data?.length ?? 0} 本`}
+          </span>
+          <label className="library-sort-field">
+            <span className="sr-only">排序</span>
+            <select
+              aria-label="排序"
+              data-testid="library-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as "recent" | "title")}
             >
-              {c.name}
-              <i className="library-collection-count">{c.book_count}</i>
-            </button>
-          ))}
-          {newCollectionOpen ? (
-            <form
-              className="library-collection-form"
-              data-testid="library-collection-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const name = newCollectionName.trim();
-                if (!name) return;
-                setCollectionError(null);
-                try {
-                  const created = await collectionsApi.create({ name });
-                  await qc.invalidateQueries({ queryKey: ["collections"] });
-                  setNewCollectionName("");
-                  setNewCollectionOpen(false);
-                  // 建完直接切进去：新建书单几乎总是为了马上往里放书。
-                  setCollectionFilter(created.id);
-                } catch (err) {
-                  setCollectionError(err instanceof ApiError ? err.message : "书单没能建起来。");
-                }
-              }}
-            >
-              <input
-                autoFocus
-                value={newCollectionName}
-                placeholder="书单名，比如「2026 秋·扫榜第一批」"
-                aria-label="书单名"
-                maxLength={120}
-                onChange={(e) => setNewCollectionName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setNewCollectionOpen(false);
-                    setNewCollectionName("");
-                  }
-                }}
-              />
-              <button type="submit" disabled={!newCollectionName.trim()}>
-                建立
-              </button>
-              <button
-                type="button"
-                className="is-quiet"
-                onClick={() => {
-                  setNewCollectionOpen(false);
-                  setNewCollectionName("");
-                }}
-              >
-                取消
-              </button>
-            </form>
-          ) : (
-            <button
-              type="button"
-              className="library-collection-new"
-              data-testid="library-collection-new"
-              onClick={() => setNewCollectionOpen(true)}
-            >
-              + 新建书单
-            </button>
-          )}
+              <option value="recent">最近导入</option>
+              <option value="title">按书名</option>
+            </select>
+          </label>
         </div>
-        {/* 这个入口**一直在**，条件不满足时变灰并说清缺什么。
-            原来是「选中书单才渲染」——听起来合理，实际后果是一个没建过书单的人
-            永远不会知道共性视图存在：他得先建单、再选中，那个按钮才第一次出现。
-            一个看不见的功能和不存在没有区别，而这是要卖钱的功能。 */}
-        <div className="library-collection-actions" data-testid="library-collection-actions">
-          {collectionFilter != null ? (
-            <>
-              <Link
-                className="secondary"
-                to={`/collections/${collectionFilter}/patterns`}
-                data-testid="library-open-patterns"
-              >
-                看这组书的共性 →
-              </Link>
-              <span className="muted">把它们摆在一起，看共同做对了什么。</span>
-            </>
-          ) : (
-            <>
-              <span
-                className="secondary is-disabled"
-                data-testid="library-open-patterns-blocked"
-                aria-disabled="true"
-              >
-                看这组书的共性
-              </span>
-              {/* 说缺什么，而不是说「不可用」。前者是一句他能照做的话。
-                  但查询还没回来时不能说「先建一个书单」——他可能明明有。
-                  「还不知道」和「没有」是两回事，把前者当后者是我在画像门上犯过的同一个错。 */}
-              <span className="muted">
-                {collections.isPending
-                  ? "共性视图把一组书摆在一起，看它们共同做对了什么。"
-                  : (collections.data || []).length === 0
-                    ? "先建一个书单，把想比较的书放进去——共性视图会看出它们共同做对了什么。"
-                    : "先选上面一个书单。共性视图比的是一组书，得先圈定是哪一组。"}
-              </span>
-            </>
-          )}
         </div>
-        {collectionError ? (
-          <p className="notice" role="alert" data-testid="library-collection-error">
-            {collectionError}
-          </p>
-        ) : null}
       </div>
 
       <div
@@ -903,6 +841,14 @@ export function LibraryPage() {
             </button>
           </div>
         ) : null}
+        {/* 加书进书单失败时的话。它原来长在被删掉的那个书单条里，
+            删完之后 `setCollectionError` 还在被调用，却没有任何地方把它显示出来——
+            **报错被设置了但没人看得见，等于静默失败**。挪到它真正会发生的地方旁边。 */}
+        {collectionError ? (
+          <p className="notice" role="alert" data-testid="library-collection-error">
+            {collectionError}
+          </p>
+        ) : null}
         {books.isLoading ? (
           <Loading />
         ) : books.error ? (
@@ -1000,6 +946,7 @@ export function LibraryPage() {
           </div>
         ) : null}
       </div>
+
     </section>
   );
 }
@@ -1102,6 +1049,17 @@ function BookRow({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deletingRef = useRef(false);
+  // 确认/改这本书的类型。改完刷新书库列表——「待确认」三个字要立刻消失，
+  // 否则用户点完看不出发生了什么，只会再点一次。
+  const qc = useQueryClient();
+  const setKind = useMutation({
+    mutationFn: (next: "fiction" | "reference") => booksApi.setMaterialKind(book.id, next),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["library"] });
+      void qc.invalidateQueries({ queryKey: ["books"] });
+    },
+  });
+
   const remove = useMutation({
     mutationFn: () => booksApi.delete(book.id),
     onSuccess: () => {
@@ -1165,7 +1123,16 @@ function BookRow({
       <span className="book-row-main">
         {/* 整行可点。原来这里只有右边一个「打开」按钮，等于告诉用户
             「这一行的其他地方是死的」。 */}
-        <Link className="book-row-title" to={`/books/${book.id}`} title={book.title}>
+        {/* 书名就是这一行的出口——`book-open-<id>` 挂在它身上。
+            这里原来还并排藏着一个 1×1 的「打开」链接，注释说是留给键盘用户的，
+            但它同时写着 `tabIndex={-1}` 和 `aria-hidden`：**键盘 tab 不到，读屏也不念**。
+            它唯一的用户是测试脚本。删掉，让测试直接盯真正的那个链接。 */}
+        <Link
+          className="book-row-title"
+          to={`/books/${book.id}`}
+          title={book.title}
+          data-testid={`book-open-${book.id}`}
+        >
           {book.title}
         </Link>
         {/* 文件名只在和书名不同的时候才出现——同名时重复一遍是同一句话说两次。 */}
@@ -1222,18 +1189,6 @@ function BookRow({
         <path d="m9 6 6 6-6 6" />
       </svg>
       <div className="book-row-actions">
-        {/* 「打开」按钮去掉了——书名本身就是那个链接。这个隐藏的链接留给验收脚本和
-            键盘用户：它们都按 book-open-<id> 找入口，拿掉会把「少一个按钮」变成
-            「这一行没有可聚焦的出口」。 */}
-        <Link
-          className="book-row-open-sr"
-          to={`/books/${book.id}`}
-          data-testid={`book-open-${book.id}`}
-          tabIndex={-1}
-          aria-hidden="true"
-        >
-          打开
-        </Link>
         <div className="book-row-more" ref={(node) => {
           const trigger = node?.querySelector<HTMLButtonElement>(".overflow-menu-trigger");
           moreTriggerRef.current = trigger || null;
@@ -1242,6 +1197,36 @@ function BookRow({
             label="⋯"
             data-testid={`book-more-${book.id}`}
             items={[
+              // 类型确认。走查发现书库里每一行都挂着「· 待确认」，六本书六个，
+              // 其中五本已经分析完了——而**产品里没有任何地方能确认它**。
+              // 接口一直都在（PUT /books/:id/material-kind），只是没人给它出口。
+              // 一个清不掉的提醒比没有提醒更糟：它每天提醒你去做一件做不到的事。
+              ...(info
+                ? [
+                    {
+                      id: "kind",
+                      label:
+                        info.material_kind === "reference"
+                          ? info.material_kind_confirmed
+                            ? "改成小说"
+                            : "确认是工具书"
+                          : info.material_kind_confirmed
+                            ? "改成工具书"
+                            : "确认是小说",
+                      testId: `book-kind-${book.id}`,
+                      onSelect: () => {
+                        // 未确认时点一下＝认可程序猜的那个；已确认时点一下＝改成另一个。
+                        // 两种情况下按钮上写的都是「点完会变成什么」，不是「现在是什么」。
+                        const next: "fiction" | "reference" = info.material_kind_confirmed
+                          ? info.material_kind === "reference"
+                            ? "fiction"
+                            : "reference"
+                          : (info.material_kind as "fiction" | "reference");
+                        void setKind.mutate(next);
+                      },
+                    },
+                  ]
+                : []),
               {
                 id: "delete",
                 label: "删除书籍",

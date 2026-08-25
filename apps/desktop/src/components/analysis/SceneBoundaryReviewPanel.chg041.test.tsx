@@ -97,10 +97,16 @@ function draftOverview(etag = "etag-A", scenes = MODEL_SCENES) {
   });
 }
 
-function renderPanel(props: Partial<ComponentProps<typeof SceneBoundaryReviewPanel>> = {}) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+function createTestClient(staleTime = 0) {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime }, mutations: { retry: false } },
   });
+}
+
+function renderPanel(
+  props: Partial<ComponentProps<typeof SceneBoundaryReviewPanel>> = {},
+  client = createTestClient(),
+) {
   return render(
     <QueryClientProvider client={client}>
       <SceneBoundaryReviewPanel chapterId={2} chapterTitle="第二章" {...props} />
@@ -158,6 +164,40 @@ afterEach(() => {
 });
 
 describe("SceneBoundaryReviewPanel CHG-041", () => {
+  it("keeps a stale empty cache in a loading state until the fresh proposal arrives", async () => {
+    let resolveOverview: ((value: ReturnType<typeof overviewFixture>) => void) | undefined;
+    vi.mocked(analysisApi.sceneBoundariesOverview).mockReturnValue(
+      new Promise((resolve) => {
+        resolveOverview = resolve;
+      }) as ReturnType<typeof analysisApi.sceneBoundariesOverview>,
+    );
+    // Match the real app-wide 10-second freshness window. The confirmation
+    // gate must override it, otherwise this recent empty value is trusted and
+    // the misleading idle screen remains visible until another invalidation.
+    const client = createTestClient(10_000);
+    client.setQueryData(
+      ["scene-boundaries", 2],
+      overviewFixture({
+        confirmed_revision: null,
+        draft_revision: null,
+        model_revision: null,
+        awaiting_confirmation: false,
+      }),
+    );
+
+    renderPanel({}, client);
+
+    expect(screen.getByTestId("scene-boundary-loading")).toHaveTextContent(
+      "正在准备场景划分",
+    );
+    expect(screen.queryByText("当前无需确认场景划分。")).not.toBeInTheDocument();
+
+    resolveOverview?.(overviewFixture());
+
+    expect(await screen.findByRole("heading", { name: "确认场景划分" })).toBeInTheDocument();
+    expect(screen.queryByText("当前无需确认场景划分。")).not.toBeInTheDocument();
+  });
+
   it("renders waiting confirmation page", async () => {
     vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(overviewFixture() as any);
     renderPanel();

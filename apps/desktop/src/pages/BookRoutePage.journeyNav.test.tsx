@@ -275,6 +275,7 @@ describe("CHG-017 BookRoutePage journey nav", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId("shell-scene-boundary-review").length).toBeGreaterThan(0);
     });
+    expect(screen.queryByTestId("confirm-boundary-division")).not.toBeInTheDocument();
     expect(screen.queryByText("阅读旅程尚未开始")).not.toBeInTheDocument();
     expect(screen.queryByTestId("workspace-tab-journey")).not.toBeInTheDocument();
   });

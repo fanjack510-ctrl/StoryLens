@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +14,7 @@ import { ApiError } from "../services/apiClient";
 const overview = vi.fn();
 const synthesize = vi.fn();
 const readCollection = vi.fn();
+const exportPdf = vi.fn();
 
 vi.mock("../services/commonPatternsApi", () => ({
   commonPatternsApi: {
@@ -27,6 +28,11 @@ vi.mock("../services/collectionsApi", () => ({
     read: (...a: unknown[]) => readCollection(...a),
   },
 }));
+
+vi.mock("../features/commonPatterns/commonPatternsExport", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../features/commonPatterns/commonPatternsExport")>();
+  return { ...original, downloadCommonPatternsPdf: (...a: unknown[]) => exportPdf(...a) };
+});
 
 const BASE_OVERVIEW = {
   books: [
@@ -185,6 +191,23 @@ describe("共性视图", () => {
     renderPage();
     fireEvent.click(await screen.findByTestId("cp-run"));
     expect(await screen.findByTestId("cp-provenance")).toHaveTextContent("deepseek-v4-flash");
+  });
+
+  it("共性结果生成后可以导出结构化 PDF", async () => {
+    const result = {
+      ...BASE_OVERVIEW,
+      provider_name: "deepseek",
+      model_name: "deepseek-v4-flash",
+      patterns: [],
+      not_shared: [],
+    };
+    synthesize.mockResolvedValue(result);
+    exportPdf.mockResolvedValue(undefined);
+    renderPage();
+    expect(screen.queryByTestId("cp-export-pdf")).toBeNull();
+    fireEvent.click(await screen.findByTestId("cp-run"));
+    fireEvent.click(await screen.findByTestId("cp-export-pdf"));
+    await waitFor(() => expect(exportPdf).toHaveBeenCalledWith(7, "扫榜第一批", result));
   });
 
   it("一条共性都没有时说的是「没找到」，不是空白", async () => {

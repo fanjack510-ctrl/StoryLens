@@ -49,11 +49,12 @@ def test_extract_chapter_materials_produces_full_drafts():
     drafts = [d for sc in scenes for d in sc.drafts]
     assert drafts, "悬疑信号词应产出资料"
     for d in drafts:
-        # 每条资料五件套齐全，且示例不是原文拼接（不含源文本的人名）
+        # 每条资料五件套齐全；展示摘要是可核对的证据句，抽象模式不带人名。
         assert d.title and d.concise_example and d.core_pattern
         assert d.mechanism and d.suspense_question
-        assert "陈默" not in d.concise_example
         assert "陈默" not in d.core_pattern
+        assert "被明确下来，并限制了后续" not in d.concise_example
+        assert "处境随之改变" not in d.concise_example
     # 开篇章节的 stage_hint
     assert all(d.applicable_stage == "开篇" for d in drafts)
 

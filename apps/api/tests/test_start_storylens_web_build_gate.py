@@ -127,6 +127,8 @@ def test_build_failure_does_not_start_or_listen(tmp_path: Path, require_pwsh: st
         cwd=str(ROOT),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
         timeout=120,
     )
@@ -181,6 +183,8 @@ def test_stale_dist_skip_build_does_not_start(tmp_path: Path, require_pwsh: str)
         cwd=str(ROOT),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
         timeout=60,
     )
@@ -217,6 +221,8 @@ def test_idempotent_healthy_reuse_still_short_circuits(require_pwsh: str) -> Non
         cwd=str(ROOT),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
         timeout=30,
     )

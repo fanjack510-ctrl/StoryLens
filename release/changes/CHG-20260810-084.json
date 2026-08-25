@@ -1,7 +1,7 @@
 {
   "id": "CHG-20260810-084",
   "title": "Real Hierarchical V2 Provider window extraction and synthesis fix",
-  "type": "bugfix",
+  "type": "fix",
   "base_version": "1.2.0",
   "status": "implemented",
   "include_in_next_release": true,

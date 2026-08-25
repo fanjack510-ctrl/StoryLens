@@ -377,7 +377,7 @@ def _major_character(
     """
     events = sorted(facts.get("key_events", ()))
     goals = list(facts.get("goals", ()))
-    choices = list(facts.get("choices", ()))
+    character_choices = list(facts.get("choices", ()))
     to_lead = list(facts.get("to_lead", ()))
     # 身份：正文写明的说法，抽取层一直在产出（role_hint），此前一路被丢掉。取出现次数最多的
     # 那个说法——同一个人在不同块里可能被写成「十班班长」和「班长」，多数票选出更完整的那个。
@@ -387,8 +387,8 @@ def _major_character(
     # 这一栏就空着。
     states = sorted(facts.get("states", ()), key=lambda x: x[0])
     ending = str(states[-1][2]) if states else ""
-    costs = [c for _, cs, _ in choices for c in cs]
-    gains = [g for _, _, gs in choices for g in gs]
+    costs = [c for _, cs, _ in character_choices for c in cs]
+    gains = [g for _, _, gs in character_choices for g in gs]
     return {
         "character_id": str(entity.get("entity_key", "")),
         "name": str(entity.get("display_surface_norm", "")),
@@ -422,7 +422,7 @@ def _major_character(
         # surface; a machine word is shown, and a reader cannot tell it from a bug.
         "relationship_to_protagonist": "" if index == 0 else (to_lead[-1] if to_lead else ""),
         "relationship_changes": to_lead[:6],
-        "major_choice": choices[0][0] if choices else "",
+        "major_choice": character_choices[0][0] if character_choices else "",
         "cost_paid": costs[:4],
         "gain_received": gains[:4],
         "ending": ending,

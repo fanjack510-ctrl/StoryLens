@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260825-001",
+  "title": "知识库清空旧素材并保留静态分类",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/material_lab",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/service.py",
+    "apps/api/tests/test_material_lab_api.py",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
+    "apps/desktop/src/pages/KnowledgeLibraryPage.test.tsx"
+  ],
+  "user_summary": "清除错误导入的素材数据，在空库状态下仍保留题材与分类目录，等待重新导入原始素材。",
+  "technical_summary": "Make the knowledge taxonomy originate from the canonical genre templates instead of imported row counts, remove the incorrect legacy-import rows from the active workspace database, and show a truthful empty-library state without touching books or completed whole-book analysis results.",
+  "acceptance_criteria": [
+    "错误导入的 legacy 素材与导入批次全部清空",
+    "书籍、章节、段落和已完成的全文分析结果不受影响",
+    "素材为空时仍显示 10 个题材及各题材的规范分类",
+    "悬疑题材在空库状态下仍显示开篇异常、实物线索、人物疑点、伏笔、真相揭示等 18 个分类",
+    "空状态明确提示可从全文分析识别线索或稍后导入原始素材"
+  ],
+  "tests": [
+    "python -m pytest apps/api/tests/test_material_lab_api.py -q (19 passed)",
+    "npm run test -- --run src/pages/KnowledgeLibraryPage.test.tsx (5 passed)",
+    "apps/desktop npm run typecheck"
+  ],
+  "verification_evidence": [
+    "工作区数据库 material_lab_legacy_materials: 40967 -> 0",
+    "工作区数据库 material_lab_legacy_imports: 1 -> 0",
+    "API 验证 knowledge_count=0、imported_knowledge_count=0、materials_total=0",
+    "API 验证 taxonomy_count=10、悬疑 categories=18 且计数全部为 0",
+    "真实浏览器刷新后无旧素材卡片，悬疑分类仍可切换"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅清空 material_lab_legacy_materials 与 material_lab_legacy_imports 中的错误迁移数据；未清空 material_lab_materials，未修改任何书籍、章节、段落或全文分析结果。旧数据若需要恢复，必须从原始素材重新导入并重新识别。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-25T01:41:15Z",
+  "updated_at": "2026-08-25T01:42:00Z"
+}

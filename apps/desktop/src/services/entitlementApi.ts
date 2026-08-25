@@ -10,6 +10,9 @@ export const PRO_FEATURE_KEYS = [
   "whole_book_native",
   "whole_book_enhanced",
   "chapter_aggregate_insights",
+  "common_patterns",
+  "knowledge_extraction",
+  "book_skill_generation",
 ] as const;
 
 export type ProFeatureKey = (typeof PRO_FEATURE_KEYS)[number];

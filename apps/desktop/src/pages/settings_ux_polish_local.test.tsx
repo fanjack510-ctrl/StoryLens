@@ -38,6 +38,21 @@ vi.mock("../services/settingsApi", () => ({
   },
 }));
 
+// 「隐私与更新」这一屏在桌面和网页两种运行时下长得不一样：没有原生更新器时，
+// 整块更新界面换成一句「网页版更新随本地服务更新」。这个测试问的是**桌面版**
+// 那一屏（它断言的 check-update-button 只在桌面路径里），所以运行时得说自己是桌面。
+// 之前没有这个桩，jsdom 里 canUseNativeUpdater 退回 isTauriRuntime() = false，
+// 于是测试在网页那条分支上找一个桌面才有的按钮，必然找不到。
+vi.mock("../services/runtimeCapabilities", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>(
+    "../services/runtimeCapabilities",
+  );
+  return {
+    ...actual,
+    canUseNativeUpdater: () => true,
+  };
+});
+
 vi.mock("../services/providersApi", () => ({
   providersApi: {
     list: vi.fn(async () => [

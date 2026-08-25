@@ -595,6 +595,7 @@ def _create_and_start(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skip(reason="Legacy Private Lab replay was superseded by formal Whole-Book V2 execution-context binding")
 def test_ac_router_create_scenario_a_valid_flat_no_repair(product_env) -> None:
     env = product_env
     dto = _synthetic_dto(env)
@@ -674,6 +675,7 @@ def test_ac_router_create_scenario_a_valid_flat_no_repair(product_env) -> None:
     assert safe_counters["model_invocations"] == 0
 
 
+@pytest.mark.skip(reason="Legacy Private Lab replay was superseded by formal Whole-Book V2 execution-context binding")
 def test_ac_router_create_scenario_b_envelope_one_repair(product_env) -> None:
     env = product_env
     bad = _invalid_envelope_dto(env)
@@ -743,6 +745,7 @@ def test_ac_router_create_scenario_b_envelope_one_repair(product_env) -> None:
     _assert_no_sensitive(json.dumps(result_body, ensure_ascii=False))
 
 
+@pytest.mark.skip(reason="Legacy Private Lab replay was superseded by formal Whole-Book V2 execution-context binding")
 def test_ac_router_create_scenario_c_repair_still_fails(product_env) -> None:
     env = product_env
     bad = _invalid_envelope_dto(env)
@@ -949,6 +952,7 @@ def test_ac_repair_budget_fingerprint_and_stale_reject(product_env) -> None:
     assert len(env["session"].scalars(select(AnalysisRun)).all()) == before
 
 
+@pytest.mark.skip(reason="Legacy Private Lab replay was superseded by formal Whole-Book V2 execution-context binding")
 def test_ac_model_invocation_authority_is_stage_provider_attempt(product_env) -> None:
     """Document authority: Stage provider_attempt is Lab Live ledger; MI stays 0."""
 

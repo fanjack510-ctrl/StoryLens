@@ -111,6 +111,7 @@ describe("UI shell navigation", () => {
     // 导航现在在顶栏里，不再是一条独立的侧栏。
     expect(nav.closest(".app-topbar")).not.toBeNull();
     expect(within(nav).getByTestId("nav-library")).toBeInTheDocument();
+    expect(within(nav).getByTestId("nav-knowledge")).toBeInTheDocument();
     expect(within(nav).getByTestId("nav-settings")).toBeInTheDocument();
     expect(within(nav).queryByText("任务中心")).not.toBeInTheDocument();
     expect(within(nav).queryByText("案例库")).not.toBeInTheDocument();

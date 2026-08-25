@@ -128,33 +128,39 @@ def test_stage1_reservation_and_release(testing_session):
     assert reservation.released_at is not None
 
 
-def test_exceeded_dimensions_requests_tokens_cost(testing_session):
-    with pytest.raises(InsufficientBudgetReservation) as req_exc:
-        reserve_budget(
-            testing_session,
-            run_id=None,
-            stage=STAGE_BOUNDARY,
-            required_requests=10,
-            required_tokens=10,
-            required_cost=0.01,
-            remaining_requests=5,
-            remaining_tokens=100,
-            remaining_cost=1,
-        )
-    assert req_exc.value.exceeded_dimensions == ["requests"]
-    with pytest.raises(InsufficientBudgetReservation) as tok_exc:
-        reserve_budget(
-            testing_session,
-            run_id=None,
-            stage=STAGE_BOUNDARY,
-            required_requests=1,
-            required_tokens=500,
-            required_cost=0.01,
-            remaining_requests=10,
-            remaining_tokens=100,
-            remaining_cost=1,
-        )
-    assert tok_exc.value.exceeded_dimensions == ["tokens"]
+def test_only_estimated_cost_blocks_reservation(testing_session):
+    # Requests and tokens remain visible in the estimate but are advisory. They
+    # are alternate units for the same paid usage and must not independently
+    # block a run while its explicit CNY budget still covers the estimate.
+    request_advisory = reserve_budget(
+        testing_session,
+        run_id=None,
+        stage=STAGE_BOUNDARY,
+        required_requests=10,
+        required_tokens=10,
+        required_cost=0.01,
+        remaining_requests=5,
+        remaining_tokens=100,
+        remaining_cost=1,
+    )
+    assert request_advisory.status == "active"
+    from app.services.budget_reservation import release_reservation
+
+    release_reservation(testing_session, request_advisory.id)
+    token_advisory = reserve_budget(
+        testing_session,
+        run_id=None,
+        stage=STAGE_BOUNDARY,
+        required_requests=1,
+        required_tokens=500,
+        required_cost=0.01,
+        remaining_requests=10,
+        remaining_tokens=100,
+        remaining_cost=1,
+    )
+    assert token_advisory.status == "active"
+    release_reservation(testing_session, token_advisory.id)
+
     with pytest.raises(InsufficientBudgetReservation) as cost_exc:
         reserve_budget(
             testing_session,

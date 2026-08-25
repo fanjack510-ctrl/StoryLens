@@ -58,7 +58,13 @@ function notLicensedMessage(key: CapabilityKey): string {
     case "story_lab":
       return "当前授权不包含故事实验台";
     case "cross_book_search":
-      return "当前授权不包含跨书检索";
+      return "当前授权不包含找相似写法";
+    case "common_patterns":
+      return "当前授权不包含共性视图";
+    case "knowledge_extraction":
+      return "当前授权不包含从全书提取素材";
+    case "book_skill_generation":
+      return "当前授权不包含生成作品 Skill";
     case "advanced_export":
       return "当前授权不包含进阶导出";
     case "pro_whole_book_insights":

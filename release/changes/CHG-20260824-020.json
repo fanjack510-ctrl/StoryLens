@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260824-020",
+  "title": "重构读懂报告的信息层级",
+  "type": "improvement",
+  "base_version": "1.3.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/features/wholeBookV2"
+  ],
+  "files": [
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.tsx",
+    "apps/desktop/src/features/wholeBookV2/formal.css",
+    "apps/desktop/src/features/wholeBookV2/wholeBookV2.css",
+    "apps/desktop/src/features/wholeBookV2/presentation/ComprehendReportView.tsx",
+    "apps/desktop/src/features/wholeBookV2/presentation/ComprehendReportView.test.tsx"
+  ],
+  "user_summary": "将工具书读懂结果整理为全书总览、可带走内容、适读人群、章节导航和可折叠逐节详情，去除裸露格式标记与重复页面标题。",
+  "technical_summary": "Import and consolidate the dedicated comprehend-report stylesheet, suppress the duplicate product header after completion, and reorganize the result into a constrained-width overview, structured labeled takeaways, sticky chapter navigation, chapter summary cards and collapsed section details. Parse only controlled semantic labels and strip light Markdown instead of enabling arbitrary model-rendered HTML.",
+  "acceptance_criteria": [
+    "完成后的读懂页面只显示一份书名和报告标题",
+    "全书摘要、核心主张、读者所得与适读人群具有明确视觉分区",
+    "模型返回的轻量 Markdown 标记不会直接显示给用户",
+    "章节提供导航、摘要、主线与内容数量概览",
+    "逐节详情默认折叠且仍可展开核对真实段落依据",
+    "导出 PDF 与 HTML 操作保留在报告首屏"
+  ],
+  "tests": [
+    "apps/desktop/src/features/wholeBookV2/presentation/ComprehendReportView.test.tsx (2 tests)",
+    "apps/desktop TypeScript typecheck",
+    "scripts/check_project.py"
+  ],
+  "verification_evidence": [
+    "定向组件测试 2 项通过",
+    "真实浏览器验证书籍 20 的读懂报告仅有一个书名标题",
+    "真实浏览器验证没有裸露 ** 标记，报告宽度 944px 且章节卡片正常呈现",
+    "真实浏览器确认全书总览、语义标签、章节导航与折叠详情可见"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "纯前端信息架构与样式调整，不修改报告数据结构或持久化内容。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": null,
+  "created_at": "2026-08-24T15:27:49Z",
+  "updated_at": "2026-08-24T15:27:49Z"
+}

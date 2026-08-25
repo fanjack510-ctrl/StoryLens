@@ -17,6 +17,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app import __version__
+
 from app.db.models import Base, Book, Chapter, NarrativeAssetVersion, Paragraph
 from app.main import create_app, mount_private_engine_lab_if_enabled
 from app.narrative_core.contracts.api_dto import WHOLE_BOOK_RUNS_ENDPOINT_DISABLED
@@ -131,7 +133,7 @@ def _seed_book(session: Session) -> tuple[Book, int]:
 
 
 def test_gates_and_version_locked() -> None:
-    assert VERSION == "1.2.0"
+    assert VERSION == __version__
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False

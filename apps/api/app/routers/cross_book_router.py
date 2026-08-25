@@ -68,7 +68,7 @@ def post_by_meaning(body: MeaningSearchRequest, db: Session = Depends(get_db)) -
             detail={
                 "error_code": "CROSS_BOOK_SEARCH_REQUIRES_PRO",
                 "message": (
-                    "「按意思找」是 Pro 功能。上面的关键词检索保持免费，"
+                    "「找相似写法」是 Pro 功能。上面的找原句功能保持免费，"
                     "而且覆盖全部条目；付费的是用自己的话描述、由模型挑出来这一步。"
                 ),
                 "details": {
