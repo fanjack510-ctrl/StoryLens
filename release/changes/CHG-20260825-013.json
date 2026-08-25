@@ -3,9 +3,16 @@
   "title": "Ship built-in curated material catalog",
   "type": "fix",
   "base_version": "1.3.1",
-  "status": "registered",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "fe4c147d9300bec474734a4aff3726aa1fe43fbb",
+      "message": "fix(material-lab): ship curated knowledge seed",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "Material Lab",
     "Windows packaging"
@@ -24,8 +31,14 @@
     "Repeated startup is idempotent and user-imported material is not overwritten or duplicated.",
     "The release asset contains no source excerpts, local paths, API credentials, license secrets, or private keys."
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "python -m pytest apps/api/tests/test_builtin_material_seed.py apps/api/tests/test_material_lab_api.py::test_legacy_materials_join_global_catalog_without_fake_storylens_evidence -q (4 passed)",
+    "python scripts/check_project.py (passed)"
+  ],
+  "verification_evidence": [
+    "Release seed validates to exactly 798 cards (480 domain_reference, 318 genre_example) across all ten fixed genres; forbidden credential/path/URL scan returned no matches.",
+    "Project scaffold gate passed after seed implementation; VERSION 1.3.1 and registry baseline were consistent."
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -41,5 +54,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-25T13:30:37Z",
-  "updated_at": "2026-08-25T13:31:00Z"
+  "updated_at": "2026-08-25T13:34:08Z"
 }
