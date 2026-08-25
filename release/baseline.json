@@ -1,15 +1,13 @@
 {
-  "version": "1.3.0",
-  "git_tag": null,
-  "git_commit": "6ef804bc",
-  "status": "legacy_verified",
-  "released_at": null,
-  "channel": "development",
-  "installer_sha256": null,
+  "version": "1.3.1",
+  "git_tag": "v1.3.1",
+  "git_commit": "bb38ff8835ef8b43c9978b5724f1bf1b97452435",
+  "status": "verified",
+  "released_at": "2026-08-25T12:35:45Z",
+  "channel": "stable",
+  "installer_sha256": "33279f33fd409e9972fe4ba1429fd5d0f5dae32bb19c0de110a7abc795a5682a",
   "updater_sha256": null,
-  "manifest_url": null,
-  "notes": "V1.3.0 开发基线，对应 commit 6ef804bc（chore(release): 1.2.0 → 1.3.0）。和 1.2.0 一样是开发基线，不是封存的发布产物：status 仍为 unverified，没有安装包证明，也不复用任何更早版本的证明。推到 1.3.0 是因为 VERSION 已经是 1.3.0，而台账停在 1.2.0 会让治理检查恒红——一个恒红的检查等于没有检查。正规路径 prepare-next-release 当前走不通（165 条变更记录不完整，ready_count 为 0），那是另一件事。",
-  "legacy_source_baseline": true,
-  "legacy_adopted_at": "2026-08-25T11:50:51Z",
-  "legacy_adoption_notes": "1. 1.0.2 version commit exists (52fd44894b41fa48192fc06ef1e189acb517b8f5).\n2. current HEAD is a descendant of that baseline commit.\n3. Historical Git tag and complete release artifacts are missing.\n4. 1.0.3 will be the first fully traceable version after enabling release baseline management.\n5. User explicitly authorized generating the next version.\n6. This adoption does NOT claim historical installer/tag/manifest artifacts were verified."
+  "manifest_url": "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.3.1",
+  "notes": "StoryLens v1.3.1 stable GitHub release; tag, installer digest and publication time verified against the public release asset.",
+  "legacy_source_baseline": false
 }

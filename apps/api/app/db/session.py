@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from app.db.models import Base
 
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def _ensure_sqlite_parent(database_url: str) -> None:
@@ -87,6 +89,18 @@ def create_db() -> None:
     from app.narrative_core.migrations.runner import apply_narrative_migrations
 
     apply_narrative_migrations(engine)
+    # A release contains a sanitized knowledge-card seed, never a user's SQLite
+    # database.  Import is transaction-scoped and retried on the next startup if
+    # the packaged asset is absent or invalid.
+    from app.narrative_core.material_lab.builtin_seed import (
+        install_builtin_material_seed,
+    )
+
+    try:
+        with SessionLocal.begin() as session:
+            install_builtin_material_seed(session)
+    except Exception:  # noqa: BLE001 - material seed must not prevent app startup
+        logger.exception("builtin_material_seed_install_failed")
 
 
 def migrate_phase_task_cancellation_v1(target_engine) -> None:

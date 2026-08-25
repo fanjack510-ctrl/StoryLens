@@ -862,6 +862,12 @@ def list_materials(
 
 def _legacy_material_dict(m: MaterialLabLegacyMaterial) -> dict:
     is_reference_corpus = (m.source_pattern_id or "").startswith("corpus:")
+    is_builtin = (m.source_pattern_id or "").startswith("builtin:")
+    builtin_role = (
+        (m.source_pattern_id or "").removeprefix("builtin:")
+        if is_builtin
+        else ""
+    )
     evidence: dict = {}
     evidence_rows: list[dict] = []
     if is_reference_corpus:
@@ -895,9 +901,17 @@ def _legacy_material_dict(m: MaterialLabLegacyMaterial) -> dict:
     ))
     return {
         "id": f"legacy:{m.source_material_id}",
-        "origin": "reference_corpus" if is_reference_corpus else "legacy_import",
+        "origin": (
+            "builtin_library"
+            if is_builtin
+            else ("reference_corpus" if is_reference_corpus else "legacy_import")
+        ),
         "book_id": None,
-        "source_book_title": m.source_book_title if is_reference_corpus else "旧项目资料库",
+        "source_book_title": (
+            "StoryLens 内置素材"
+            if is_builtin
+            else (m.source_book_title if is_reference_corpus else "旧项目资料库")
+        ),
         "chapter_id": None,
         "scene_seq": int(primary_evidence.get("paragraph_index") or primary_evidence.get("scene_seq") or 0),
         "place": "",
@@ -911,20 +925,40 @@ def _legacy_material_dict(m: MaterialLabLegacyMaterial) -> dict:
         "title": m.title,
         "source_excerpt": source_excerpt,
         "source_paragraph_ids": source_paragraph_ids,
-        "source_material_kind": "reference" if is_structured_reference else "fiction",
+        "source_material_kind": (
+            "reference"
+            if builtin_role == "domain_reference" or is_structured_reference
+            else "fiction"
+        ),
         "source_material_kind_confirmed": True,
-        "knowledge_role": "domain_reference" if is_structured_reference else "genre_example",
+        "knowledge_role": (
+            builtin_role
+            if builtin_role in {"domain_reference", "genre_example"}
+            else ("domain_reference" if is_structured_reference else "genre_example")
+        ),
         "knowledge_role_label": (
-            "种田资料知识"
-            if is_structured_reference
-            else ("参考小说知识" if is_reference_corpus else "旧库知识")
+            "领域知识"
+            if builtin_role == "domain_reference"
+            else (
+                "题材创作知识"
+                if is_builtin
+                else (
+                    "种田资料知识"
+                    if is_structured_reference
+                    else ("参考小说知识" if is_reference_corpus else "旧库知识")
+                )
+            )
         ),
         "verification_label": (
-            ("本地写作资料 · " if is_structured_reference else "本地参考小说 · ")
-            + (" / ".join(chapter_labels) if chapter_labels else "章节待定位")
-            + (" · 三段资料依据已核对" if is_structured_reference else " · 段落证据已核对")
-            if is_reference_corpus
-            else "旧项目派生层已迁入；未复制小说正文或原文摘录"
+            "StoryLens 内置素材 · 已脱敏，不含小说正文或本地路径"
+            if is_builtin
+            else (
+                ("本地写作资料 · " if is_structured_reference else "本地参考小说 · ")
+                + (" / ".join(chapter_labels) if chapter_labels else "章节待定位")
+                + (" · 三段资料依据已核对" if is_structured_reference else " · 段落证据已核对")
+                if is_reference_corpus
+                else "旧项目派生层已迁入；未复制小说正文或原文摘录"
+            )
         ),
         "concise_example": m.concise_example,
         "core_pattern": m.core_pattern,

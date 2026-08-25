@@ -20,6 +20,10 @@ datas = [
     # when config/cloud_pricing.json is absent in packaged installs.
     (str(REPO / "config" / "cloud_pricing.default.json"), "config"),
     (str(REPO / "config" / "license_public_keys.production.json"), "config"),
+    (
+        str(REPO / "packages" / "material_seed" / "storylens_material_seed_v1.json"),
+        "packages/material_seed",
+    ),
 ]
 
 hiddenimports = [

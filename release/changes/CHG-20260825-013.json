@@ -1,0 +1,45 @@
+{
+  "id": "CHG-20260825-013",
+  "title": "Ship built-in curated material catalog",
+  "type": "fix",
+  "base_version": "1.3.1",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "Material Lab",
+    "Windows packaging"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/material_lab/builtin_seed.py",
+    "packages/material_seed/storylens_material_seed_v1.json",
+    "apps/api/app/db/session.py",
+    "apps/api/storylens-api.spec",
+    "scripts/export_builtin_material_seed.py"
+  ],
+  "user_summary": "Bundle the 798 approved knowledge cards as a sanitized seed and import them safely on first launch or upgrade.",
+  "technical_summary": "Export the approved 780 isolated and 18 native derived cards into a Pydantic-validated source-independent JSON asset; package it with the sidecar; atomically merge it at startup under an owned batch while preserving user rows and skipping equivalent content.",
+  "acceptance_criteria": [
+    "A fresh database contains exactly 798 built-in cards after startup.",
+    "Repeated startup is idempotent and user-imported material is not overwritten or duplicated.",
+    "The release asset contains no source excerpts, local paths, API credentials, license secrets, or private keys."
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema change. Adds an owned derived-data batch; existing books, analysis results and user materials are preserved."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-25T13:30:37Z",
+  "updated_at": "2026-08-25T13:31:00Z"
+}
