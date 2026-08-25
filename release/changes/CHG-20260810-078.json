@@ -7,12 +7,6 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "133490105f40694f1f07411a7fe266a77876e9eb",
-      "message": "cut over formal Whole-Book product UI to shared V2 and hierarchical runtime.",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
       "sha": "ce1768f451c4cd7f05dbae8235877726098407f6",
       "message": "cut over formal Whole-Book product UI to shared V2 and hierarchical runtime.",
       "primary": true,
@@ -31,7 +25,7 @@
   ],
   "files": [],
   "user_summary": "Formal Whole-Book V2 UI cutover with shared ReportView and hierarchical V2 formal runtime.",
-  "technical_summary": "Route /books/:bookId/whole-book -> WholeBookV2ProductPage; Free create/background use hierarchical V2; legacy V1 notice.",
+  "technical_summary": "Route /books/:bookId/whole-book -> WholeBookV2ProductPage; Free create/background use hierarchical V2; legacy V1 notice. Removed the obsolete pre-amend commit SHA so clean CI clones can validate the release ledger.",
   "acceptance_criteria": [],
   "tests": [
     "tests/test_whole_book_chg078_formal_v2_cutover.py",
@@ -54,7 +48,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-10T07:16:03Z",
-  "updated_at": "2026-08-10T07:43:33Z"
+  "updated_at": "2026-08-25T12:41:08Z"
 }
