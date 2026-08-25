@@ -36,7 +36,9 @@ def main() -> int:
         print("解决：把它们写进 pyproject.toml 的 dependencies，再重新 bootstrap。")
         print("解释器：", sys.executable)
         return 1
-    print(f"check_sidecar_imports: {len(set(names))} 个模块都在")
+    # Keep release-build output ASCII-safe: GitHub's Windows runner may use
+    # a cp1252 console even when the repository and sources are UTF-8.
+    print(f"check_sidecar_imports: {len(set(names))} modules available")
     return 0
 
 if __name__ == "__main__":
