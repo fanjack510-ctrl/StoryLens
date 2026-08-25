@@ -1,13 +1,13 @@
 {
-  "version": "1.3.1",
-  "git_tag": "v1.3.1",
-  "git_commit": "bb38ff8835ef8b43c9978b5724f1bf1b97452435",
+  "version": "1.3.2",
+  "git_tag": "v1.3.2",
+  "git_commit": "3200d095a9648f1c779dbbbf4904d352d799e4a8",
   "status": "verified",
-  "released_at": "2026-08-25T12:35:45Z",
+  "released_at": "2026-08-25T14:13:27Z",
   "channel": "stable",
-  "installer_sha256": "33279f33fd409e9972fe4ba1429fd5d0f5dae32bb19c0de110a7abc795a5682a",
+  "installer_sha256": "d6d62dfff28421ecd8dbfa148f46d97baa757ade8f6d6ca0134f4cb6db008f16",
   "updater_sha256": null,
-  "manifest_url": "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.3.1",
-  "notes": "StoryLens v1.3.1 stable GitHub release; tag, installer digest and publication time verified against the public release asset.",
+  "manifest_url": "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.3.2",
+  "notes": "StoryLens v1.3.2 stable GitHub release; tag, installer digest and publication time verified against the public release asset.",
   "legacy_source_baseline": false
 }
