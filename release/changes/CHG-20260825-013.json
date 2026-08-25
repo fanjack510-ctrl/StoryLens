@@ -30,7 +30,7 @@
     "apps/api/storylens-api.spec",
     "scripts/export_builtin_material_seed.py"
   ],
-  "user_summary": "Bundle the 798 approved knowledge cards as a sanitized seed and import them safely on first launch or upgrade.",
+  "user_summary": "内置并自动恢复已验收的 798 条创作素材；新安装与旧版本升级后都能直接看到，且不会覆盖用户自己的素材。",
   "technical_summary": "Export the approved 780 isolated and 18 native derived cards into a Pydantic-validated source-independent JSON asset; package it with the sidecar; atomically merge it at startup under an owned batch while preserving user rows and skipping equivalent content.",
   "acceptance_criteria": [
     "A fresh database contains exactly 798 built-in cards after startup.",
@@ -60,5 +60,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-25T13:30:37Z",
-  "updated_at": "2026-08-25T13:34:09Z"
+  "updated_at": "2026-08-25T13:43:03Z"
 }
