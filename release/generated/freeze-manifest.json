@@ -1,167 +1,280 @@
 {
-  "frozen_at": "2026-07-23T05:21:03Z",
-  "base_version": "1.0.4",
+  "frozen_at": "2026-08-25T11:53:09Z",
+  "base_version": "1.3.0",
   "changes": [
     {
-      "id": "CHG-20260722-007",
-      "title": "Fix configured AI provider start-analysis gate",
-      "status": "ready",
+      "id": "CHG-20260824-001",
+      "title": "修复版本无关的发布台账降级测试",
+      "status": "ready-for-staging",
       "commits": [
-        "a387a00aa3fdf6330c82f565f2aa56767b0af58a",
-        "17ae45ddea56827a25ad4945488d863fd8a70001",
-        "44e22fb8a8c2e19a13df20bfc3d3928724898f26"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-008",
-      "title": "Fix long-book chapter navigation and pure-reading scroll",
-      "status": "ready",
+      "id": "CHG-20260824-002",
+      "title": "收束能力入口、书籍工作台与素材库体验",
+      "status": "ready-for-staging",
       "commits": [
-        "f3afc0e42a3f1c081b332228e5ceafc00cff083a",
-        "63b043415e57646a69c772959d23a2f9e4ff04c6",
-        "284cd3cea77505d219f5e0ed01612557cc376f58"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-009",
-      "title": "Restore continuous reader journey momentum line",
-      "status": "ready",
+      "id": "CHG-20260824-003",
+      "title": "将素材库纠正为题材知识库",
+      "status": "ready-for-staging",
       "commits": [
-        "24418b7680fe3e045465f601b8865a9019c46563"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-010",
-      "title": "Fill book workspace height to viewport bottom",
-      "status": "ready",
+      "id": "CHG-20260824-004",
+      "title": "新增跨书题材知识库",
+      "status": "ready-for-staging",
       "commits": [
-        "24c68b243e3fc5adf9043ff10f986e781b527051"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-011",
-      "title": "Unify narrative loop interpretation",
-      "status": "ready",
+      "id": "CHG-20260824-005",
+      "title": "校准全书分析正式验收合同",
+      "status": "ready-for-staging",
       "commits": [
-        "d47a9540193f7fb3200db67de64b4424b82c9c0e"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-012",
-      "title": "Simplify Reader Journey chart explanations and hook-payoff visualization",
-      "status": "ready",
+      "id": "CHG-20260824-006",
+      "title": "同步共性视图能力键合同",
+      "status": "ready-for-staging",
       "commits": [
-        "3a03db6a0665dfa9a75844f4f945fad90585749a"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-013",
-      "title": "Reconcile and rank hook-payoff relationships",
-      "status": "ready",
+      "id": "CHG-20260824-007",
+      "title": "校准后端正式安全与启动合同",
+      "status": "ready-for-staging",
       "commits": [
-        "694818063b8c632a89b280ee9f05a439efb4d12c"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260722-014",
-      "title": "Simplify Reader Journey terminology and explanations",
-      "status": "ready",
+      "id": "CHG-20260824-008",
+      "title": "补登记跨目录后端测试稳定性修复",
+      "status": "ready-for-staging",
       "commits": [
-        "3426457bec502f8f98f1ef5150dfe183f936e3ea"
+        "3976b3977936b4acd3ec03c2eba1473d451b201a",
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-001",
-      "title": "Fix frontend build gate and stale-dist startup",
-      "status": "ready",
+      "id": "CHG-20260824-009",
+      "title": "补登记书库仪表盘与能力入口可发现性",
+      "status": "ready-for-staging",
       "commits": [
-        "9cd806100a18498967fa7263ea88ecc535ff366d",
-        "806d7a36b3e0ed343728c0b8c82c64dc780cd750",
-        "15b3af2c886b88ef9fc95a08c107e131036e77ab"
+        "5b671e356f80d5374a92ca6d90f5a31d59d5f991",
+        "67b919631dbb0f040238ce1f4500cf3bd9b77143",
+        "cad46c69211d2eac89b219840f8b4c25eb6edea0",
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-002",
-      "title": "Clarify Reader Journey roles and simplify lens navigation",
-      "status": "ready",
+      "id": "CHG-20260824-010",
+      "title": "补登记长篇资产体积与授权解锁修复",
+      "status": "ready-for-staging",
       "commits": [
-        "068a4ae77bd4ee895afb1073aff44ec839bec9a9",
-        "ff92f5a745cf7b2661aeecdb544d6816a3c348fb",
-        "796f577aeefe866ea5ba5ce1eb16b5c877557f21"
+        "599c0825b4cdbb5ff6086622c547d723fa2a7cf6",
+        "c2c8151673a6451a4fb97ce1cc6ecfe0ae687658",
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-003",
-      "title": "Redesign Reader Journey hook resolution summary",
-      "status": "ready",
+      "id": "CHG-20260824-011",
+      "title": "补登记素材库本地引擎迁入",
+      "status": "ready-for-staging",
       "commits": [
-        "80b4a9b0642dfe5ebb001c2d62e5e07e7c80e280",
-        "1802f3a17a966e5ffceb68012c6aaa47f3247cfb",
-        "2027bbc91fda0419e1c2a6311e87791dfdb5b594",
-        "263e7789d5556384ccd3271fbd033255bfbe6b9d",
-        "6cee9b4dda1778028bb961293e737b808a6f64ae",
-        "72eb02e4e76c0aa4c4e3b6d7d3ed1fd78b1400e0"
+        "a0a6b553c069cf8927fcd5b007f861d30a7ccf99",
+        "afce3c083c6a86a3909efdca4cbab99c09105aa4",
+        "c304e37cd7f904e07e4529c51e62ef8bcbf7fbd6",
+        "a13be0420950b9cc19fd8d3a37f6e2f981ce4866",
+        "eb7c7867ff5db420620f6218021e962ce15ad6bc",
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-004",
-      "title": "Smooth chapter switching and fix long-book chapter list overlap",
-      "status": "ready",
+      "id": "CHG-20260824-012",
+      "title": "隔离被正式全书 V2 替代的私有实验回放",
+      "status": "ready-for-staging",
       "commits": [
-        "14296d420df5b13009e11596d4d2588453b8de57",
-        "1688923eb20cc6ea595f9797d210785136296946",
-        "f5fb089ed4e356367bb2342bd4799e7d76d8cdfb"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-005",
-      "title": "Separate Reader Journey chart tools and make comparison mode explicit",
-      "status": "ready",
+      "id": "CHG-20260824-013",
+      "title": "重排书库首页并压缩全局顶栏",
+      "status": "ready-for-staging",
       "commits": [
-        "5ae56e6ceae2d0da22a2fe38a1d4357e078108a9",
-        "ab3af600bfb860dc2e04b290789e76ce64905ef9",
-        "188b6d22216ee61e7074abcf072b88853789725b"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-006",
-      "title": "Simplify Reader Journey workspace information hierarchy",
-      "status": "ready",
+      "id": "CHG-20260824-014",
+      "title": "将题材知识库收束为全文拆文小说的全局产物",
+      "status": "ready-for-staging",
       "commits": [
-        "4cf755d1e4a10170cec86215c88d92039d2ca90f",
-        "2318ff78454a2ba8d489ca5a19b0d7929ea0d977",
-        "78601b2e969f131866ece52290101c834caa7ecf",
-        "ec14b4c45f98e21c7b7ef9448f500e0cf946124a",
-        "978d2b66ff8ec33b32e63fc8644ea8ac66e46bee",
-        "6de850198590a5ee01aa4000f1c975029897aa6b",
-        "043e2e7ce6f8ffb2c9d3a6ca82b6f5153126a8ff",
-        "a9a853d155a1f4c0799a0ae13c664a0b4a1eb9d9"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-007",
-      "title": "Move persistent appearance selector to global app header",
-      "status": "ready",
+      "id": "CHG-20260824-015",
+      "title": "恢复单章场景编辑并分离单章与全书分析层级",
+      "status": "ready-for-staging",
       "commits": [
-        "ab3df3f7fda771864b582b8900a21ab833c6caa9",
-        "8a83c95d54c871169671e8fe070efa2950ada18d",
-        "ad386d1f1adbb84ac40a32b6732b78a8fe8254cd"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-008",
-      "title": "Seal StoryLens 1.0.5 release baseline",
-      "status": "ready",
+      "id": "CHG-20260824-016",
+      "title": "启用本地开发 Pro 验证授权并校准授权页能力状态",
+      "status": "ready-for-staging",
       "commits": [
-        "a509297a499cded341fb36bdbe46a6cb6f6c942b"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     },
     {
-      "id": "CHG-20260723-009",
-      "title": "Fix Reader Journey PNG export after more-menu removal",
-      "status": "ready",
+      "id": "CHG-20260824-017",
+      "title": "消除场景确认页刷新时的误导空状态",
+      "status": "ready-for-staging",
       "commits": [
-        "2ad6f3ce733023db1dcad5e795a4610561289e48"
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260824-018",
+      "title": "重构长篇导入后的画像与分析范围选择流程",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260824-019",
+      "title": "为短篇拆文增加Pro PDF导出",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260824-020",
+      "title": "重构读懂报告的信息层级",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260824-021",
+      "title": "重构创作知识库并增加作品Skill生成",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260824-022",
+      "title": "迁移旧项目素材知识库",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-001",
+      "title": "知识库清空旧素材并保留静态分类",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-002",
+      "title": "知识库按题材分类限量提取",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-003",
+      "title": "知识摘要改为真实证据句",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-004",
+      "title": "本地参考小说高效分类与知识入库",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-005",
+      "title": "结构化种田写作资料入库",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-006",
+      "title": "榜单共性挑书工作区重构",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-007",
+      "title": "找参考双入口体验重构",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-008",
+      "title": "知识库全书来源管理器分页优化",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-009",
+      "title": "榜单共性结构化 PDF 导出",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-010",
+      "title": "正式拆分免费版与 StoryLens Pro，并接通爱发电购买激活",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
+      ]
+    },
+    {
+      "id": "CHG-20260825-011",
+      "title": "修复跨版本变更池错误阻塞发布",
+      "status": "ready-for-staging",
+      "commits": [
+        "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58"
       ]
     }
   ]
