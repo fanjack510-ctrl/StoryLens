@@ -1,14 +1,13 @@
 {
-  "frozen_at": "2026-08-25T13:37:39Z",
-  "base_version": "1.3.1",
+  "frozen_at": "2026-08-25T15:16:00Z",
+  "base_version": "1.3.2",
   "changes": [
     {
-      "id": "CHG-20260825-013",
-      "title": "Ship built-in curated material catalog",
-      "status": "ready-for-staging",
+      "id": "CHG-20260825-014",
+      "title": "修复桌面端 Pro 购买链接无法打开",
+      "status": "ready",
       "commits": [
-        "fe4c147d9300bec474734a4aff3726aa1fe43fbb",
-        "239ca12f661fbe4f04a49bb9f5d8d72ed549ac7d"
+        "25be9a9910881a62921ef0f133c9bcf41546921a"
       ]
     }
   ]
