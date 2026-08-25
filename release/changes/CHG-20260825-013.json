@@ -3,7 +3,7 @@
   "title": "Ship built-in curated material catalog",
   "type": "fix",
   "base_version": "1.3.1",
-  "status": "ready-for-staging",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -41,12 +41,16 @@
   "tests": [
     "python -m pytest apps/api/tests/test_builtin_material_seed.py apps/api/tests/test_material_lab_api.py::test_legacy_materials_join_global_catalog_without_fake_storylens_evidence -q (4 passed)",
     "python scripts/check_project.py (passed)",
-    "scripts/smoke_windows_release.ps1: 14 pytest passed; packaged sidecar reported 798 total / 798 imported / 0 books; no residual process."
+    "scripts/smoke_windows_release.ps1: 14 pytest passed; packaged sidecar reported 798 total / 798 imported / 0 books; no residual process.",
+    "npm audit --omit=dev --json (0 production vulnerabilities)",
+    "Windows release build and artifact gates passed for StoryLens 1.3.2"
   ],
   "verification_evidence": [
     "Release seed validates to exactly 798 cards (480 domain_reference, 318 genre_example) across all ten fixed genres; forbidden credential/path/URL scan returned no matches.",
     "Project scaffold gate passed after seed implementation; VERSION 1.3.1 and registry baseline were consistent.",
-    "Isolated packaged sidecar API confirmed the clean runtime receives all 798 materials without inheriting any build-machine books."
+    "Isolated packaged sidecar API confirmed the clean runtime receives all 798 materials without inheriting any build-machine books.",
+    "Installer SHA256 d6d62dfff28421ecd8dbfa148f46d97baa757ade8f6d6ca0134f4cb6db008f16; sidecar SHA256 2b7b40b2226d99524d29e6c30b885a02218c75b3517002483ed5a210806f31a9.",
+    "Diff-only sensitive-data scan from v1.3.1 found zero credential/private-key/local-path matches and zero new sensitive paths."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -63,5 +67,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-25T13:30:37Z",
-  "updated_at": "2026-08-25T14:05:30Z"
+  "updated_at": "2026-08-25T14:10:26Z"
 }
