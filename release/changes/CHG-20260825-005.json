@@ -3,9 +3,16 @@
   "title": "结构化种田写作资料入库",
   "type": "feature",
   "base_version": "1.3.0",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/api/app/narrative_core/material_lab",
     "apps/desktop/src/pages/KnowledgeLibraryPage.tsx",
@@ -40,7 +47,8 @@
     "读取 5 册 DOCX 共 500 条结构化素材，导入 24 个纯知识章节的 480 条，排除种田剧情事件库 20 条",
     "种田知识由 24 条增加到 504 条：日常细节 183、谋生手艺 103、经营发家 84、天气节气 45、养殖加工 42、作物种植 25、土壤水利 22",
     "浏览器抽查当家主妇：来源显示为古代种田文写作素材库·第一册，并展开 BASIS、EXAMPLE、PITFALL 三个稳定资料编号",
-    "页面验证标签为本地写作资料 · 农家人物 · 三段资料依据已核对"
+    "页面验证标签为本地写作资料 · 农家人物 · 三段资料依据已核对",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -55,7 +63,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-25T06:35:00Z",
-  "updated_at": "2026-08-25T06:35:00Z"
+  "updated_at": "2026-08-25T11:50:40Z"
 }

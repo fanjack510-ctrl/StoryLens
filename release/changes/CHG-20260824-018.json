@@ -3,9 +3,16 @@
   "title": "重构长篇导入后的画像与分析范围选择流程",
   "type": "improvement",
   "base_version": "1.3.0",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/desktop/src/components/books/BookAnalysisCards.tsx",
     "apps/desktop/src/pages/BookRoutePage.tsx"
@@ -41,7 +48,8 @@
     "TypeScript typecheck 通过",
     "真实浏览器验证书籍 18 未确认时只显示画像步骤",
     "真实浏览器验证画像确认后展示单章精析与全书分析双卡",
-    "release/evidence/takeover/book-analysis-scope-choice-preview.png"
+    "release/evidence/takeover/book-analysis-scope-choice-preview.png",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -56,7 +64,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-24T14:08:21Z",
-  "updated_at": "2026-08-24T14:10:20Z"
+  "updated_at": "2026-08-25T11:50:36Z"
 }

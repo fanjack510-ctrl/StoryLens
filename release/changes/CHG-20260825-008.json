@@ -3,9 +3,16 @@
   "title": "知识库全书来源管理器分页优化",
   "type": "improvement",
   "base_version": "1.3.0",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/desktop/src/pages"
   ],
@@ -35,7 +42,8 @@
     "真实浏览器验证当前3本来源摘要为已提取2、待提取1",
     "真实浏览器点击待提取筛选后仅显示星际校园：五人小队向前冲并显示1本结果",
     "组件测试使用15本来源验证每页6本、共3页、下一页切换和书名搜索",
-    "组件测试验证已提取状态筛选不会混入待提取来源"
+    "组件测试验证已提取状态筛选不会混入待提取来源",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -50,7 +58,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-25T08:35:25Z",
-  "updated_at": "2026-08-25T08:38:00Z"
+  "updated_at": "2026-08-25T11:50:41Z"
 }

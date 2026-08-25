@@ -3,9 +3,16 @@
   "title": "恢复单章场景编辑并分离单章与全书分析层级",
   "type": "fix",
   "base_version": "1.3.0",
-  "status": "registered",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/api/app/services/boundary_review_service.py",
     "apps/desktop/src/pages/BookRoutePage.tsx",
@@ -52,7 +59,8 @@
     "TypeScript typecheck、定向 ESLint、git diff --check、变更登记校验和 scripts/check_project.py 通过",
     "release/evidence/takeover/chapter-analysis-levels-preview.png",
     "release/evidence/takeover/scene-boundary-editor-preview.png",
-    "release/evidence/takeover/whole-book-mode-selector-preview.png"
+    "release/evidence/takeover/whole-book-mode-selector-preview.png",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -67,7 +75,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-24T13:12:42Z",
-  "updated_at": "2026-08-24T13:21:15Z"
+  "updated_at": "2026-08-25T11:50:34Z"
 }

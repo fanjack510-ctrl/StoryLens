@@ -3,9 +3,16 @@
   "title": "知识库清空旧素材并保留静态分类",
   "type": "improvement",
   "base_version": "1.3.0",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/api/app/narrative_core/material_lab",
     "apps/desktop/src/pages/KnowledgeLibraryPage.tsx"
@@ -35,7 +42,8 @@
     "工作区数据库 material_lab_legacy_imports: 1 -> 0",
     "API 验证 knowledge_count=0、imported_knowledge_count=0、materials_total=0",
     "API 验证 taxonomy_count=10、悬疑 categories=18 且计数全部为 0",
-    "真实浏览器刷新后无旧素材卡片，悬疑分类仍可切换"
+    "真实浏览器刷新后无旧素材卡片，悬疑分类仍可切换",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -50,7 +58,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-25T01:41:15Z",
-  "updated_at": "2026-08-25T01:42:00Z"
+  "updated_at": "2026-08-25T11:50:38Z"
 }

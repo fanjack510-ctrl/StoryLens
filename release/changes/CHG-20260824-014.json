@@ -3,9 +3,16 @@
   "title": "将题材知识库收束为全文拆文小说的全局产物",
   "type": "improvement",
   "base_version": "1.3.0",
-  "status": "registered",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/api/app/narrative_core/material_lab",
     "apps/api/app/routers/material_lab_router.py",
@@ -51,7 +58,8 @@
     "ESLint、scripts/check_project.py 与变更登记校验通过",
     "真实本地数据只识别 2 本完成全文拆文的小说，旧的 6366 条不合格素材被隔离",
     "浏览器验证单书页面无题材知识库标签，旧地址跳转 /knowledge",
-    "release/evidence/takeover/knowledge-library-global-only-preview.png"
+    "release/evidence/takeover/knowledge-library-global-only-preview.png",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -66,7 +74,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-24T12:34:50Z",
-  "updated_at": "2026-08-24T12:52:00Z"
+  "updated_at": "2026-08-25T11:50:33Z"
 }

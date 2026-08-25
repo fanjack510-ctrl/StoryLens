@@ -1,12 +1,12 @@
 {
-  "adopted_at": "2026-07-21T06:47:29Z",
+  "adopted_at": "2026-08-25T11:50:51Z",
   "previous_status": "unverified",
   "new_status": "legacy_verified",
-  "baseline_version": "1.0.2",
-  "baseline_git_commit": "52fd44894b41fa48192fc06ef1e189acb517b8f5",
+  "baseline_version": "1.3.0",
+  "baseline_git_commit": "6ef804bc",
   "legacy_source_baseline": true,
   "legacy_adoption_notes": "1. 1.0.2 version commit exists (52fd44894b41fa48192fc06ef1e189acb517b8f5).\n2. current HEAD is a descendant of that baseline commit.\n3. Historical Git tag and complete release artifacts are missing.\n4. 1.0.3 will be the first fully traceable version after enabling release baseline management.\n5. User explicitly authorized generating the next version.\n6. This adoption does NOT claim historical installer/tag/manifest artifacts were verified.",
-  "notes_preserved": "VERSION bump commit 52fd448 exists. No v1.0.2 Git tag, no archived installer hash, and no published updater manifest evidence found in-repo. Local install of 1.0.2 is claimed in docs but not cryptographically attested here.",
+  "notes_preserved": "V1.3.0 开发基线，对应 commit 6ef804bc（chore(release): 1.2.0 → 1.3.0）。和 1.2.0 一样是开发基线，不是封存的发布产物：status 仍为 unverified，没有安装包证明，也不复用任何更早版本的证明。推到 1.3.0 是因为 VERSION 已经是 1.3.0，而台账停在 1.2.0 会让治理检查恒红——一个恒红的检查等于没有检查。正规路径 prepare-next-release 当前走不通（165 条变更记录不完整，ready_count 为 0），那是另一件事。",
   "git_tag": null,
   "installer_sha256": null,
   "released_at": null

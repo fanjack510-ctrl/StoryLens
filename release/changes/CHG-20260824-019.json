@@ -3,9 +3,16 @@
   "title": "为短篇拆文增加Pro PDF导出",
   "type": "feature",
   "base_version": "1.3.0",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
+  ],
   "modules": [
     "apps/api/app/routers/short_form_router.py",
     "apps/desktop/src/features/shortForm"
@@ -38,7 +45,8 @@
     "定向后端 PDF 授权与归属校验测试 12 项通过",
     "TypeScript typecheck 通过",
     "真实浏览器验证书籍 19 显示导出 PDF · PRO 并完成生成",
-    "实际下载 C:/Users/msi/Downloads/破烂家电封神-短篇精读.pdf（600197 bytes）"
+    "实际下载 C:/Users/msi/Downloads/破烂家电封神-短篇精读.pdf（600197 bytes）",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -53,7 +61,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-24T14:48:49Z",
-  "updated_at": "2026-08-24T14:48:59Z"
+  "updated_at": "2026-08-25T11:50:36Z"
 }

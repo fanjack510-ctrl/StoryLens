@@ -3,24 +3,72 @@
   "title": "补登记书库仪表盘与能力入口可发现性",
   "type": "improvement",
   "base_version": "1.3.0",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
   "commits": [
-    {"sha": "5b671e356f80d5374a92ca6d90f5a31d59d5f991", "message": "feat(ui): 首页从一张书单变成一个仪表盘", "primary": true, "multi_change_reason": null},
-    {"sha": "67b919631dbb0f040238ce1f4500cf3bd9b77143", "message": "fix(ui): 修复画像按钮、筛选断词和 PRO 入口", "primary": false, "multi_change_reason": "同属书库与能力入口验收修复"},
-    {"sha": "cad46c69211d2eac89b219840f8b4c25eb6edea0", "message": "fix(ui): 付费功能入口始终可发现", "primary": false, "multi_change_reason": "同属书库与能力入口验收修复"}
+    {
+      "sha": "5b671e356f80d5374a92ca6d90f5a31d59d5f991",
+      "message": "feat(ui): 首页从一张书单变成一个仪表盘",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "67b919631dbb0f040238ce1f4500cf3bd9b77143",
+      "message": "fix(ui): 修复画像按钮、筛选断词和 PRO 入口",
+      "primary": false,
+      "multi_change_reason": "同属书库与能力入口验收修复"
+    },
+    {
+      "sha": "cad46c69211d2eac89b219840f8b4c25eb6edea0",
+      "message": "fix(ui): 付费功能入口始终可发现",
+      "primary": false,
+      "multi_change_reason": "同属书库与能力入口验收修复"
+    },
+    {
+      "sha": "95e046a2fa576f6e7a4fdcbe2d6fc48bbf3b9f58",
+      "message": "feat(release): consolidate StoryLens 1.3.1 candidate",
+      "primary": false,
+      "multi_change_reason": "Integrated StoryLens 1.3.1 release candidate"
+    }
   ],
-  "modules": ["apps/desktop/src/pages", "apps/desktop/src/components/layout"],
-  "files": ["apps/desktop/src/pages/LibraryPage.tsx", "apps/desktop/src/components/layout/AppShell.tsx", "apps/desktop/src/styles/components.css"],
+  "modules": [
+    "apps/desktop/src/pages",
+    "apps/desktop/src/components/layout"
+  ],
+  "files": [
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/src/styles/components.css"
+  ],
   "user_summary": "书库首页升级为仪表盘，并让画像与付费能力入口始终可找到。",
   "technical_summary": "Register the existing dashboard, acceptance polish and capability-discovery commits discovered during takeover.",
-  "acceptance_criteria": ["首页提供书库概览", "能力入口不因当前授权状态而消失", "画像与筛选控件可正常使用"],
-  "tests": ["apps/desktop/src/pages/LibraryPage.collections.test.tsx", "apps/desktop/src/services/product_edition_identity_local.test.tsx"],
-  "verification_evidence": ["前端全量测试通过"],
-  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "界面与发现性变更。"},
-  "release_impact": {"requires_reanalysis": false, "requires_restart": false, "updater_impact": false, "breaking_change": false},
+  "acceptance_criteria": [
+    "首页提供书库概览",
+    "能力入口不因当前授权状态而消失",
+    "画像与筛选控件可正常使用"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/LibraryPage.collections.test.tsx",
+    "apps/desktop/src/services/product_edition_identity_local.test.tsx"
+  ],
+  "verification_evidence": [
+    "前端全量测试通过",
+    "release/evidence/1.3.1/RC1_VERIFICATION.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "界面与发现性变更。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
   "blocker_level": "none",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-24T09:21:00Z",
-  "updated_at": "2026-08-24T09:21:00Z"
+  "updated_at": "2026-08-25T11:50:30Z"
 }
