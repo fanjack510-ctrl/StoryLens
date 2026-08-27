@@ -65,7 +65,10 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install -e ".[dev,sidecar]"
+          .venv/bin/python -m pip install \
+            --constraint scripts/macos-release-constraints.txt \
+            --only-binary=cryptography \
+            -e ".[dev,sidecar]"
 
       - name: Targeted platform tests
         shell: bash

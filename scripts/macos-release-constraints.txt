@@ -1,0 +1,4 @@
+# Keep the macOS release sidecar reproducible on both Apple Silicon and Intel.
+# cryptography 50 currently has no Intel macOS wheel, so pip builds it against
+# the runner's Homebrew OpenSSL and PyInstaller can bundle an incompatible dylib.
+cryptography==46.0.5
