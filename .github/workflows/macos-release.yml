@@ -1,0 +1,97 @@
+name: macOS Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected repository version"
+        required: true
+        default: "1.3.4"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify requested version
+        shell: bash
+        run: |
+          actual="$(tr -d '[:space:]' < VERSION)"
+          [[ "$actual" == "${{ inputs.version }}" ]] || {
+            echo "Requested version ${{ inputs.version }} does not match VERSION $actual" >&2
+            exit 2
+          }
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -e ".[dev,sidecar]"
+
+      - name: Targeted platform tests
+        shell: bash
+        run: |
+          .venv/bin/python -m pytest -q \
+            apps/api/tests/test_paths_runtime.py \
+            apps/api/tests/test_pdf_export_vip_gate.py
+
+      - name: Build DMG
+        shell: bash
+        env:
+          STORYLENS_RC_CANDIDATE: "1"
+        run: ./scripts/build_macos_release.sh
+
+      - name: Desktop runtime unit tests
+        shell: bash
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+      - name: Release smoke tests
+        shell: bash
+        run: ./scripts/smoke_macos_release.sh
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: storylens-macos-${{ matrix.arch }}-${{ inputs.version }}
+          path: dist/release-macos-${{ matrix.arch }}/
+          if-no-files-found: error
+          retention-days: 14

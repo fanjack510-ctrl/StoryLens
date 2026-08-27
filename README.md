@@ -17,7 +17,7 @@ StoryLens 1.3.1 是面向小说创作者的**本地优先拆书、阅读分析�
 | 原始文件 | 用户原始 TXT / DOCX / EPUB **不会被软件删除** |
 | 云端账号 | StoryLens **不提供**云端账号 |
 | 费用 | 由你的模型服务账户承担 |
-| 平台 | Windows 10/11（PowerShell 脚本）；桌面栈 React + Vite + Tauri |
+| 平台 | Windows 10/11；macOS 12+ 安装包见 [`docs/macos-desktop-release.md`](docs/macos-desktop-release.md)；桌面栈 React + Vite + Tauri |
 
 开源许可证尚未选定，见 [`docs/license-selection-notes.md`](docs/license-selection-notes.md)。**请勿**期望仓库中已有 `LICENSE` 文件。
 
@@ -67,6 +67,7 @@ V1.0 发布就绪审计：`audits/v1.0/`。
 
 构建前端：`.\scripts\build-release.ps1`（调用 `build_desktop.ps1`；正式版本以 `tauri.conf.json` / `set_version.ps1` 为准）。
 构建 Windows 安装包：`.\scripts\build_windows_release.ps1`。
+构建 macOS 安装包：在 Mac 或 GitHub Actions 运行 `./scripts/build_macos_release.sh`，详见 [`docs/macos-desktop-release.md`](docs/macos-desktop-release.md)。
 
 ### Narrative Intelligence Core
 

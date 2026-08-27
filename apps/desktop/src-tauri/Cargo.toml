@@ -30,6 +30,9 @@ windows-sys = { version = "0.59", features = [
   "Win32_UI_Shell",
 ] }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

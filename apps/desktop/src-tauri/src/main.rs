@@ -163,19 +163,7 @@ fn save_download_file(app: AppHandle, filename: String, bytes: Vec<u8>) -> Resul
 fn open_external_https_url(url: String) -> Result<(), String> {
     use windows_sys::Win32::UI::Shell::ShellExecuteW;
 
-    let parsed = url::Url::parse(url.trim()).map_err(|_| "购买地址无效。".to_string())?;
-    let host = parsed
-        .host_str()
-        .map(str::to_ascii_lowercase)
-        .ok_or_else(|| "购买地址无效。".to_string())?;
-    if parsed.scheme() != "https"
-        || host == "localhost"
-        || host == "127.0.0.1"
-        || host == "::1"
-        || host.ends_with(".localhost")
-    {
-        return Err("购买地址无效。".into());
-    }
+    let parsed = validated_external_https_url(&url)?;
 
     let verb: Vec<u16> = OsStr::new("open").encode_wide().chain(Some(0)).collect();
     let target: Vec<u16> = OsStr::new(parsed.as_str())
@@ -200,8 +188,38 @@ fn open_external_https_url(url: String) -> Result<(), String> {
 
 #[cfg(not(windows))]
 #[tauri::command]
-fn open_external_https_url(_url: String) -> Result<(), String> {
-    Err("当前系统暂不支持打开外部页面。".into())
+fn open_external_https_url(url: String) -> Result<(), String> {
+    let parsed = validated_external_https_url(&url)?;
+    #[cfg(target_os = "macos")]
+    let launcher = "open";
+    #[cfg(not(target_os = "macos"))]
+    let launcher = "xdg-open";
+
+    let status = std::process::Command::new(launcher)
+        .arg(parsed.as_str())
+        .status()
+        .map_err(|error| format!("系统浏览器未能打开购买页面：{error}"))?;
+    if !status.success() {
+        return Err("系统浏览器未能打开购买页面。".into());
+    }
+    Ok(())
+}
+
+fn validated_external_https_url(raw: &str) -> Result<url::Url, String> {
+    let parsed = url::Url::parse(raw.trim()).map_err(|_| "购买地址无效。".to_string())?;
+    let host = parsed
+        .host_str()
+        .map(str::to_ascii_lowercase)
+        .ok_or_else(|| "购买地址无效。".to_string())?;
+    if parsed.scheme() != "https"
+        || host == "localhost"
+        || host == "127.0.0.1"
+        || host == "::1"
+        || host.ends_with(".localhost")
+    {
+        return Err("购买地址无效。".into());
+    }
+    Ok(parsed)
 }
 
 #[tauri::command]
@@ -337,4 +355,25 @@ fn main() {
         }
         _ => {}
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validated_external_https_url;
+
+    #[test]
+    fn external_url_accepts_public_https() {
+        let parsed = validated_external_https_url(
+            "https://afdian.com/item/b7251700a07311f1be455254001e7c00",
+        )
+        .expect("public HTTPS URL should be accepted");
+        assert_eq!(parsed.scheme(), "https");
+    }
+
+    #[test]
+    fn external_url_rejects_local_or_non_https_targets() {
+        assert!(validated_external_https_url("http://example.com").is_err());
+        assert!(validated_external_https_url("https://127.0.0.1/license").is_err());
+        assert!(validated_external_https_url("https://demo.localhost/license").is_err());
+    }
 }

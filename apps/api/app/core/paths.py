@@ -1,9 +1,10 @@
-"""Filesystem roots for development vs packaged Windows desktop."""
+"""Filesystem roots for development vs packaged desktop applications."""
 
 from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Mapping
 from functools import lru_cache
 from pathlib import Path
 
@@ -39,16 +40,38 @@ def is_production_runtime() -> bool:
     return is_frozen()
 
 
+def _production_data_root(
+    *,
+    platform_name: str | None = None,
+    os_name: str | None = None,
+    environ: Mapping[str, str] | None = None,
+    home: Path | None = None,
+) -> Path:
+    """Return the native per-user application-data root for this platform."""
+    platform_name = platform_name or sys.platform
+    os_name = os_name or os.name
+    environ = environ if environ is not None else os.environ
+    home = home or Path.home()
+    if platform_name == "darwin":
+        return home / "Library" / "Application Support" / "StoryLens"
+    if os_name == "nt":
+        local = environ.get("LOCALAPPDATA")
+        if local:
+            return Path(local) / "StoryLens"
+        return home / "AppData" / "Local" / "StoryLens"
+    xdg_data_home = environ.get("XDG_DATA_HOME")
+    if xdg_data_home:
+        return Path(xdg_data_home).expanduser() / "StoryLens"
+    return home / ".local" / "share" / "StoryLens"
+
+
 @lru_cache
 def user_data_root() -> Path:
     override = os.environ.get("STORYLENS_DATA_DIR")
     if override:
         return Path(override).expanduser().resolve()
     if is_production_runtime():
-        local = os.environ.get("LOCALAPPDATA")
-        if local:
-            return Path(local) / "StoryLens"
-        return Path.home() / "AppData" / "Local" / "StoryLens"
+        return _production_data_root()
     return (resource_root() / "data").resolve()
 
 

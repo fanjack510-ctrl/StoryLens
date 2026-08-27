@@ -98,12 +98,13 @@ fn find_free_port() -> Result<u16, BackendError> {
             detail: format!("bind 127.0.0.1:0 failed: {e}"),
         })
         .and_then(|listener| {
-            listener.local_addr().map(|addr| addr.port()).map_err(|e| {
-                BackendError {
+            listener
+                .local_addr()
+                .map(|addr| addr.port())
+                .map_err(|e| BackendError {
                     user_message: "无法分配本地端口，请稍后重试或重启电脑。".into(),
                     detail: format!("local_addr failed: {e}"),
-                }
-            })
+                })
         })
 }
 
@@ -114,20 +115,39 @@ fn sidecar_candidates(app: &AppHandle) -> Vec<PathBuf> {
             paths.push(dir.join("storylens-api.exe"));
             paths.push(dir.join("storylens-api"));
             paths.push(dir.join("binaries").join("storylens-api.exe"));
+            paths.push(dir.join("binaries").join("storylens-api"));
         }
     }
     if let Ok(resource) = app.path().resource_dir() {
         paths.push(resource.join("storylens-api.exe"));
+        paths.push(resource.join("storylens-api"));
         paths.push(resource.join("binaries").join("storylens-api.exe"));
+        paths.push(resource.join("binaries").join("storylens-api"));
     }
     if let Ok(manifest) = std::env::var("CARGO_MANIFEST_DIR") {
-        let triple = std::env::var("TARGET")
-            .unwrap_or_else(|_| "x86_64-pc-windows-msvc".into());
+        let triple = std::env::var("TARGET").unwrap_or_else(|_| host_target_triple());
         let base = PathBuf::from(manifest).join("binaries");
         paths.push(base.join(format!("storylens-api-{triple}.exe")));
+        paths.push(base.join(format!("storylens-api-{triple}")));
         paths.push(base.join("storylens-api.exe"));
+        paths.push(base.join("storylens-api"));
     }
     paths
+}
+
+fn host_target_triple() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        return format!("{}-pc-windows-msvc", std::env::consts::ARCH);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return format!("{}-apple-darwin", std::env::consts::ARCH);
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        format!("{}-unknown-linux-gnu", std::env::consts::ARCH)
+    }
 }
 
 fn resolve_sidecar(app: &AppHandle) -> Result<PathBuf, BackendError> {
@@ -182,7 +202,11 @@ fn terminate_pid(pid: u32) {
     }
     #[cfg(not(windows))]
     {
-        let _ = pid;
+        // This path is reached only after the authenticated loopback shutdown
+        // request timed out. Kill exactly the PID spawned by this instance.
+        unsafe {
+            libc::kill(pid as libc::pid_t, libc::SIGKILL);
+        }
     }
 }
 
@@ -193,8 +217,11 @@ fn pid_alive(pid: u32) -> bool {
     }
     #[cfg(not(windows))]
     {
-        let _ = pid;
-        false
+        if pid == 0 {
+            return false;
+        }
+        let result = unsafe { libc::kill(pid as libc::pid_t, 0) };
+        result == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
     }
 }
 
@@ -546,11 +573,20 @@ fn cleanup_failed_spawn(life: SidecarLifecycle) {
     stop_lifecycle(life);
 }
 
-fn user_log_dir() -> PathBuf {
-    let base = std::env::var_os("LOCALAPPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(".").join("data"));
-    base.join("StoryLens").join("logs")
+fn user_log_dir(_app: &AppHandle) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let base = std::env::var_os("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(".").join("data"));
+        return base.join("StoryLens").join("logs");
+    }
+    #[cfg(not(windows))]
+    {
+        _app.path()
+            .app_log_dir()
+            .unwrap_or_else(|_| PathBuf::from(".").join("data").join("logs"))
+    }
 }
 
 pub fn start_backend(app: &AppHandle) -> Result<(), BackendError> {
@@ -570,7 +606,7 @@ pub fn start_backend(app: &AppHandle) -> Result<(), BackendError> {
     }
 
     let sidecar = resolve_sidecar(app)?;
-    let log_dir = user_log_dir();
+    let log_dir = user_log_dir(app);
     // Capture same-path PIDs before any spawn so we never claim other instances.
     let baseline_path_pids: HashSet<u32> = pids_for_executable_path(&sidecar).into_iter().collect();
 

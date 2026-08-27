@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for StoryLens FastAPI sidecar (Windows).
+# PyInstaller spec for the StoryLens FastAPI desktop sidecar.
 
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all, collect_submodules
@@ -48,7 +49,6 @@ hiddenimports = [
     "pydantic_settings",
     "keyring",
     "keyring.backends",
-    "keyring.backends.Windows",
     "docx",
     "ebooklib",
     "bs4",
@@ -61,6 +61,11 @@ hiddenimports = [
     "app",
     "app.main",
 ]
+
+if sys.platform == "win32":
+    hiddenimports.append("keyring.backends.Windows")
+elif sys.platform == "darwin":
+    hiddenimports.append("keyring.backends.macOS")
 
 # keyring discovers backends via package metadata / entry points; collect_all
 # pulls submodules + dist-info so Windows Credential Manager backend is usable.

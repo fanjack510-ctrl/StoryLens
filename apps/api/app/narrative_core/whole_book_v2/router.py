@@ -1,6 +1,6 @@
 """Formal read-only V2 result API. Creation remains owned by the existing run API."""
 from __future__ import annotations
-import os,re,subprocess,tempfile
+import os,re,shutil,subprocess,sys,tempfile
 from typing import Any
 from fastapi import APIRouter,Depends,HTTPException,Query
 from fastapi.responses import Response
@@ -32,12 +32,28 @@ def get_v2_module(run_id:int,module:str,cursor:int=Query(0,ge=0),limit:int=Query
 class _PdfRequest(BaseModel):
     html:str
 def _find_pdf_browser()->str|None:
-    """A Chromium the machine already has. Every supported Windows ships Edge; Chrome is a fallback."""
-    candidates=[os.environ.get("STORYLENS_PDF_BROWSER"),
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"]
+    """Locate a Chromium-family browser already installed on the host."""
+    candidates=[os.environ.get("STORYLENS_PDF_BROWSER")]
+    if sys.platform == "darwin":
+        candidates += [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+            str(os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")),
+            str(os.path.expanduser("~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge")),
+        ]
+    elif os.name == "nt":
+        candidates += [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        ]
+    else:
+        candidates += [shutil.which(name) for name in (
+            "google-chrome", "microsoft-edge", "chromium", "chromium-browser", "brave-browser"
+        )]
     for c in candidates:
         if c and os.path.isfile(c): return c
     return None
@@ -165,7 +181,7 @@ def render_report_pdf(
                        "product_label":str(commerce.get("product_label") or "StoryLens Pro")}})
     browser=_find_pdf_browser()
     if browser is None:
-        raise HTTPException(status_code=501,detail={"error_code":"PDF_BROWSER_NOT_FOUND","message":"未找到可用于生成 PDF 的浏览器（Edge/Chrome）。","details":{}})
+        raise HTTPException(status_code=501,detail={"error_code":"PDF_BROWSER_NOT_FOUND","message":"未找到可用于生成 PDF 的 Chromium 浏览器（Edge、Chrome、Chromium 或 Brave）。","details":{}})
     with tempfile.TemporaryDirectory(prefix="storylens-pdf-") as td:
         src=os.path.join(td,"report.html"); dst=os.path.join(td,"report.pdf")
         with open(src,"w",encoding="utf-8") as f: f.write(html)

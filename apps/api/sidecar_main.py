@@ -1,6 +1,7 @@
-"""Windows desktop sidecar entry for StoryLens FastAPI.
+"""Packaged desktop sidecar entry for StoryLens FastAPI.
 
-Packaged with PyInstaller as storylens-api.exe. Listens on 127.0.0.1 only.
+Packaged with PyInstaller as ``storylens-api`` (``.exe`` on Windows).
+Listens on 127.0.0.1 only.
 """
 
 from __future__ import annotations

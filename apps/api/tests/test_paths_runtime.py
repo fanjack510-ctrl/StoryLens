@@ -21,6 +21,7 @@ def test_development_data_root_under_repo(monkeypatch, tmp_path):
     assert layout["exports"] == root / "exports"
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows LOCALAPPDATA contract")
 def test_production_layout_uses_localappdata(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     monkeypatch.setenv("STORYLENS_APP_ENV", "production")
@@ -53,3 +54,23 @@ def test_data_dir_override(monkeypatch, tmp_path):
     monkeypatch.setenv("STORYLENS_DATA_DIR", str(tmp_path / "custom"))
     paths.user_data_root.cache_clear()
     assert paths.user_data_root() == (tmp_path / "custom").resolve()
+
+
+def test_macos_production_root_uses_application_support(tmp_path):
+    root = paths._production_data_root(
+        platform_name="darwin",
+        os_name="posix",
+        environ={},
+        home=tmp_path,
+    )
+    assert root == tmp_path / "Library" / "Application Support" / "StoryLens"
+
+
+def test_linux_production_root_honors_xdg_data_home(tmp_path):
+    root = paths._production_data_root(
+        platform_name="linux",
+        os_name="posix",
+        environ={"XDG_DATA_HOME": str(tmp_path / "xdg")},
+        home=tmp_path,
+    )
+    assert root == tmp_path / "xdg" / "StoryLens"

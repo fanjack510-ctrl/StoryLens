@@ -290,3 +290,15 @@ def test_short_form_pdf_opens_for_pro(
     )
     assert r.status_code == 501
     assert r.json()["detail"]["error_code"] == "PDF_BROWSER_NOT_FOUND"
+
+
+def test_macos_pdf_browser_detection_includes_chrome(monkeypatch: pytest.MonkeyPatch) -> None:
+    chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    monkeypatch.delenv("STORYLENS_PDF_BROWSER", raising=False)
+    monkeypatch.setattr(v2_router_module.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        v2_router_module.os.path,
+        "isfile",
+        lambda candidate: candidate == chrome,
+    )
+    assert v2_router_module._find_pdf_browser() == chrome
