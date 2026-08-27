@@ -23,8 +23,9 @@ cleanup() {
   if [[ -n "$SIDECAR_PID" ]] && kill -0 "$SIDECAR_PID" 2>/dev/null; then
     kill "$SIDECAR_PID" 2>/dev/null || true
   fi
-  if mount | grep -Fq "on $MOUNT_POINT "; then
-    hdiutil detach "$MOUNT_POINT" -quiet || true
+  if [[ -d "$MOUNT_POINT" ]]; then
+    hdiutil detach "$MOUNT_POINT" -quiet 2>/dev/null || \
+      hdiutil detach "$MOUNT_POINT" -force -quiet 2>/dev/null || true
   fi
   rm -rf "$TMP_ROOT"
 }
@@ -71,7 +72,11 @@ mkdir -p "$MOUNT_POINT"
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT_POINT" -quiet
 APP="$MOUNT_POINT/StoryLens.app"
 [[ -d "$APP" ]] || { echo "StoryLens.app missing from DMG" >&2; exit 5; }
-[[ -x "$APP/Contents/MacOS/StoryLens" ]] || { echo "Desktop executable missing" >&2; exit 5; }
+DESKTOP_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+[[ -n "$DESKTOP_EXECUTABLE" && -x "$APP/Contents/MacOS/$DESKTOP_EXECUTABLE" ]] || {
+  echo "Desktop executable missing: $DESKTOP_EXECUTABLE" >&2
+  exit 5
+}
 [[ -x "$APP/Contents/MacOS/storylens-api" ]] || {
   echo "Bundled sidecar missing from StoryLens.app" >&2
   find "$APP/Contents" -maxdepth 4 -type f -print >&2
