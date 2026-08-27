@@ -3,7 +3,7 @@
   "title": "StoryLens 1.3.4 macOS 安装包与平台适配",
   "type": "build",
   "base_version": "1.3.4",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -17,6 +17,12 @@
       "message": "test: read macOS bundle executable from plist",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "fde72946200cb68bf79c21c8c86bf2ac1f4e37e8",
+      "message": "fix: pin macOS sidecar crypto wheel",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -28,6 +34,7 @@
     ".github/workflows/macos-release.yml",
     "scripts/build_macos_release.sh",
     "scripts/smoke_macos_release.sh",
+    "scripts/macos-release-constraints.txt",
     "apps/desktop/src-tauri/src/backend.rs",
     "apps/desktop/src-tauri/src/main.rs",
     "apps/api/app/core/paths.py",
@@ -52,10 +59,15 @@
   ],
   "tests": [
     ".venv/Scripts/python.exe -m pytest -q apps/api/tests/test_paths_runtime.py apps/api/tests/test_pdf_export_vip_gate.py (19 passed)",
-    "cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml (6 passed)"
+    "cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml (6 passed)",
+    "GitHub Actions run 33066225041: targeted Python tests, Rust unit tests, packaged sidecar health/shutdown, DMG mount, bundle and sidecar checks passed on macos-15 arm64 and macos-15-intel x64"
   ],
   "verification_evidence": [
-    "Windows targeted platform tests and Rust unit tests passed before macOS CI dispatch."
+    "Windows targeted platform tests and Rust unit tests passed before macOS CI dispatch.",
+    "Successful dual-architecture workflow: https://github.com/fanjack510-ctrl/StoryLens/actions/runs/33066225041 (build commit fde72946200cb68bf79c21c8c86bf2ac1f4e37e8).",
+    "Published Apple Silicon DMG: https://github.com/fanjack510-ctrl/StoryLens/releases/download/v1.3.4/StoryLens_1.3.4_arm64.dmg (SHA-256 6d212ff92ce7e7f038e57aa3c04a2b0fdb851efbc87db22790699d7bcced33ad).",
+    "Published Intel DMG: https://github.com/fanjack510-ctrl/StoryLens/releases/download/v1.3.4/StoryLens_1.3.4_x64.dmg (SHA-256 5dde25ddf5514915d1836908decceed58d07dbd1728a79b520e479b7c63946da).",
+    "Existing Windows installer remained attached to v1.3.4 unchanged; macOS assets are unsigned and unnotarized beta packages because no Apple Developer signing secrets are configured."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -72,5 +84,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-27T10:34:05Z",
-  "updated_at": "2026-08-27T10:55:03Z"
+  "updated_at": "2026-08-27T12:07:52Z"
 }
