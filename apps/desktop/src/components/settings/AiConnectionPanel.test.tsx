@@ -155,9 +155,9 @@ describe("AiConnectionPanel", () => {
     expect(screen.getByTestId("ai-delete-credential")).toBeDisabled();
   });
 
-  it("保存会先存配置再验证——保存完不验证等于让人自己点第二下", async () => {
+  it("保存设置只持久化，不偷偷发起真实连接测试", async () => {
     const save = vi.spyOn(providersApi, "save").mockResolvedValue({} as never);
-    vi.spyOn(settingsApi, "setActiveCloudProvider").mockResolvedValue({} as never);
+    const setActive = vi.spyOn(settingsApi, "setActiveCloudProvider").mockResolvedValue({} as never);
     const transport = vi.spyOn(providersApi, "transportDiagnostic").mockResolvedValue({} as never);
     const test = vi.spyOn(providersApi, "testConnection").mockResolvedValue({} as never);
     mount();
@@ -168,7 +168,52 @@ describe("AiConnectionPanel", () => {
     );
     fireEvent.click(screen.getByTestId("ai-save"));
     await waitFor(() => expect(save).toHaveBeenCalled());
-    await waitFor(() => expect(transport).toHaveBeenCalled());
-    await waitFor(() => expect(test).toHaveBeenCalled());
+    expect(setActive).toHaveBeenCalledWith("deepseek");
+    expect(transport).not.toHaveBeenCalled();
+    expect(test).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("ai-message")).toHaveTextContent("配置已保存");
+  });
+
+  it("测试连接严格先保存配置和当前 Provider，再发诊断与真实调用", async () => {
+    const save = vi.spyOn(providersApi, "save").mockResolvedValue({} as never);
+    const setActive = vi.spyOn(settingsApi, "setActiveCloudProvider").mockResolvedValue({} as never);
+    const transport = vi.spyOn(providersApi, "transportDiagnostic").mockResolvedValue({} as never);
+    const test = vi.spyOn(providersApi, "testConnection").mockResolvedValue({} as never);
+    mount();
+    await screen.findByTestId("ai-connection-status");
+    await waitFor(() => expect(screen.getByRole("radio", { name: /V4 Flash/ })).toBeChecked());
+
+    fireEvent.click(screen.getByTestId("ai-verify"));
+    await waitFor(() => expect(test).toHaveBeenCalledWith("deepseek", 32));
+
+    expect(save.mock.invocationCallOrder[0]).toBeLessThan(setActive.mock.invocationCallOrder[0]);
+    expect(setActive.mock.invocationCallOrder[0]).toBeLessThan(transport.mock.invocationCallOrder[0]);
+    expect(transport.mock.invocationCallOrder[0]).toBeLessThan(test.mock.invocationCallOrder[0]);
+    expect(screen.getByTestId("ai-message")).toHaveTextContent("配置已保存，连接正常");
+  });
+
+  it("配置保存失败时绝不继续测试旧配置", async () => {
+    vi.spyOn(providersApi, "save").mockRejectedValue(new Error("配置保存失败"));
+    vi.spyOn(settingsApi, "setActiveCloudProvider").mockResolvedValue({} as never);
+    const transport = vi.spyOn(providersApi, "transportDiagnostic").mockResolvedValue({} as never);
+    const test = vi.spyOn(providersApi, "testConnection").mockResolvedValue({} as never);
+    mount();
+    await screen.findByTestId("ai-connection-status");
+    await waitFor(() => expect(screen.getByRole("radio", { name: /V4 Flash/ })).toBeChecked());
+
+    fireEvent.click(screen.getByTestId("ai-verify"));
+    await waitFor(() => expect(screen.getByTestId("ai-message")).toHaveTextContent("配置保存失败"));
+    expect(transport).not.toHaveBeenCalled();
+    expect(test).not.toHaveBeenCalled();
+  });
+
+  it("没有已保存密钥时，必须填入 API Key 才能测试", async () => {
+    mount({ credential_configured: false, connection_state: "unconfigured" });
+    await screen.findByTestId("ai-connection-status");
+    const verify = screen.getByTestId("ai-verify");
+    expect(verify).toBeDisabled();
+    fireEvent.change(screen.getByTestId("ai-api-key-input"), { target: { value: "sk-local-test" } });
+    expect(verify).toBeEnabled();
+    expect(verify).toHaveTextContent("保存并测试连接");
   });
 });

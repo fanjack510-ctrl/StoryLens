@@ -140,6 +140,11 @@ export function AiConnectionPanel({ focusApiKey = false }: { focusApiKey?: boole
   const status = connection.data;
   const tone = toneOf(status?.connection_state || "unconfigured");
   const keySaved = Boolean(status?.credential_configured);
+  const hasUnsavedConnectionChanges = Boolean(
+    baseUrlDirty ||
+      (model && model !== String(configuration.data?.plus_model || "")) ||
+      apiKey.trim(),
+  );
 
   const refreshAll = async () => {
     await Promise.all([
@@ -160,6 +165,10 @@ export function AiConnectionPanel({ focusApiKey = false }: { focusApiKey?: boole
       await settingsApi.setActiveCloudProvider(next);
       setApiKey("");
       setEditingKey(false);
+      setBaseUrl("");
+      setBaseUrlDirty(false);
+      setModel("");
+      setMessage("服务商已保存。请确认模型和 API Key，再测试连接。");
       await refreshAll();
     } catch (error: unknown) {
       setFailed(true);
@@ -169,77 +178,81 @@ export function AiConnectionPanel({ focusApiKey = false }: { focusApiKey?: boole
     }
   };
 
+  const persistCurrentConfiguration = async () => {
+    const current = configuration.data;
+    if (!current || !selectedId) throw new Error("服务商配置尚未加载完成，请稍后再试。");
+    await providersApi.save(selectedId, {
+      display_name: current.display_name,
+      region: current.region || "",
+      workspace_id: current.workspace_id || "",
+      base_url: baseUrl.trim() || null,
+      plus_model: model || current.plus_model,
+      max_model: model || current.plus_model,
+      flash_model: model || current.plus_model,
+      timeout_seconds: current.timeout_seconds ?? 300,
+      max_retries: current.max_retries ?? 3,
+      enabled: true,
+      disconnected: false,
+      allow_auto_route: Boolean(current.allow_auto_route),
+      raw_logging_enabled: Boolean(current.raw_logging_enabled),
+      api_key: apiKey.trim() || null,
+    });
+    // 测试接口只读取当前活跃服务商的持久化配置。必须等这一步成功，才允许发测试请求。
+    await settingsApi.setActiveCloudProvider(selectedId);
+    writeStoredAnalysisMode(depth);
+    setApiKey("");
+    setEditingKey(false);
+    setBaseUrlDirty(false);
+  };
+
+  const connectionErrorMessage = (error: unknown): string => {
+    const code = String((error as { code?: string })?.code || "");
+    return code === "PROVIDER_AUTHENTICATION_FAILED" || code.includes("401")
+      ? "API Key 无效"
+      : code === "PROVIDER_INSUFFICIENT_BALANCE" || code.includes("402")
+        ? "服务商账户余额不足"
+        : code.includes("429")
+          ? "请求过快，稍后再试"
+          : error instanceof Error
+            ? error.message
+            : "验证失败";
+  };
+
   /**
-   * 先传输诊断、再打一次真实的最小调用。
+   * 严格按 保存配置 → 设为当前 Provider → 传输诊断 → 真实最小调用 执行。
    *
    * 只做传输诊断不够：写「验证快照」的是真实调用，而分析前的预检读的正是那份快照。少了它，
    * 距离上一次真实探测 24 小时后，「分析本章」会永久变灰（PROVIDER_HEALTH_STALE），
    * 而设置页里没有任何按钮能解开——诊断证明的是管子通，不是服务商能用。
    */
-  const verify = async ({ silent = false }: { silent?: boolean } = {}) => {
-    if (!silent && busy) return;
-    if (!silent) {
-      setBusy("verify");
-      setMessage("");
-      setFailed(false);
-    }
+  const verify = async () => {
+    if (busy) return;
+    setBusy("verify");
+    setMessage("");
+    setFailed(false);
     try {
+      await persistCurrentConfiguration();
       await providersApi.transportDiagnostic(selectedId);
       await providersApi.testConnection(selectedId, 32);
-      if (!silent) setMessage("连接正常。");
+      setMessage("配置已保存，连接正常。");
     } catch (error: unknown) {
       setFailed(true);
-      const code = String((error as { code?: string })?.code || "");
-      setMessage(
-        code === "PROVIDER_AUTHENTICATION_FAILED" || code.includes("401")
-          ? "API Key 无效"
-          : code === "PROVIDER_INSUFFICIENT_BALANCE" || code.includes("402")
-            ? "服务商账户余额不足"
-            : code.includes("429")
-              ? "请求过快，稍后再试"
-              : error instanceof Error
-                ? error.message
-                : "验证失败",
-      );
+      setMessage(connectionErrorMessage(error));
     } finally {
-      if (!silent) {
-        setBusy(null);
-        await refreshAll();
-      }
+      setBusy(null);
+      await refreshAll();
     }
   };
 
-  /** 保存与验证合成一个动作：保存完不验证，等于让人自己去点第二下。 */
+  /** 只保存，不偷偷发起计费/联网测试；测试按钮会再次确保保存成功后再连接。 */
   const save = async () => {
     if (busy || !configuration.data) return;
     setBusy("save");
     setMessage("");
     setFailed(false);
     try {
-      const current = configuration.data;
-      await providersApi.save(selectedId, {
-        display_name: current.display_name,
-        region: current.region || "",
-        workspace_id: current.workspace_id || "",
-        base_url: baseUrl.trim() || null,
-        plus_model: model || current.plus_model,
-        max_model: model || current.plus_model,
-        flash_model: model || current.plus_model,
-        timeout_seconds: current.timeout_seconds ?? 300,
-        max_retries: current.max_retries ?? 3,
-        enabled: true,
-        disconnected: false,
-        allow_auto_route: Boolean(current.allow_auto_route),
-        raw_logging_enabled: Boolean(current.raw_logging_enabled),
-        api_key: apiKey || null,
-      });
-      await settingsApi.setActiveCloudProvider(selectedId);
-      writeStoredAnalysisMode(depth);
-      setApiKey("");
-      setEditingKey(false);
-      setBaseUrlDirty(false);
-      await verify({ silent: true });
-      setMessage("已保存并验证。");
+      await persistCurrentConfiguration();
+      setMessage("配置已保存。可以继续测试连接。");
     } catch (error: unknown) {
       setFailed(true);
       setMessage(error instanceof Error ? error.message : "保存失败");
@@ -443,12 +456,16 @@ export function AiConnectionPanel({ focusApiKey = false }: { focusApiKey?: boole
         </select>
       </Row>
 
-      <Row label="连接状态" testId="ai-status-row">
+      <Row
+        label="连接状态"
+        hint="测试前会先保存当前服务商、模型、接口地址与 API Key"
+        testId="ai-status-row"
+      >
         <div className="ai-status-line" data-tone={tone} data-testid="ai-connection-status">
           <div className="ai-status-text">
             <p className="ai-status-title" data-testid="ai-connection-label">
               <span className="ai-status-dot" aria-hidden />
-              {busy === "verify" ? "正在验证…" : status?.ui_label || "尚未配置"}
+              {busy === "verify" ? "正在保存并验证…" : status?.ui_label || "尚未配置"}
             </p>
             <p className="ai-status-sub" data-testid="ai-connection-reason">
               {status?.model
@@ -476,10 +493,14 @@ export function AiConnectionPanel({ focusApiKey = false }: { focusApiKey?: boole
             type="button"
             className="ai-btn-ghost"
             data-testid="ai-verify"
-            disabled={Boolean(busy)}
+            disabled={
+              Boolean(busy) ||
+              !configuration.data ||
+              (!keySaved && !apiKey.trim())
+            }
             onClick={() => void verify()}
           >
-            测试连接
+            {hasUnsavedConnectionChanges ? "保存并测试连接" : "测试连接"}
           </button>
         </div>
       </Row>
