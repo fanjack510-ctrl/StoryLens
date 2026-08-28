@@ -72,7 +72,7 @@ describe("ComprehendReportView information hierarchy", () => {
     render(<ComprehendReportView data={result} title="测试工具书" runId={7} />);
 
     expect(screen.getByRole("button", { name: "导出 PDF · PRO" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "导出 HTML" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出基础 HTML" })).toBeInTheDocument();
     for (const detail of document.querySelectorAll(".cmp-fold")) {
       expect(detail).not.toHaveAttribute("open");
     }

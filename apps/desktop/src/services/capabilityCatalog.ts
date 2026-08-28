@@ -147,8 +147,8 @@ export const CAPABILITIES: Capability[] = [
     name: "报告导出",
     what: "把分析结果导成一份能发出去、能存档的文件。",
     tier: "mixed",
-    free: "HTML，内容一样，可以自己在浏览器里打印",
-    paid: "PDF：中文字体、页边距、页码",
+    free: "基础 HTML：保留核心文字摘要，方便离线阅读和备份",
+    paid: "结构化 PDF：完整图表、证据表、逐章结构、中文字体、页码和专业打印排版",
     needs: "analyzed_book",
     cta: "打开报告去导出",
     to: (id: number) => `/books/${id}/whole-book`,
@@ -242,7 +242,7 @@ export const FREE_FEATURE_LINES: ReadonlyArray<{ label: string; line: string }> 
   },
   {
     label: "基础资料与导出",
-    line: "浏览知识库、关键词检索，以及导出可打印的 HTML",
+    line: "浏览知识库、关键词检索，以及导出核心摘要版 HTML",
   },
 ];
 

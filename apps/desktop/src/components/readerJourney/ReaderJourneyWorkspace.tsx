@@ -181,7 +181,7 @@ type Props = {
   /** Printed on the report's cover and in its 口径 appendix. Absent → those rows are omitted. */
   bookTitle?: string | null;
   /** 宿主想把「导出本章报告」画在自己的页头里时传这个：拿到动作和忙碌状态，按钮它自己画。 */
-  onExportReady?: (action: { run: () => void; busy: boolean }) => void;
+  onExportReady?: (action: { run: () => void; runHtml: () => void; busy: boolean }) => void;
   providerName?: string | null;
   modelName?: string | null;
   /** Optional SourcePane (正文) for three-column workspace grid. */
@@ -939,9 +939,8 @@ export function ReaderJourneyWorkspace({
     }
   };
 
-  /** 结构化的章节评测报告。PDF 走后端的无头 Chromium；那台机器上没有浏览器时落回 HTML，
-   *  内容一模一样——但授权门拒绝不是故障，那时候不落回，否则等于把收费的东西换个名字发出去。 */
-  const handleReportExport = async () => {
+  /** 结构化的章节评测报告。PDF 与基础 HTML 是两份不同层级的产物，不互相静默顶替。 */
+  const handleReportExport = useCallback(async () => {
     if (reportBusy) return;
     setReportBusy(true);
     setVipNotice(null);
@@ -964,25 +963,70 @@ export function ReaderJourneyWorkspace({
       if (error instanceof VipRequiredError) {
         setVipNotice({ message: error.message, url: error.afdianUrl });
       } else {
-        // 这里以前固定说「本机没有可用的打印内核」——它没查过，只是猜。用户机器上明明装着
-        // 浏览器，真实原因却是这个页面拿不到旅程任务号，于是一句编出来的诊断把人指向了
-        // 完全错误的方向。一条自己没验证过的原因，比不给原因更糟。
-        downloadChapterReportHtml(input);
-        setExportStatus("succeeded");
         const why = error instanceof Error && error.message ? error.message : "PDF 生成失败";
-        setExportMessage(`${why}；已导出同内容的 HTML，浏览器里打印即得 PDF`);
+        setExportStatus("failed");
+        setExportMessage(`${why}。可另行导出基础 HTML。`);
       }
     } finally {
       setReportBusy(false);
     }
-  };
+  }, [
+    reportBusy,
+    visualization,
+    chapterTitle,
+    summary.chapter_title,
+    bookTitle,
+    analysisRunIdProp,
+    journeyRunIdProp,
+    providerName,
+    modelName,
+  ]);
+
+  const handleReportHtmlExport = useCallback(async () => {
+    if (reportBusy) return;
+    setReportBusy(true);
+    setVipNotice(null);
+    const input = {
+      visualization,
+      chapterTitle: chapterTitle ?? summary.chapter_title,
+      bookTitle,
+      analysisRunId: analysisRunIdProp ?? null,
+      journeyRunId: journeyRunIdProp ?? null,
+      providerName,
+      modelName,
+    };
+    try {
+      const saved = await downloadChapterReportHtml(input);
+      setExportStatus("succeeded");
+      setExportMessage(savedFileMessage(saved));
+    } catch (error) {
+      setExportStatus("failed");
+      setExportMessage(error instanceof Error ? error.message : "HTML 导出失败，请重试。");
+    } finally {
+      setReportBusy(false);
+    }
+  }, [
+    reportBusy,
+    visualization,
+    chapterTitle,
+    summary.chapter_title,
+    bookTitle,
+    analysisRunIdProp,
+    journeyRunIdProp,
+    providerName,
+    modelName,
+  ]);
 
   // 宿主（同步工作台）把这个动作画在页头的导出组里。逻辑留在这儿，因为报告要用的
   // visualization / chapterTitle 都在这儿。
   useEffect(() => {
     if (!onExportReady) return;
-    onExportReady({ run: () => void handleReportExport(), busy: reportBusy });
-  }, [onExportReady, reportBusy, visualization, chapterTitle, bookTitle]);
+    onExportReady({
+      run: () => void handleReportExport(),
+      runHtml: () => void handleReportHtmlExport(),
+      busy: reportBusy,
+    });
+  }, [onExportReady, reportBusy, handleReportExport, handleReportHtmlExport]);
 
 
   const selectedPhaseData = useMemo(
@@ -1507,16 +1551,28 @@ export function ReaderJourneyWorkspace({
             {/* 按钮本身移到了页头的导出组里——它是这一页唯一的产出动作，不该是一行末尾的
                 12px 小标签。这里只留逻辑，因为数据在这儿。 */}
             {onExportReady ? null : (
-              <button
-                type="button"
-                className="journey-report-export-btn"
-                data-testid="journey-export-report-pdf"
-                title="一份结构化的章节评测报告：三项判断、追读曲线、悬念账本、逐场证据"
-                disabled={reportBusy}
-                onClick={() => void handleReportExport()}
-              >
-                {reportBusy ? "正在生成…" : "导出本章报告 · PRO"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="journey-report-export-btn"
+                  data-testid="journey-export-report-pdf"
+                  title="一份结构化的章节评测报告：三项判断、追读曲线、悬念账本、逐场证据"
+                  disabled={reportBusy}
+                  onClick={() => void handleReportExport()}
+                >
+                  {reportBusy ? "正在生成…" : "导出本章报告 · PRO"}
+                </button>
+                <button
+                  type="button"
+                  className="journey-report-export-btn"
+                  data-testid="journey-export-report-html"
+                  title="免费基础阅读版：本章判断、阶段与场景概览"
+                  disabled={reportBusy}
+                  onClick={() => void handleReportHtmlExport()}
+                >
+                  基础 HTML
+                </button>
+              </>
             )}
           </div>
           {vipNotice && (

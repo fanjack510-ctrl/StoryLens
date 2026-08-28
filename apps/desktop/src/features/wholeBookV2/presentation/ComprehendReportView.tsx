@@ -120,12 +120,23 @@ export function ComprehendReportView({
         // 门拒绝是一个答案，不是故障——这时不落回 HTML，否则等于把收费的东西换个名字发出去。
         setVip({ message: err.message, url: err.afdianUrl });
       } else {
-        downloadComprehendHtml(data, title);
-        setNote(
-          (err instanceof Error && err.message ? err.message : "PDF 生成失败") +
-            "；已导出同内容的 HTML，浏览器里打印即得 PDF",
-        );
+        setNote((err instanceof Error && err.message ? err.message : "PDF 生成失败") + "。可另行导出基础 HTML。");
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onExportHtml = async () => {
+    if (busy) return;
+    setBusy(true);
+    setVip(null);
+    setNote("");
+    try {
+      const saved = await downloadComprehendHtml(data, title);
+      setNote(savedFileMessage(saved));
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "HTML 导出失败，请重试。");
     } finally {
       setBusy(false);
     }
@@ -144,8 +155,8 @@ export function ComprehendReportView({
               <button type="button" data-testid="comprehend-export-pdf" disabled={busy} onClick={() => void onExport()}>
                 {busy ? "正在生成…" : "导出 PDF · PRO"}
               </button>
-              <button type="button" onClick={() => downloadComprehendHtml(data, title)}>
-                导出 HTML
+              <button type="button" disabled={busy} onClick={() => void onExportHtml()}>
+                导出基础 HTML
               </button>
             </div>
           )}

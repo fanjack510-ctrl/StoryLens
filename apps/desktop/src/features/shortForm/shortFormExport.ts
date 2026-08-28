@@ -170,32 +170,38 @@ ${
 </table>`;
 }
 
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 export function shortFormFileName(reading: ShortFormReading): string {
   const safe = (reading.result.title || "短篇").replace(/[\\/:*?"<>|]/g, "_");
   return `${safe}-短篇精读.html`;
 }
 
-export function downloadShortForm(reading: ShortFormReading): void {
-  triggerDownload(
-    new Blob([buildShortFormHtml(reading)], { type: "text/html;charset=utf-8" }),
+/** 免费 HTML 只保留读故事所需的基础拆分；逐段技法、回扣和专业横版表格留给 Pro PDF。 */
+export function buildShortFormBasicHtml(reading: ShortFormReading): string {
+  const r = reading.result;
+  const beatCards = r.beats.map((b) =>
+    `<section><h2>${esc(b.beat)} · ${esc(b.title)}</h2><p class="meta">第 ${b.segment_start}–${b.segment_end} 段</p><p>${esc(b.summary)}</p></section>`,
+  ).join("");
+  const segments = r.segments.map((s) =>
+    `<li><b>第 ${s.index} 段 · ${esc(s.phase) || "故事推进"}</b><p>${esc(s.beats.join("；") || s.emotion_note || "—")}</p></li>`,
+  ).join("");
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(r.title)} · 短篇精读基础版</title><style>
+body{margin:0;background:#f5f6f2;color:#17201a;font-family:"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8}main{max-width:780px;margin:auto;padding:48px 28px 80px;background:#fff;min-height:100vh}h1{margin:0}h2{font-size:19px;color:#14503c;margin:30px 0 4px}.meta{color:#6f7d74}.notice{margin:22px 0;padding:14px 16px;background:#eef5f1;border-left:4px solid #2f6b57}ol{padding-left:24px}li{padding:10px 0;border-bottom:1px solid #e7ebe8}li p{margin:4px 0}
+</style></head><body><main><p class="meta">StoryLens · 免费基础阅读版</p><h1>${esc(r.title)}</h1>
+${r.one_line ? `<p>${esc(r.one_line)}</p>` : ""}<p class="meta">${r.character_count.toLocaleString()} 字 · ${r.segments.length} 段${r.genre ? ` · ${esc(r.genre)}` : ""}</p>
+<div class="notice"><b>本文件保留故事概览和基础分段。</b><br>逐段技法、回扣、情绪结构及专业打印排版请使用 StoryLens Pro PDF。</div>
+${beatCards}<h2>基础分段</h2><ol>${segments}</ol></main></body></html>`;
+}
+
+export function downloadShortForm(reading: ShortFormReading): Promise<SavedFileResult> {
+  return saveBlobAsFile(
+    new Blob([buildShortFormBasicHtml(reading)], { type: "text/html;charset=utf-8" }),
     shortFormFileName(reading),
   );
 }
 
-/** Generate a real PDF through the same Pro-gated printer used by the whole-book and chapter
- * reports. The HTML remains the free, self-contained fallback; a rejected licence is surfaced
- * as a product answer instead of being disguised as a rendering failure. */
+/** Generate the structured worksheet PDF through the same Pro-gated printer used elsewhere.
+ * A rejected licence is surfaced as a product answer instead of being disguised as a rendering failure. */
 export async function downloadShortFormPdf(
   bookId: number,
   reading: ShortFormReading,

@@ -1,9 +1,8 @@
 /** The analysis as a formal report: the document a paying reader receives.
  *
- * Deliberately **not** the HTML export. That one is the audit surface — every section, every
- * row, the raw JSON at the bottom — and holding everything is right for that job. This one is
- * read cover to cover by someone deciding what to rewrite, so it is organised as an argument
- * rather than as a tour of the data.
+ * Deliberately **not** the free HTML export. The free file is a compact reading copy; this one is
+ * read cover to cover by someone deciding what to rewrite, so it carries the structured charts,
+ * evidence and print layout and is organised as an argument rather than as a tour of the data.
  *
  * ## The argument
  *
@@ -388,7 +387,7 @@ function structurePages(d: WholeBookAnalysisV2): string {
       openTable
         ? `<p class="note">下列情节线在末章仍未给出结果。有意留作续篇的不在此列之限，其余为读者最易察觉的缺口。</p>
            <table class="lines">${openTable}</table>
-           ${open.length > 14 ? `<p class="note">另有 ${open.length - 14} 条未列出，完整清单见 HTML 导出。</p>` : ""}`
+           ${open.length > 14 ? `<p class="note">另有 ${open.length - 14} 条未列出，完整清单请回软件报告页查看。</p>` : ""}`
         : `<p class="note">未测到走到最后仍未收束的情节线。</p>`
     }
     ${judgement(d, CHAPTER_DIMENSION.structure)}
@@ -430,7 +429,6 @@ function pacingPage(d: WholeBookAnalysisV2): string {
 function charactersPage(d: WholeBookAnalysisV2): string {
   const c = d.characters;
   const p = c.protagonist;
-  const name = val(p.initial_identity) || val(d.overview.protagonist) || "主角";
   const arc =
     val(p.initial_goal) && val(p.final_goal) && p.initial_goal !== p.final_goal
       ? `<p class="arc"><span>${esc(p.initial_goal)}</span><i>→</i><span>${esc(p.final_goal)}</span></p>`
@@ -499,7 +497,7 @@ function suspensePage(d: WholeBookAnalysisV2): string {
     const rest = rows.length - max;
     return (
       `<table class="qs ${cls}">${body}</table>` +
-      (rest > 0 ? `<p class="note">另有 ${rest} 条未列出，完整清单见 HTML 导出。</p>` : "")
+      (rest > 0 ? `<p class="note">另有 ${rest} 条未列出，完整清单请回软件报告页查看。</p>` : "")
     );
   };
   // Derived: how long a question stays open, in chapters. A book whose suspense spans are all
@@ -652,7 +650,7 @@ function appendixChapters(d: WholeBookAnalysisV2, pagesLeft: number): string {
     ${
       dropped > 0
         ? `<p class="note">受 ${PAGE_BUDGET} 页篇幅所限，本表列至第 ${shown.at(-1)?.chapter_index} 章，
-           <b>其后 ${dropped} 章未列出</b>；完整逐章表见 HTML 导出。</p>`
+           <b>其后 ${dropped} 章未列出</b>；完整逐章表请回软件报告页查看。</p>`
         : ""
     }
     <table class="chapters">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMockWholeBookAnalysisV2 } from "./mockAdapter";
-import { buildReportHtml, reportFileName } from "./reportExport";
+import { buildBasicReportHtml, buildReportHtml, reportFileName } from "./reportExport";
 
 describe("结构化报告导出", () => {
   const data = buildMockWholeBookAnalysisV2();
@@ -141,5 +141,16 @@ describe("结构化报告导出", () => {
       const close = (html.match(new RegExp(`</${tag}>`, "g")) ?? []).length;
       expect(`${tag}:${open}`).toBe(`${tag}:${close}`);
     }
+  });
+});
+
+describe("免费基础 HTML 与 Pro 报告边界", () => {
+  it("只保留核心摘要，不携带原始 JSON、证据附录和打印版式", () => {
+    const html = buildBasicReportHtml(buildMockWholeBookAnalysisV2());
+    expect(html).toContain("免费基础阅读版");
+    expect(html).toContain("这本书讲什么");
+    expect(html).not.toContain('id="raw-data"');
+    expect(html).not.toContain("附录A");
+    expect(html).not.toContain("@media print");
   });
 });

@@ -2358,6 +2358,7 @@ export function WholeBookV2ReportView({
   const handleReanalyze = onReanalyzeClick ?? onReanalyze;
   const statusLabel = analysisStatusLabel ?? "已完成";
   const [exporting, setExporting] = useState(false);
+  const [htmlExporting, setHtmlExporting] = useState(false);
   const [vipNotice, setVipNotice] = useState<{ message: string; url: string } | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const showNonRealWarning = mode === "formal" && needsReanalysisWarning(data);
@@ -2449,9 +2450,8 @@ export function WholeBookV2ReportView({
                   // that would hand out the gated artifact by another name.
                   setVipNotice({ message: err.message, url: err.afdianUrl });
                 } else {
-                  // No headless browser on this machine, or the sidecar is down — the
-                  // HTML file carries the same report, so the click still delivers one.
-                  downloadReport(data);
+                  const why = err instanceof Error ? err.message : "PDF 生成失败，请重试。";
+                  setExportMessage(`${why} 可另行导出基础 HTML。`);
                 }
               } finally {
                 setExporting(false);
@@ -2464,10 +2464,23 @@ export function WholeBookV2ReportView({
             type="button"
             className="wbv2-reanalyse-btn"
             data-testid="whole-book-v2-export-html-button"
-            title="自包含网页版，内嵌完整原始 JSON，可做机器对账"
-            onClick={() => downloadReport(data)}
+            title="免费基础阅读版：核心摘要与主要阶段"
+            disabled={htmlExporting}
+            onClick={async () => {
+              setHtmlExporting(true);
+              setVipNotice(null);
+              setExportMessage(null);
+              try {
+                const saved = await downloadReport(data);
+                setExportMessage(savedFileMessage(saved));
+              } catch (err) {
+                setExportMessage(err instanceof Error ? err.message : "HTML 导出失败，请重试。");
+              } finally {
+                setHtmlExporting(false);
+              }
+            }}
           >
-            HTML
+            {htmlExporting ? "正在保存…" : "基础 HTML"}
           </button>
           {showReanalyzeButton && handleReanalyze ? (
             <button

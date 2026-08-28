@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  buildShortFormBasicHtml,
   buildShortFormHtml,
   downloadShortFormPdf,
   shortFormFileName,
@@ -63,6 +64,15 @@ function reading(segments: number): ShortFormReading {
 }
 
 describe("shortFormExport", () => {
+  it("基础 HTML 不复制 Pro 的逐段技法工作表", () => {
+    const html = buildShortFormBasicHtml(reading(6));
+    expect(html).toContain("免费基础阅读版");
+    expect(html).toContain("基础分段");
+    expect(html).not.toContain("学习之处");
+    expect(html).not.toContain("呼应第 1 段");
+    expect(html).not.toContain("@page");
+  });
+
   it("prints every scene, however many there are", () => {
     // No page budget, unlike the whole-book report. That one is an argument and is capped at
     // twenty pages because nobody finishes a report that grows with the book; this is read

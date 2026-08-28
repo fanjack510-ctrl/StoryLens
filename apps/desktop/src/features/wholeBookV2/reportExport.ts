@@ -1,14 +1,8 @@
-/** 结构化报告导出。
+/** 全书报告导出。
  *
- *  One self-contained HTML file holding everything the seven on-screen modules hold —
- *  including the fields the screen summarises (full pacing table, every chapter's function,
- *  the complete evidence index with quotes) — plus the raw analysis JSON embedded in a
- *  <script type="application/json"> block, so a reviewer can audit the prose against the
- *  data without the app. Labels come from the same maps the screen uses; the export never
- *  invents its own vocabulary.
- *
- *  The file carries a print stylesheet: open in a browser → 打印 → PDF is the intended
- *  hand-off path.
+ * `buildReportHtml` 保留为内部审计/回归用的完整文档；用户可见的免费 HTML 由
+ * `buildBasicReportHtml` 生成，只交付核心文字摘要。结构图、证据表、完整章节结构和印刷排版
+ * 属于 Pro PDF，不能再通过换一个扩展名原样发出去。
  */
 import type { WholeBookAnalysisV2 } from "./contracts";
 import { saveBlobAsFile, type SavedFileResult } from "../../services/fileDownload";
@@ -739,21 +733,47 @@ export function buildReportHtml(d: WholeBookAnalysisV2, generatedAt: Date = new 
 </html>`;
 }
 
-function triggerDownload(blob: Blob, name: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/** 免费基础阅读版。它用于离线阅读和备份，不复刻 Pro PDF 的结构化成品报告。 */
+export function buildBasicReportHtml(d: WholeBookAnalysisV2): string {
+  const meta = d.book_metadata;
+  const overview = d.overview;
+  const breakdown = d.story_breakdown;
+  const stages = (d.story?.structure_stages ?? []).slice(0, 10);
+  const strengths = (d.assessment?.strengths ?? []).slice(0, 5);
+  const issues = (d.assessment?.issues ?? []).slice(0, 5);
+  const beats = (breakdown?.four_beats ?? []).slice(0, 4);
+  const techniques = (breakdown?.reusable_techniques ?? []).slice(0, 6);
+  const section = (title: string, body: string) => body ? `<section><h2>${esc(title)}</h2>${body}</section>` : "";
+  const list = (items: string[]) => items.length ? `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const storySummary = [overview?.one_sentence_story, overview?.full_summary]
+    .map((x) => String(x ?? "").trim()).filter(Boolean);
+
+  return `<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(meta.title)} · 基础阅读版</title>
+<style>
+body{margin:0;background:#f5f6f2;color:#17201a;font-family:"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8}
+main{max-width:820px;margin:0 auto;padding:48px 28px 80px;background:#fff;min-height:100vh}h1{margin:0;font-size:30px}h2{margin:36px 0 12px;font-size:20px;color:#14503c;border-bottom:1px solid #d8e0da;padding-bottom:8px}h3{font-size:16px;margin:18px 0 4px}p{margin:8px 0}.meta{color:#6f7d74}.notice{margin:24px 0;padding:14px 16px;background:#eef5f1;border-left:4px solid #2f6b57}.item{margin:14px 0;padding-left:14px;border-left:2px solid #d8e0da}ul{padding-left:22px}
+</style></head><body><main>
+<p class="meta">StoryLens · 免费基础阅读版</p><h1>${esc(meta.title)}</h1>
+<p class="meta">${meta.chapter_count.toLocaleString()} 章 · ${meta.character_count.toLocaleString()} 字 · ${esc(d.type_profile.primary_genre)}</p>
+<div class="notice"><b>这是一份便于阅读和备份的核心摘要。</b><br>完整图表、证据索引、逐章结构、专业排版与页码请使用 StoryLens Pro PDF。</div>
+${section("这本书讲什么", storySummary.map((x) => `<p>${esc(x)}</p>`).join(""))}
+${section("故事骨架", list((overview?.story_skeleton ?? []).slice(0, 10)))}
+${section("起承转合", beats.map((x) => `<div class="item"><h3>${esc(x.beat)} · ${esc(x.title)}</h3><p>${esc(x.summary)}</p></div>`).join(""))}
+${section("主要阶段", stages.map((x) => `<div class="item"><h3>第 ${x.chapter_start}–${x.chapter_end} 章 · ${esc(x.title)}</h3><p>${esc(x.summary)}</p></div>`).join(""))}
+${section("值得保留", strengths.map((x) => `<div class="item"><h3>${esc(x.title)}</h3><p>${esc(x.why_good)}</p></div>`).join(""))}
+${section("优先处理", issues.map((x) => `<div class="item"><h3>${esc(x.priority)} · ${esc(x.category)}</h3><p>${esc(x.symptom)}</p>${x.possible_direction ? `<p><b>方向：</b>${esc(x.possible_direction)}</p>` : ""}</div>`).join(""))}
+${section("可复用写法", techniques.map((x) => `<div class="item"><h3>${esc(x.name)}</h3><p>${esc(x.what_it_is)}</p></div>`).join(""))}
+</main></body></html>`;
 }
 
-/** Trigger a browser download of the report. Kept apart from the builder so tests can
- *  exercise the pure part without a DOM. */
-export function downloadReport(d: WholeBookAnalysisV2): void {
-  triggerDownload(new Blob([buildReportHtml(d)], { type: "text/html;charset=utf-8" }), reportFileName(d));
+/** 安装版 WebView 会忽略 `<a download>`，统一交给桌面保存服务并返回真实路径。 */
+export function downloadReport(d: WholeBookAnalysisV2): Promise<SavedFileResult> {
+  return saveBlobAsFile(
+    new Blob([buildBasicReportHtml(d)], { type: "text/html;charset=utf-8" }),
+    reportFileName(d),
+  );
 }
 
 /** PDF export is the Pro tier. The error carries what the notice UI needs — the message
@@ -767,7 +787,7 @@ export class VipRequiredError extends Error {
   }
 }
 
-/** PDF via the sidecar, which prints the same HTML through a headless Chromium — a real
+/** PDF via the sidecar, which prints the professional report through a headless Chromium — a real
  *  .pdf file, vector text, charts included. Throws VipRequiredError when the licence gate
  *  refuses, and a plain Error for operational failures the caller may fall back from. */
 export async function downloadReportPdf(d: WholeBookAnalysisV2): Promise<SavedFileResult> {

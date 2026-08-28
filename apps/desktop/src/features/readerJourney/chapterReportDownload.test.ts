@@ -4,7 +4,7 @@
  *  浏览器，真实原因是这个页面拿不到旅程任务号；那句编出来的诊断把人指向了完全错误的方向。
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { downloadChapterReportPdf, VipRequiredError } from "./chapterReportDownload";
+import { buildChapterBasicHtml, downloadChapterReportPdf, VipRequiredError } from "./chapterReportDownload";
 import type { ChapterReportInput } from "./chapterReportExport";
 
 vi.mock("../../services/apiClient", () => ({ getApiBase: () => "http://127.0.0.1:8000" }));
@@ -31,6 +31,7 @@ const input = {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("单章报告的 PDF 导出", () => {
@@ -42,6 +43,7 @@ describe("单章报告的 PDF 导出", () => {
     const fetchMock = vi.fn(async () => new Response(new Blob(["%PDF-"]), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("URL", { createObjectURL: () => "blob:x", revokeObjectURL: () => undefined });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
     await downloadChapterReportPdf({ ...input, journeyRunId: 42 });
     expect(fetchMock.mock.calls[0][0]).toBe(
       "http://127.0.0.1:8000/api/v1/reader-journey-runs/42/export-pdf",
@@ -85,5 +87,15 @@ describe("单章报告的 PDF 导出", () => {
     await expect(downloadChapterReportPdf({ ...input, journeyRunId: 42 })).rejects.toThrow(
       /浏览器内核/,
     );
+  });
+});
+
+describe("单章免费基础 HTML", () => {
+  it("说明产品边界，且不携带 Pro 的图表与打印版式", () => {
+    const html = buildChapterBasicHtml(input);
+    expect(html).toContain("免费基础阅读版");
+    expect(html).toContain("本章判断");
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("@page");
   });
 });

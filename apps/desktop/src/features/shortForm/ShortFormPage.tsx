@@ -81,6 +81,7 @@ function BeatBar({ result }: { result: ShortFormResult }) {
 function Reading({ bookId, reading }: { bookId: number; reading: ShortFormReading }) {
   const result = reading.result;
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [htmlBusy, setHtmlBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfSuccess, setPdfSuccess] = useState<string | null>(null);
   const [purchaseUrl, setPurchaseUrl] = useState("");
@@ -100,6 +101,21 @@ function Reading({ bookId, reading }: { bookId: number; reading: ShortFormReadin
       setPdfBusy(false);
     }
   };
+  const exportHtml = async () => {
+    if (htmlBusy) return;
+    setHtmlBusy(true);
+    setPdfError(null);
+    setPdfSuccess(null);
+    setPurchaseUrl("");
+    try {
+      const saved = await downloadShortForm(reading);
+      setPdfSuccess(savedFileMessage(saved));
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : "HTML 导出失败，请重试。");
+    } finally {
+      setHtmlBusy(false);
+    }
+  };
   return (
     <>
       {result.one_line ? <p className="sf-one-line">{result.one_line}</p> : null}
@@ -109,11 +125,8 @@ function Reading({ bookId, reading }: { bookId: number; reading: ShortFormReadin
         {reading.segments_resplit > 0 ? ` · ${reading.segments_resplit} 段过长已再切` : ""}
       </p>
       <div className="sf-export">
-        {/* No page budget, unlike the whole-book report: that one is an argument and is capped
-            at twenty pages, this is a worksheet read beside the text and is as long as the
-            piece has scenes. Truncating it would defeat its only purpose. */}
-        <button type="button" onClick={() => downloadShortForm(reading)}>
-          导出 HTML
+        <button type="button" disabled={htmlBusy} onClick={() => void exportHtml()}>
+          {htmlBusy ? "正在保存…" : "导出基础 HTML"}
         </button>
         <button type="button" disabled={pdfBusy} onClick={() => void exportPdf()}>
           {pdfBusy ? "正在生成 PDF…" : "导出 PDF · PRO"}

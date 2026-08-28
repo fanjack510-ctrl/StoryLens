@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import type { ComprehendResult } from "../../services/wholeBookFreeProductApi";
 import { buildComprehendPrintHtml, comprehendFileName } from "./comprehendPrintExport";
+import { buildComprehendBasicHtml } from "./comprehendDownload";
 
 const base = (over: Partial<ComprehendResult> = {}): ComprehendResult =>
   ({
@@ -80,5 +81,16 @@ describe("读懂的印刷版式", () => {
 
   it("文件名不带路径分隔符——书名里出现 / 会让保存失败", () => {
     expect(comprehendFileName("人因/评估")).toBe("StoryLens_人因_评估_读懂.html");
+  });
+});
+
+describe("读懂的免费基础 HTML", () => {
+  it("有逐章摘要，但不交付逐节主张、依据、动作和术语", () => {
+    const html = buildComprehendBasicHtml(base(), "手册");
+    expect(html).toContain("免费基础阅读版");
+    expect(html).toContain("本章讲可视化");
+    expect(html).not.toContain("分类数据应当用色相区分");
+    expect(html).not.toContain("Palmer &amp; Schloss");
+    expect(html).not.toContain("Sequential mapping");
   });
 });
