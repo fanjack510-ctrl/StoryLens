@@ -3,9 +3,16 @@
   "title": "修复安装版 PDF 导出连接中断",
   "type": "fix",
   "base_version": "1.3.4",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "d6d1cd7056d68da8efd9782b7a712183b14ff0a9",
+      "message": "fix(pdf): keep Edge export connection alive",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "pdf-export",
     "whole-book",
@@ -31,7 +38,8 @@
   ],
   "verification_evidence": [
     "pytest targeted: 15 passed",
-    "real Edge smoke: 141831 bytes, %PDF signature"
+    "real Edge smoke: 141831 bytes, %PDF signature",
+    "check_project: version, change registry and project scaffold passed"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -46,7 +54,7 @@
     "breaking_change": false
   },
   "blocker_level": "P1",
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-28T16:16:56Z",
-  "updated_at": "2026-08-28T16:16:56Z"
+  "updated_at": "2026-08-28T16:21:15Z"
 }
