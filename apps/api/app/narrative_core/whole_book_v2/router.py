@@ -1,6 +1,6 @@
 """Formal read-only V2 result API. Creation remains owned by the existing run API."""
 from __future__ import annotations
-import os,re,shutil,subprocess,sys,tempfile
+import os,re,shutil,subprocess,sys,tempfile,time
 from typing import Any
 from fastapi import APIRouter,Depends,HTTPException,Query
 from fastapi.responses import Response
@@ -58,6 +58,36 @@ def _find_pdf_browser()->str|None:
         if c and os.path.isfile(c): return c
     return None
 _FOOTER_CSS="font-family:'Microsoft YaHei','PingFang SC',sans-serif;font-size:7.5px;color:#6f7d74;"
+def _cleanup_pdf_workspace(path:str)->None:
+    """Best-effort cleanup: a stale Chromium lock must never abort the HTTP response."""
+    for delay in (0.0,0.08,0.2,0.5):
+        if delay: time.sleep(delay)
+        try:
+            shutil.rmtree(path)
+            return
+        except FileNotFoundError:
+            return
+        except OSError:
+            pass
+    shutil.rmtree(path,ignore_errors=True)
+
+def _stop_pdf_browser(proc:subprocess.Popen[Any])->None:
+    """Stop only the Chromium tree started for this export."""
+    try:
+        if proc.poll() is None and os.name == "nt":
+            subprocess.run(
+                ["taskkill","/PID",str(proc.pid),"/T","/F"],
+                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
+            )
+        elif proc.poll() is None:
+            proc.terminate()
+            proc.wait(timeout=5)
+    except Exception:
+        try: proc.kill()
+        except Exception: pass
+    try: proc.wait(timeout=5)
+    except Exception: pass
+
 def _print_via_devtools(
     browser:str,
     profile:str,
@@ -89,17 +119,27 @@ def _print_via_devtools(
         import httpx,websockets
         port_file=os.path.join(profile,"DevToolsActivePort")
         proc=subprocess.Popen([browser,"--headless=new","--disable-gpu","--no-first-run",
-            "--disable-extensions","--remote-debugging-port=0",f"--user-data-dir={profile}",url],
+            "--disable-extensions","--disable-background-mode","--remote-debugging-port=0",
+            f"--user-data-dir={profile}",url],
             stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         try:
-            loop=asyncio.get_running_loop(); deadline=loop.time()+timeout; port=None
+            loop=asyncio.get_running_loop(); deadline=loop.time()+timeout; port=None; exited_at=None
             while loop.time()<deadline:
                 if os.path.isfile(port_file):
                     head=open(port_file,encoding="utf-8").read().splitlines()
                     if head and head[0].strip().isdigit(): port=int(head[0].strip()); break
-                if proc.poll() is not None: return None
+                # Edge can hand the profile to a child and let the launcher exit. Give that
+                # child time to publish DevToolsActivePort instead of treating the hand-off as
+                # a rendering failure (and then leaving its lockfile behind).
+                if proc.poll() is not None:
+                    exited_at=exited_at or loop.time()
+                    if loop.time()-exited_at>8:
+                        _log.warning("pdf_browser_exited_before_devtools exit_code=%s",proc.returncode)
+                        return None
                 await asyncio.sleep(0.15)
-            if port is None: return None
+            if port is None:
+                _log.warning("pdf_devtools_port_timeout")
+                return None
             base=f"http://127.0.0.1:{port}"
             async with httpx.AsyncClient(timeout=10.0) as http:
                 ws_url=None
@@ -118,7 +158,11 @@ def _print_via_devtools(
                     await ws.send(json.dumps({"id":mid,"method":method,"params":params or {}}))
                     while True:
                         msg=json.loads(await ws.recv())
-                        if msg.get("id")==mid: return msg.get("result") or {}
+                        if msg.get("id")==mid:
+                            error=msg.get("error")
+                            if error:
+                                raise RuntimeError(f"CDP {method} failed: {error.get('message') or error}")
+                            return msg.get("result") or {}
                 await call("Page.enable")
                 # The target exists before its document finishes; poll rather than race the load
                 # event, which may already have fired by the time the websocket is attached.
@@ -141,12 +185,15 @@ def _print_via_devtools(
                         "</div>"),
                 })
                 data=res.get("data")
+                try:
+                    # No reply is required. The connection may close immediately, which is the
+                    # desired outcome: release cdp-profile/lockfile before workspace cleanup.
+                    await ws.send(json.dumps({"id":n+1,"method":"Browser.close","params":{}}))
+                except Exception: pass
                 return base64.b64decode(data) if data else None
         finally:
-            proc.kill()
-            try: proc.wait(timeout=10)
-            except Exception: pass
-            shutil.rmtree(profile,ignore_errors=True)
+            _stop_pdf_browser(proc)
+            _cleanup_pdf_workspace(profile)
     try:
         pdf=asyncio.run(run())
     except Exception:
@@ -182,7 +229,8 @@ def render_report_pdf(
     browser=_find_pdf_browser()
     if browser is None:
         raise HTTPException(status_code=501,detail={"error_code":"PDF_BROWSER_NOT_FOUND","message":"未找到可用于生成 PDF 的 Chromium 浏览器（Edge、Chrome、Chromium 或 Brave）。","details":{}})
-    with tempfile.TemporaryDirectory(prefix="storylens-pdf-") as td:
+    td=tempfile.mkdtemp(prefix="storylens-pdf-")
+    try:
         src=os.path.join(td,"report.html"); dst=os.path.join(td,"report.pdf")
         with open(src,"w",encoding="utf-8") as f: f.write(html)
         url="file:///"+src.replace("\\","/")
@@ -196,20 +244,33 @@ def render_report_pdf(
         )
         if pdf: return Response(content=pdf,media_type="application/pdf")
         last_err=b""
-        for headless_flag in ("--headless=new","--headless"):
+        for attempt,headless_flag in enumerate(("--headless=new","--headless"),start=1):
             cmd=[browser,headless_flag,"--disable-gpu","--no-first-run","--disable-extensions",
-                 f"--user-data-dir={os.path.join(td,'profile')}","--no-pdf-header-footer",
+                 "--disable-background-mode",f"--user-data-dir={os.path.join(td,f'profile-{attempt}')}",
+                 "--no-pdf-header-footer",
                  f"--print-to-pdf={dst}",url]
+            return_code=None
             try:
                 proc=subprocess.run(cmd,capture_output=True,timeout=120)
-                last_err=proc.stderr or proc.stdout or b""
+                return_code=proc.returncode
+                last_err=proc.stderr or proc.stdout or f"Chromium exit code: {proc.returncode}".encode()
             except subprocess.TimeoutExpired:
                 last_err=b"timeout"
+            if return_code == 0:
+                # Edge may return after handing work to a child. Wait briefly for the file.
+                ready_deadline=time.monotonic()+8
+                while time.monotonic()<ready_deadline and not (
+                    os.path.isfile(dst) and os.path.getsize(dst)>0
+                ):
+                    time.sleep(0.1)
             if os.path.isfile(dst) and os.path.getsize(dst)>0: break
         if not (os.path.isfile(dst) and os.path.getsize(dst)>0):
-            raise HTTPException(status_code=500,detail={"error_code":"PDF_RENDER_FAILED","message":last_err.decode(errors="replace")[-500:],"details":{}})
+            message=last_err.decode(errors="replace")[-500:].strip() or "Chromium 未生成 PDF。"
+            raise HTTPException(status_code=500,detail={"error_code":"PDF_RENDER_FAILED","message":message,"details":{}})
         with open(dst,"rb") as f: pdf=f.read()
-    return Response(content=pdf,media_type="application/pdf")
+        return Response(content=pdf,media_type="application/pdf")
+    finally:
+        _cleanup_pdf_workspace(td)
 
 
 @router.post("/{run_id}/v2/export-pdf")

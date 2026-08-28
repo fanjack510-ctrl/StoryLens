@@ -1,0 +1,52 @@
+{
+  "id": "CHG-20260829-001",
+  "title": "修复安装版 PDF 导出连接中断",
+  "type": "fix",
+  "base_version": "1.3.4",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "pdf-export",
+    "whole-book",
+    "short-form",
+    "reader-journey",
+    "comprehend",
+    "patterns"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/router.py",
+    "apps/api/tests/test_pdf_renderer_failures.py"
+  ],
+  "user_summary": "修复安装版点击导出 PDF 后出现 Failed to fetch、没有生成文件的问题。",
+  "technical_summary": "修正 Edge 启动器向子进程交接时被误判为退出的问题；通过 CDP 主动关闭浏览器；按进程树清理专用打印进程；临时目录锁清理改为有界重试且永不遮蔽 HTTP 错误；CLI 回退使用隔离 profile 并等待异步输出文件；CDP 错误写入日志。",
+  "acceptance_criteria": [
+    "真实 Edge 能生成以 %PDF 开头的中文多页 PDF",
+    "Chromium profile 锁文件不会把结构化错误变成 Failed to fetch",
+    "共享 PDF 渲染器覆盖全书、短篇、单章、读懂与榜单共性入口"
+  ],
+  "tests": [
+    "PDF renderer 与 Pro gate 定向测试 15/15",
+    "真实 Edge 中文多页 PDF 冒烟"
+  ],
+  "verification_evidence": [
+    "pytest targeted: 15 passed",
+    "real Edge smoke: 141831 bytes, %PDF signature"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-08-28T16:16:56Z",
+  "updated_at": "2026-08-28T16:16:56Z"
+}
