@@ -3,9 +3,16 @@
   "title": "修复桌面 HTML 导出并区分基础版与 Pro 报告",
   "type": "fix",
   "base_version": "1.3.4",
-  "status": "registered",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "3490545202ae1536e6b8afa882d5c0fb60faf947",
+      "message": "fix(export): restore desktop HTML downloads",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop-export",
     "whole-book",
@@ -56,7 +63,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-28T14:33:05Z",
-  "updated_at": "2026-08-28T15:00:05Z"
+  "updated_at": "2026-08-28T15:38:27Z"
 }
