@@ -82,6 +82,17 @@ DESKTOP_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$A
   find "$APP/Contents" -maxdepth 4 -type f -print >&2
   exit 5
 }
+codesign --verify --deep --strict --verbose=2 "$APP" || {
+  echo "StoryLens.app signature verification failed" >&2
+  exit 6
+}
+SIGNATURE_DETAILS="$(codesign -dv --verbose=4 "$APP" 2>&1)"
+grep -q '^Signature=' <<<"$SIGNATURE_DETAILS" || {
+  echo "StoryLens.app has no readable signature" >&2
+  exit 6
+}
+printf '%s\n' "$SIGNATURE_DETAILS" | \
+  grep -E '^(Identifier|Format|CodeDirectory|Signature|TeamIdentifier)=' || true
 hdiutil detach "$MOUNT_POINT" -quiet
 
 echo "MACOS RELEASE SMOKE OK ($ARCH_LABEL)"

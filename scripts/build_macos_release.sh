@@ -25,6 +25,16 @@ case "$HOST_TRIPLE" in
   *) echo "Unsupported macOS Rust host: $HOST_TRIPLE" >&2; exit 2 ;;
 esac
 
+# Gatekeeper may report an unsigned Apple Silicon app downloaded from the
+# internet as "damaged". Prefer a configured Developer ID, but always give
+# public builds at least an ad-hoc signature.
+export APPLE_SIGNING_IDENTITY="${APPLE_SIGNING_IDENTITY:--}"
+if [[ "$APPLE_SIGNING_IDENTITY" == "-" ]]; then
+  SIGNING_MODE="adhoc"
+else
+  SIGNING_MODE="developer-id"
+fi
+
 echo "==> Version consistency"
 "$PYTHON" scripts/version_manager.py check
 if [[ "${STORYLENS_RC_CANDIDATE:-0}" != "1" ]]; then
@@ -64,6 +74,15 @@ npx vite build
 npm run tauri -- build --bundles dmg
 popd >/dev/null
 
+APP_BUNDLE="$ROOT/apps/desktop/src-tauri/target/release/bundle/macos/StoryLens.app"
+if [[ ! -d "$APP_BUNDLE" ]]; then
+  echo "App bundle not found after Tauri build: $APP_BUNDLE" >&2
+  exit 4
+fi
+codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+codesign -dv --verbose=4 "$APP_BUNDLE" 2>&1 | \
+  grep -E '^(Identifier|Format|CodeDirectory|Signature|TeamIdentifier)=' || true
+
 RELEASE_DIR="$ROOT/dist/release-macos-$ARCH_LABEL"
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
@@ -79,7 +98,7 @@ cp "$DMG_SOURCE" "$DMG_TARGET"
 shasum -a 256 "$DMG_TARGET" > "$RELEASE_DIR/SHA256SUMS.txt"
 
 DMG_TARGET="$DMG_TARGET" RELEASE_DIR="$RELEASE_DIR" VERSION="$VERSION" \
-ARCH_LABEL="$ARCH_LABEL" HOST_TRIPLE="$HOST_TRIPLE" "$PYTHON" - <<'PY'
+ARCH_LABEL="$ARCH_LABEL" HOST_TRIPLE="$HOST_TRIPLE" SIGNING_MODE="$SIGNING_MODE" "$PYTHON" - <<'PY'
 import hashlib
 import json
 import os
@@ -92,6 +111,9 @@ summary = {
     "platform": "macos",
     "architecture": os.environ["ARCH_LABEL"],
     "target_triple": os.environ["HOST_TRIPLE"],
+    "signing_mode": os.environ["SIGNING_MODE"],
+    "signed": True,
+    "notarized": False,
     "signed_and_notarized": False,
     "installer": str(dmg),
     "installer_size": dmg.stat().st_size,

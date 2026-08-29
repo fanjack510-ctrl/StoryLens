@@ -81,6 +81,9 @@ jobs:
         shell: bash
         env:
           STORYLENS_RC_CANDIDATE: "1"
+          # Prefer a configured Developer ID. The build script falls back to
+          # ad-hoc signing for public Apple Silicon artifacts.
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: ./scripts/build_macos_release.sh
 
       - name: Desktop runtime unit tests
