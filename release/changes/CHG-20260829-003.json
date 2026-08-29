@@ -1,0 +1,44 @@
+{
+  "id": "CHG-20260829-003",
+  "title": "验证 macOS 桌面程序实际拉起内置分析服务",
+  "type": "fix",
+  "base_version": "1.3.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "release",
+    "macos",
+    "desktop-runtime"
+  ],
+  "files": [
+    "scripts/smoke_macos_release.sh"
+  ],
+  "user_summary": "补充 macOS 安装包真实桌面启动验收，防止只验证 sidecar 单独可运行、实际应用仍无法启动。",
+  "technical_summary": "DMG 冒烟在挂载和签名校验后复制 StoryLens.app，直接启动桌面可执行文件，等待其拉起内置 sidecar，再从启动日志解析动态端口并请求健康检查。",
+  "acceptance_criteria": [
+    "ARM64 DMG 内桌面程序能实际拉起 bundled sidecar",
+    "桌面拉起的 sidecar /health 返回成功",
+    "失败日志包含桌面 stderr 和 sidecar 启动日志"
+  ],
+  "tests": [
+    "GitHub macOS ARM64 桌面端到 sidecar 启动冒烟"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅增强 macOS 发布门禁。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-29T03:10:00Z",
+  "updated_at": "2026-08-29T03:10:00Z"
+}

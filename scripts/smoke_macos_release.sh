@@ -19,7 +19,15 @@ DMG="$ROOT/dist/release-macos-$ARCH_LABEL/StoryLens_$(tr -d '[:space:]' < VERSIO
 TMP_ROOT="$(mktemp -d)"
 MOUNT_POINT="$TMP_ROOT/mount"
 SIDECAR_PID=""
+DESKTOP_PID=""
+DESKTOP_CHILD_PIDS=""
 cleanup() {
+  for pid in $DESKTOP_CHILD_PIDS; do
+    kill "$pid" 2>/dev/null || true
+  done
+  if [[ -n "$DESKTOP_PID" ]] && kill -0 "$DESKTOP_PID" 2>/dev/null; then
+    kill "$DESKTOP_PID" 2>/dev/null || true
+  fi
   if [[ -n "$SIDECAR_PID" ]] && kill -0 "$SIDECAR_PID" 2>/dev/null; then
     kill "$SIDECAR_PID" 2>/dev/null || true
   fi
@@ -93,6 +101,52 @@ grep -q '^Signature=' <<<"$SIGNATURE_DETAILS" || {
 }
 printf '%s\n' "$SIGNATURE_DETAILS" | \
   grep -E '^(Identifier|Format|CodeDirectory|Signature|TeamIdentifier)=' || true
+
+# The standalone sidecar test above is not enough: Finder starts the desktop
+# executable from inside the app bundle, and the desktop must resolve and spawn
+# the bundled sidecar itself. Copy the mounted app to a writable location and
+# exercise that exact production startup path.
+INSTALLED_APP="$TMP_ROOT/StoryLens.app"
+ditto "$APP" "$INSTALLED_APP"
 hdiutil detach "$MOUNT_POINT" -quiet
+
+APP_DATA="$TMP_ROOT/app-data"
+APP_HOME="$TMP_ROOT/home"
+mkdir -p "$APP_DATA" "$APP_HOME"
+DESKTOP_STDERR="$TMP_ROOT/desktop.err"
+HOME="$APP_HOME" STORYLENS_DATA_DIR="$APP_DATA" \
+  "$INSTALLED_APP/Contents/MacOS/$DESKTOP_EXECUTABLE" \
+  >"$TMP_ROOT/desktop.out" 2>"$DESKTOP_STDERR" &
+DESKTOP_PID=$!
+
+SIDECAR_LOG="$APP_DATA/logs/sidecar.log"
+desktop_ready=0
+for _ in $(seq 1 180); do
+  DESKTOP_CHILD_PIDS="$(pgrep -P "$DESKTOP_PID" 2>/dev/null || true)"
+  if [[ -f "$SIDECAR_LOG" ]] && grep -q 'Uvicorn running on http://127.0.0.1:' "$SIDECAR_LOG"; then
+    desktop_ready=1
+    break
+  fi
+  if ! kill -0 "$DESKTOP_PID" 2>/dev/null; then
+    echo "Desktop process exited before its bundled sidecar became ready" >&2
+    cat "$DESKTOP_STDERR" >&2 || true
+    find "$APP_DATA" -maxdepth 3 -type f -print -exec tail -n 80 {} \; >&2 || true
+    exit 7
+  fi
+  sleep 0.5
+done
+if [[ "$desktop_ready" != "1" ]]; then
+  echo "Desktop did not start its bundled sidecar" >&2
+  cat "$DESKTOP_STDERR" >&2 || true
+  find "$APP_DATA" -maxdepth 3 -type f -print -exec tail -n 80 {} \; >&2 || true
+  exit 7
+fi
+
+DESKTOP_PORT="$(sed -n 's#.*http://127\.0\.0\.1:\([0-9][0-9]*\).*#\1#p' "$SIDECAR_LOG" | tail -n 1)"
+[[ -n "$DESKTOP_PORT" ]] || { echo "Could not read desktop sidecar port" >&2; exit 7; }
+curl --silent --fail "http://127.0.0.1:$DESKTOP_PORT/health" >/dev/null || {
+  echo "Desktop-spawned sidecar health check failed" >&2
+  exit 7
+}
 
 echo "MACOS RELEASE SMOKE OK ($ARCH_LABEL)"
