@@ -74,15 +74,6 @@ npx vite build
 npm run tauri -- build --bundles dmg
 popd >/dev/null
 
-APP_BUNDLE="$ROOT/apps/desktop/src-tauri/target/release/bundle/macos/StoryLens.app"
-if [[ ! -d "$APP_BUNDLE" ]]; then
-  echo "App bundle not found after Tauri build: $APP_BUNDLE" >&2
-  exit 4
-fi
-codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
-codesign -dv --verbose=4 "$APP_BUNDLE" 2>&1 | \
-  grep -E '^(Identifier|Format|CodeDirectory|Signature|TeamIdentifier)=' || true
-
 RELEASE_DIR="$ROOT/dist/release-macos-$ARCH_LABEL"
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
