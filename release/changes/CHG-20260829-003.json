@@ -3,7 +3,7 @@
   "title": "修复 macOS 隔离状态下内置分析服务退出",
   "type": "fix",
   "base_version": "1.3.4",
-  "status": "implemented",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
   "commits": [
     {
@@ -44,7 +44,13 @@
     "前端 DesktopBootstrap 定向测试",
     "GitHub macOS ARM64 quarantine 桌面端到 sidecar 启动冒烟"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "Rust backend targeted tests: 4 passed",
+    "DesktopBootstrap targeted tests: 3 passed",
+    "GitHub Actions run 33258766423: ARM64 and x64 passed",
+    "ARM64 smoke injected quarantine into bundled sidecar, launched the desktop, and reached /health",
+    "Published ARM64 SHA256 64130b96936fae6ee50fc8104aad51e33026ac1ecb5eb18deeea94f390a87b00"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -60,5 +66,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-08-29T14:53:04Z"
+  "updated_at": "2026-08-29T15:25:00Z"
 }
