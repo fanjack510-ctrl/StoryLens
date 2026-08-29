@@ -1,6 +1,6 @@
 {
   "id": "CHG-20260829-003",
-  "title": "验证 macOS 桌面程序实际拉起内置分析服务",
+  "title": "修复 macOS 隔离状态下内置分析服务退出",
   "type": "fix",
   "base_version": "1.3.4",
   "status": "implemented",
@@ -16,20 +16,27 @@
   "modules": [
     "release",
     "macos",
-    "desktop-runtime"
+    "desktop-runtime",
+    "bootstrap-ui"
   ],
   "files": [
+    "apps/desktop/src-tauri/src/backend.rs",
+    "apps/desktop/src/components/desktop/DesktopBootstrap.tsx",
+    "apps/desktop/src/components/desktop/DesktopBootstrap.test.tsx",
+    "apps/desktop/src/services/desktopRuntime.ts",
     "scripts/smoke_macos_release.sh"
   ],
-  "user_summary": "补充 macOS 安装包真实桌面启动验收，防止只验证 sidecar 单独可运行、实际应用仍无法启动。",
-  "technical_summary": "DMG 冒烟在挂载和签名校验后复制 StoryLens.app，直接启动桌面可执行文件，等待其拉起内置 sidecar，再从启动日志解析动态端口并请求健康检查。",
+  "user_summary": "修复 Apple Silicon 上 StoryLens 主程序可以打开、但本地分析服务随即退出的问题，并在查看详情中显示真实退出原因。",
+  "technical_summary": "macOS 启动时将已签名 bundled sidecar 原子复制到用户可写 runtime 目录再执行，避免直接运行仍带 quarantine 的嵌套文件；启动失败保留退出状态与 stderr 摘要；DMG 冒烟为嵌套 sidecar 注入 quarantine 后验证桌面端到服务健康检查。",
   "acceptance_criteria": [
-    "ARM64 DMG 内桌面程序能实际拉起 bundled sidecar",
+    "ARM64 DMG 内桌面程序能在 bundled sidecar 带 quarantine 时拉起运行副本",
     "桌面拉起的 sidecar /health 返回成功",
-    "失败日志包含桌面 stderr 和 sidecar 启动日志"
+    "查看详情能显示 sidecar 退出状态与错误摘要"
   ],
   "tests": [
-    "GitHub macOS ARM64 桌面端到 sidecar 启动冒烟"
+    "Rust desktop runtime 定向测试",
+    "前端 DesktopBootstrap 定向测试",
+    "GitHub macOS ARM64 quarantine 桌面端到 sidecar 启动冒烟"
   ],
   "verification_evidence": [],
   "data_compatibility": {

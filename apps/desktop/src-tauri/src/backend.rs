@@ -162,6 +162,80 @@ fn resolve_sidecar(app: &AppHandle) -> Result<PathBuf, BackendError> {
     })
 }
 
+fn prepare_sidecar_for_launch(
+    app: &AppHandle,
+    bundled_path: &PathBuf,
+    app_version: &str,
+) -> Result<PathBuf, BackendError> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        // A downloaded ad-hoc signed app may be approved by Gatekeeper while
+        // its nested executable remains quarantined. Copying the already
+        // signed bundled sidecar into the app's writable runtime directory
+        // avoids launching executable code directly from the quarantined DMG
+        // or app bundle. std::fs::copy does not carry extended attributes.
+        let runtime_dir = app
+            .path()
+            .app_local_data_dir()
+            .map_err(|e| BackendError {
+                user_message: "无法准备本地分析服务运行目录。请检查应用数据目录权限。".into(),
+                detail: format!("resolve macOS app_local_data_dir failed: {e}"),
+            })?
+            .join("runtime");
+        std::fs::create_dir_all(&runtime_dir).map_err(|e| BackendError {
+            user_message: "无法准备本地分析服务运行目录。请检查应用数据目录权限。".into(),
+            detail: format!("create macOS runtime dir {:?} failed: {e}", runtime_dir),
+        })?;
+
+        let safe_version: String = app_version
+            .chars()
+            .map(|ch| {
+                if ch.is_ascii_alphanumeric() || ch == '.' || ch == '-' {
+                    ch
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let target = runtime_dir.join(format!("storylens-api-{safe_version}"));
+        let temporary = runtime_dir.join(format!(
+            ".storylens-api-{safe_version}-{}.tmp",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&temporary);
+        std::fs::copy(bundled_path, &temporary).map_err(|e| BackendError {
+            user_message: "无法准备本地分析服务。请重新安装 StoryLens 后重试。".into(),
+            detail: format!(
+                "copy macOS sidecar {:?} -> {:?} failed: {e}",
+                bundled_path, temporary
+            ),
+        })?;
+        std::fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o755)).map_err(
+            |e| BackendError {
+                user_message: "无法设置本地分析服务执行权限。请重新安装 StoryLens。".into(),
+                detail: format!("chmod macOS sidecar {:?} failed: {e}", temporary),
+            },
+        )?;
+        let _ = std::fs::remove_file(&target);
+        std::fs::rename(&temporary, &target).map_err(|e| BackendError {
+            user_message: "无法更新本地分析服务。请退出 StoryLens 后重新打开。".into(),
+            detail: format!(
+                "activate macOS sidecar {:?} -> {:?} failed: {e}",
+                temporary, target
+            ),
+        })?;
+        return Ok(target);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, app_version);
+        Ok(bundled_path.clone())
+    }
+}
+
 fn normalize_path_key(path: &Path) -> String {
     path.canonicalize()
         .unwrap_or_else(|_| path.to_path_buf())
@@ -351,6 +425,19 @@ fn read_sidecar_error_token(log_dir: &PathBuf) -> Option<String> {
     None
 }
 
+fn read_sidecar_stderr_tail(log_dir: &PathBuf) -> Option<String> {
+    let path = sidecar_stderr_log_path(log_dir);
+    let content = std::fs::read_to_string(path).ok()?;
+    let mut lines: Vec<&str> = content.lines().rev().take(20).collect();
+    lines.reverse();
+    let tail = lines.join(" | ");
+    if tail.is_empty() {
+        None
+    } else {
+        Some(tail.chars().take(4000).collect())
+    }
+}
+
 fn map_sidecar_token_to_user_message(token: &str) -> Option<String> {
     if token.starts_with("DATA_DIR_NOT_WRITABLE") {
         return Some(
@@ -445,13 +532,13 @@ fn wait_for_health(
             return Ok(());
         }
 
-        let wrapper_exited = match lifecycle.child.as_mut() {
+        let wrapper_exit_status = match lifecycle.child.as_mut() {
             Some(child) => match child.try_wait() {
-                Ok(Some(_)) => {
+                Ok(Some(status)) => {
                     lifecycle.child = None;
-                    true
+                    Some(status)
                 }
-                Ok(None) => false,
+                Ok(None) => None,
                 Err(e) => {
                     return Err(BackendError {
                         user_message: "无法确认本地分析服务状态。请重启 StoryLens。".into(),
@@ -459,21 +546,24 @@ fn wait_for_health(
                     });
                 }
             },
-            None => true,
+            None => None,
         };
 
-        if wrapper_exited {
+        if let Some(exit_status) = wrapper_exit_status {
             // PyInstaller onefile may leave the real service alive after wrapper exit.
             let any_owned_alive = lifecycle.owned_pids.iter().any(|pid| pid_alive(*pid));
             if !any_owned_alive {
                 let mut user_message =
                     "本地分析服务意外退出。请重启 StoryLens；若反复出现，请重新安装。".to_string();
-                let mut detail = "sidecar exited during health wait".to_string();
+                let mut detail =
+                    format!("sidecar exited during health wait; exit_status={exit_status}");
                 if let Some(token) = read_sidecar_error_token(log_dir) {
                     detail = format!("{detail}; token={token}");
                     if let Some(mapped) = map_sidecar_token_to_user_message(&token) {
                         user_message = mapped;
                     }
+                } else if let Some(stderr_tail) = read_sidecar_stderr_tail(log_dir) {
+                    detail = format!("{detail}; stderr_tail={stderr_tail}");
                 }
                 return Err(BackendError {
                     user_message,
@@ -605,14 +695,14 @@ pub fn start_backend(app: &AppHandle) -> Result<(), BackendError> {
         guard.status = BackendStatus::Starting;
     }
 
-    let sidecar = resolve_sidecar(app)?;
+    let bundled_sidecar = resolve_sidecar(app)?;
+    let app_version = app.package_info().version.to_string();
+    let sidecar = prepare_sidecar_for_launch(app, &bundled_sidecar, &app_version)?;
     let log_dir = user_log_dir(app);
     // Capture same-path PIDs before any spawn so we never claim other instances.
     let baseline_path_pids: HashSet<u32> = pids_for_executable_path(&sidecar).into_iter().collect();
 
     let mut ready_life: Option<SidecarLifecycle> = None;
-
-    let app_version = app.package_info().version.to_string();
 
     for attempt in 0..MAX_PORT_ATTEMPTS {
         let port = find_free_port()?;

@@ -73,4 +73,21 @@ describe("DesktopBootstrap", () => {
     expect(await screen.findByText("app")).toBeInTheDocument();
     expect(bootstrap).toHaveBeenCalled();
   });
+
+  it("shows the native sidecar exit detail in the expandable diagnostics", async () => {
+    bootstrap.mockResolvedValue({
+      state: "failed",
+      message: "本地分析服务意外退出。",
+      detail: "sidecar exited during health wait; exit_status=signal: 9",
+    });
+    render(
+      <DesktopBootstrap>
+        <div>app</div>
+      </DesktopBootstrap>,
+    );
+
+    expect(await screen.findByText("本地分析服务意外退出。")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("查看详情"));
+    expect(screen.getByText(/exit_status=signal: 9/)).toBeInTheDocument();
+  });
 });

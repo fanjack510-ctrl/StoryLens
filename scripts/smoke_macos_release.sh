@@ -110,6 +110,12 @@ INSTALLED_APP="$TMP_ROOT/StoryLens.app"
 ditto "$APP" "$INSTALLED_APP"
 hdiutil detach "$MOUNT_POINT" -quiet
 
+# Reproduce the downloaded-app condition: the main app may be approved while
+# its nested sidecar still carries quarantine. The desktop must launch its
+# runtime copy rather than executing this quarantined nested file directly.
+xattr -w com.apple.quarantine "0081;$(printf '%x' "$(date +%s)");StoryLens;" \
+  "$INSTALLED_APP/Contents/MacOS/storylens-api"
+
 APP_DATA="$TMP_ROOT/app-data"
 APP_HOME="$TMP_ROOT/home"
 mkdir -p "$APP_DATA" "$APP_HOME"

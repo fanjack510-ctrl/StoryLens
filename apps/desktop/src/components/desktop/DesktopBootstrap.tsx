@@ -153,6 +153,7 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
         >
           <summary>查看详情</summary>
           <p role="status">{status.message}</p>
+          {status.detail && <pre className="desktop-bootstrap-technical-detail">{status.detail}</pre>}
           <p className="muted">详细信息已写入本机日志目录（用户数据下的 logs 文件夹）。</p>
         </details>
       </div>

@@ -4,7 +4,7 @@ export type BackendUiStatus =
   | { state: "browser_dev" }
   | { state: "starting" }
   | { state: "ready"; apiBase: string }
-  | { state: "failed"; message: string };
+  | { state: "failed"; message: string; detail?: string };
 
 function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -59,6 +59,7 @@ export async function bootstrapDesktopRuntime(
         state: string;
         api_base?: string;
         user_message?: string;
+        detail?: string;
       }>("get_backend_status");
 
       if (status.state === "ready" && status.api_base) {
@@ -70,7 +71,7 @@ export async function bootstrapDesktopRuntime(
       }
       if (status.state === "failed") {
         const message = status.user_message || "本地分析服务启动失败。";
-        const failed = { state: "failed" as const, message };
+        const failed = { state: "failed" as const, message, detail: status.detail };
         onStatus?.(failed);
         return failed;
       }
