@@ -3,9 +3,16 @@
   "title": "验证 macOS 桌面程序实际拉起内置分析服务",
   "type": "fix",
   "base_version": "1.3.4",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "466cd9a616c9bd12e9684afa99ba4cf852151381",
+      "message": "test(macos): launch bundled desktop during smoke",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "macos",
@@ -40,5 +47,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-08-29T03:10:00Z"
+  "updated_at": "2026-08-29T14:39:38Z"
 }
