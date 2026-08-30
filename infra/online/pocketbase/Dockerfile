@@ -17,10 +17,12 @@ RUN apk add --no-cache ca-certificates unzip wget \
     && mkdir -p /pb/pb_data /pb/pb_migrations \
     && chown -R pocketbase:pocketbase /pb
 
+COPY --chown=pocketbase:pocketbase pb_migrations /pb/pb_migrations
+
 USER pocketbase
 WORKDIR /pb
 
 EXPOSE 8090
 
 ENTRYPOINT ["/pb/pocketbase"]
-CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data"]
+CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data", "--migrationsDir=/pb/pb_migrations"]

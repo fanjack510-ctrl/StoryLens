@@ -21,7 +21,9 @@ def test_recharge_and_ledger_idempotency_keys_are_unique() -> None:
     recharge_unique = _unique_column_sets("online_recharge_orders")
     transaction_unique = _unique_column_sets("online_wallet_transactions")
     usage_unique = _unique_column_sets("online_model_usage_ledger")
+    job_unique = _unique_column_sets("online_analysis_jobs")
 
     assert ("external_order_no",) in recharge_unique
     assert ("idempotency_key",) in transaction_unique
     assert ("invocation_id",) in usage_unique
+    assert ("user_id", "idempotency_key") in job_unique

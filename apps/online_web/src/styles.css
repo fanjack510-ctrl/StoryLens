@@ -1,0 +1,407 @@
+:root {
+  color: #12243a;
+  background: #f3f7fb;
+  font-family:
+    Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding-bottom: 64px;
+}
+
+.centered {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: #516a84;
+}
+
+.site-header {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.site-header > div,
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #2c6aa0;
+  border-radius: 10px;
+  color: #1f5f95;
+  font-weight: 800;
+}
+
+.beta-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #dcecf9;
+  color: #1f5f95;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid #aacbe5;
+  border-radius: 12px;
+  background: #eaf4fb;
+  color: #285576;
+}
+
+.error-banner {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid #e5b6b6;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: #8b2525;
+}
+
+.error-banner button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+}
+
+.auth-panel,
+.panel {
+  border: 1px solid #d6e1eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgb(32 70 105 / 8%);
+}
+
+.auth-panel {
+  width: min(480px, 100%);
+  margin: 72px auto 0;
+  padding: 36px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #2b6e9f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 12px;
+  font-size: clamp(28px, 4vw, 38px);
+}
+
+h2 {
+  margin-bottom: 12px;
+}
+
+.auth-panel > p:not(.eyebrow),
+.upload-panel > p:not(.eyebrow),
+.empty-state {
+  color: #61758a;
+  line-height: 1.7;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 24px 0;
+  padding: 4px;
+  border-radius: 10px;
+  background: #edf3f8;
+}
+
+.mode-switch button {
+  padding: 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #526980;
+}
+
+.mode-switch button[aria-selected="true"] {
+  background: #fff;
+  color: #1f5f95;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgb(32 70 105 / 10%);
+}
+
+form,
+label {
+  display: grid;
+  gap: 8px;
+}
+
+form {
+  gap: 18px;
+}
+
+label {
+  color: #3e566e;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #bdcddd;
+  border-radius: 9px;
+  outline: 0;
+}
+
+input:focus {
+  border-color: #397aaa;
+  box-shadow: 0 0 0 3px rgb(57 122 170 / 14%);
+}
+
+.primary-button,
+.quiet-button,
+.text-button {
+  border-radius: 9px;
+  font-weight: 700;
+}
+
+.primary-button {
+  padding: 12px 18px;
+  border: 1px solid #225f91;
+  background: #286b9f;
+  color: #fff;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.quiet-button {
+  padding: 8px 12px;
+  border: 1px solid #b7cadb;
+  background: #fff;
+  color: #365b7b;
+}
+
+.text-button {
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: #276c9f;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.panel {
+  padding: 28px;
+}
+
+.result-panel {
+  grid-column: 1 / -1;
+}
+
+.file-picker {
+  display: flex;
+  min-height: 108px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border: 1px dashed #78a9ce;
+  border-radius: 12px;
+  background: #f5faff;
+  color: #286b9f;
+  text-align: center;
+}
+
+.file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.panel-heading,
+.job-row,
+.result-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.job-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-list li {
+  padding: 14px;
+  border: 1px solid #dbe5ed;
+  border-radius: 10px;
+}
+
+.job-row > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+code {
+  color: #567086;
+  font-family: "Cascadia Mono", "SFMono-Regular", monospace;
+  font-size: 12px;
+}
+
+progress {
+  width: 100%;
+  height: 7px;
+  margin-top: 10px;
+  accent-color: #2c78ad;
+}
+
+.job-error {
+  margin: 10px 0 0;
+  color: #a23c3c;
+  font-size: 13px;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.metric,
+.hash-row,
+.result-boundary {
+  padding: 16px;
+  border-radius: 10px;
+  background: #f2f7fb;
+}
+
+.metric {
+  display: grid;
+  gap: 8px;
+}
+
+.metric span,
+.hash-row span {
+  color: #657d91;
+  font-size: 13px;
+}
+
+.metric strong {
+  font-size: 22px;
+}
+
+.hash-row,
+.result-boundary {
+  grid-column: 1 / -1;
+}
+
+.hash-row {
+  display: grid;
+  gap: 8px;
+}
+
+.hash-row code {
+  overflow-wrap: anywhere;
+}
+
+.result-boundary {
+  background: #e7f3fb;
+  color: #285d83;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100% - 20px, 1180px);
+  }
+
+  .site-header {
+    align-items: flex-start;
+    padding: 14px 0;
+  }
+
+  .site-header,
+  .site-header > div,
+  .account-actions,
+  .notice {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .result-panel {
+    grid-column: auto;
+  }
+
+  .result-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .auth-panel,
+  .panel {
+    padding: 22px;
+  }
+
+  .auth-panel {
+    margin-top: 28px;
+  }
+}

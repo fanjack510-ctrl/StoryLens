@@ -18,6 +18,6 @@
     }
 
     handle {
-        respond "StoryLens Online frontend is not deployed in foundation stage" 503
+        reverse_proxy online-web:8080
     }
 }

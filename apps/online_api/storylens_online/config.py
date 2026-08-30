@@ -33,6 +33,16 @@ class OnlineSettings(BaseSettings):
     pocketbase_url: str = "http://pocketbase:8090"
     pocketbase_auth_collection: str = "users"
     frontend_origin: str = "https://replace-with-your-domain.example"
+    upload_dir: str = "/srv/storylens-online/uploads"
+    upload_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1, le=100 * 1024 * 1024)
+    job_queue_name: str = "storylens:phase2a:jobs"
+    worker_poll_seconds: int = Field(default=5, ge=1, le=60)
+    worker_lease_seconds: int = Field(default=900, ge=30, le=3600)
+    session_cookie_max_age_seconds: int = Field(
+        default=7 * 24 * 60 * 60,
+        ge=300,
+        le=30 * 24 * 60 * 60,
+    )
 
     afdian_api_base_url: str = "https://afdian.net/api/open"
     afdian_user_id: str | None = None
@@ -56,6 +66,13 @@ class OnlineSettings(BaseSettings):
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("service URL must be absolute http(s)")
         return value.rstrip("/")
+
+    @field_validator("upload_dir", "job_queue_name", "pocketbase_auth_collection")
+    @classmethod
+    def validate_nonempty_runtime_value(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("runtime path and names must not be empty")
+        return value.strip()
 
     @model_validator(mode="after")
     def reject_desktop_database(self) -> OnlineSettings:

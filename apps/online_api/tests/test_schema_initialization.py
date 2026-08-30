@@ -8,9 +8,10 @@ from storylens_online.config import OnlineSettings
 from storylens_online.db import init_schema
 from storylens_online.db.models import OnlineBase
 
-
 EXPECTED_TABLES = {
+    "online_analysis_jobs",
     "online_billing_reservations",
+    "online_book_uploads",
     "online_model_usage_ledger",
     "online_recharge_orders",
     "online_wallet_accounts",
@@ -25,7 +26,7 @@ def _settings() -> OnlineSettings:
     )
 
 
-def test_initialize_schema_creates_five_tables_and_is_idempotent(
+def test_initialize_schema_creates_all_online_tables_and_is_idempotent(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -56,6 +57,13 @@ def test_initialize_schema_creates_five_tables_and_is_idempotent(
 
     assert created_tables == EXPECTED_TABLES
     assert created_tables == set(OnlineBase.metadata.tables)
+    assert {
+        "online_billing_reservations",
+        "online_model_usage_ledger",
+        "online_recharge_orders",
+        "online_wallet_accounts",
+        "online_wallet_transactions",
+    }.issubset(created_tables)
     assert len(disposed_engines) == 2
 
 

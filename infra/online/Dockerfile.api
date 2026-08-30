@@ -11,7 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY apps/online_api/storylens_online ./storylens_online
 
-RUN useradd --create-home --uid 10001 storylens
+RUN useradd --create-home --uid 10001 storylens \
+    && mkdir -p /srv/storylens-online/uploads \
+    && chown -R storylens:storylens /srv/storylens-online/uploads
 USER storylens
 
 EXPOSE 8080

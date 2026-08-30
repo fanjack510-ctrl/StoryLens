@@ -4,7 +4,18 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -104,3 +115,45 @@ class ModelUsageLedger(TimestampMixin, OnlineBase):
     provider_cost_cny: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     customer_charge_cny: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     disposition: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+
+
+class OnlineBookUpload(TimestampMixin, OnlineBase):
+    __tablename__ = "online_book_uploads"
+    __table_args__ = (
+        CheckConstraint("file_size_bytes > 0", name="ck_online_upload_size_positive"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(96), nullable=False, unique=True)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class OnlineAnalysisJob(TimestampMixin, OnlineBase):
+    __tablename__ = "online_analysis_jobs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uq_online_job_user_idempotency"),
+        CheckConstraint("progress >= 0 AND progress <= 100", name="ck_online_job_progress_range"),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'succeeded', 'failed')",
+            name="ck_online_job_status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    upload_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    pipeline: Mapped[str] = mapped_column(String(32), nullable=False, default="phase2a_smoke")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="queued", index=True)
+    progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    result_json: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    public_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

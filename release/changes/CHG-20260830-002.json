@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260830-002",
+  "title": "实现 StoryLens Online Phase 2A 用户任务闭环",
+  "type": "feature",
+  "base_version": "1.3.6",
+  "status": "registered",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "online-api",
+    "online-web",
+    "online-worker",
+    "pocketbase-auth",
+    "hong-kong-deployment"
+  ],
+  "files": [
+    "apps/online_api/",
+    "apps/online_web/",
+    "infra/online/",
+    "release/changes/CHG-20260830-002.json"
+  ],
+  "user_summary": "新增线上 Beta 注册登录、TXT 上传、任务排队、进度查询与本地统计结果页面，保持桌面 1.3.6 和现有正式发布不变。",
+  "technical_summary": "FastAPI 作为 PocketBase BFF，以安全 Cookie 管理用户会话；上传文件以随机存储键和 SHA256 保存到 API/Worker 共享卷；Redis pending/processing 双队列配合 PostgreSQL 原子任务领取、租约与终态检查实现可恢复的至少一次投递；React/Vite 页面经 Caddy 同域访问。Phase 2A Worker 只做确定性文本统计，不调用模型、不接触爱发电、不写钱包、预留或模型用量记录。部署时镜像内 PocketBase migration 创建 users auth collection，SQLAlchemy 启动初始化幂等创建新增表。升级保留全部命名卷；回滚先备份并切回已批准提交，禁止删除卷或表。",
+  "acceptance_criteria": [
+    "邮箱密码注册、登录、退出和当前用户查询通过 FastAPI BFF 工作，浏览器仅使用 HttpOnly、Secure、SameSite=Lax Cookie",
+    "仅接受可配置大小上限内的非空 UTF-8 或 UTF-8-SIG TXT，并防止路径穿越",
+    "上传、任务和结果均按当前用户所有权隔离",
+    "任务可经历 queued、running、succeeded 或 failed，重复投递不会重复执行已完成任务",
+    "结果明确标记为 phase2a_smoke、非真实 AI、不可计费且费用为零",
+    "Phase 2A 不修改钱包、不创建付费预留、不生成模型用量账单且不调用爱发电",
+    "网站根路径显示在线 Beta 页面，公网仍仅开放 Caddy 80/443",
+    "数据库初始化保留原有 5 张表并幂等新增 online_book_uploads 与 online_analysis_jobs",
+    "VERSION 保持 1.3.6，桌面端、本地 API 和冻结发布清单零修改"
+  ],
+  "tests": [
+    "apps/online_api 全部测试",
+    "Ruff 与 Python compileall",
+    "apps/online_web TypeScript、Vitest 与生产构建",
+    "Docker Compose config 与在线镜像构建",
+    "scripts/check_project.py",
+    "git diff --check 与离线范围审计"
+  ],
+  "verification_evidence": [
+    "apps/online_api 线上单测：22 passed",
+    "Ruff check 与 format check：passed",
+    "Python compileall：passed",
+    "apps/online_web TypeScript typecheck：passed",
+    "apps/online_web Vitest：2 files / 4 tests passed",
+    "apps/online_web production build：passed",
+    "docker compose config --quiet：passed",
+    "Compose 公网端口审计：仅 gateway 80/443",
+    "Docker 镜像构建命令已执行，但本机 Docker Desktop Linux engine 未运行，未声称镜像构建通过",
+    "scripts/check_project.py：passed（VERSION、变更登记和项目骨架检查通过）",
+    "git diff --check、真实密钥模式扫描与桌面/本地 API/冻结清单范围审计：passed"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅幂等新增 online_book_uploads、online_analysis_jobs 和 PocketBase users auth collection；不删除或重建现有 5 张业务表。上传文件新增独立持久卷。升级必须保留命名卷；应用回滚切回先前提交，必要的数据回滚必须使用升级前配套备份。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-08-30T00:00:00Z",
+  "updated_at": "2026-08-30T00:00:00Z"
+}

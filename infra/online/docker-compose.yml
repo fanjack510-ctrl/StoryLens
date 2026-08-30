@@ -1,5 +1,11 @@
 name: storylens-online
 
+x-online-app: &online-app
+  image: storylens-online-api:local
+  build:
+    context: ../..
+    dockerfile: infra/online/Dockerfile.api
+
 services:
   gateway:
     image: caddy:2.10-alpine
@@ -16,12 +22,12 @@ services:
     depends_on:
       online-api:
         condition: service_healthy
+      online-web:
+        condition: service_healthy
     networks: [edge, private]
 
   online-api:
-    build:
-      context: ../..
-      dockerfile: infra/online/Dockerfile.api
+    <<: *online-app
     restart: unless-stopped
     environment:
       STORYLENS_ONLINE_RUNTIME: hong_kong_beta
@@ -30,6 +36,9 @@ services:
       STORYLENS_ONLINE_POCKETBASE_URL: http://pocketbase:8090
       STORYLENS_ONLINE_FRONTEND_ORIGIN: https://${STORYLENS_DOMAIN:?set STORYLENS_DOMAIN}
       STORYLENS_ONLINE_BILLING_MULTIPLIER: "2.0"
+      STORYLENS_ONLINE_UPLOAD_DIR: /srv/storylens-online/uploads
+      STORYLENS_ONLINE_UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-10485760}
+      STORYLENS_ONLINE_JOB_QUEUE_NAME: storylens:phase2a:jobs
       STORYLENS_ONLINE_AFDIAN_USER_ID: ${AFDIAN_USER_ID:-}
       STORYLENS_ONLINE_AFDIAN_API_TOKEN: ${AFDIAN_API_TOKEN:-}
       STORYLENS_ONLINE_AFDIAN_ALLOWED_PLAN_IDS: ${AFDIAN_ALLOWED_PLAN_IDS:-}
@@ -45,7 +54,41 @@ services:
         condition: service_healthy
       pocketbase:
         condition: service_started
+    volumes:
+      - online_uploads:/srv/storylens-online/uploads
     networks: [private, egress]
+
+  online-worker:
+    <<: *online-app
+    restart: unless-stopped
+    command: ["sh", "-c", "python -m storylens_online.db.init_schema && exec python -m storylens_online.worker"]
+    environment:
+      STORYLENS_ONLINE_RUNTIME: hong_kong_beta
+      STORYLENS_ONLINE_DATABASE_URL: postgresql+psycopg://storylens:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/storylens_online
+      STORYLENS_ONLINE_REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379/0
+      STORYLENS_ONLINE_UPLOAD_DIR: /srv/storylens-online/uploads
+      STORYLENS_ONLINE_UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-10485760}
+      STORYLENS_ONLINE_JOB_QUEUE_NAME: storylens:phase2a:jobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - online_uploads:/srv/storylens-online/uploads
+    networks: [private]
+
+  online-web:
+    build:
+      context: ../..
+      dockerfile: infra/online/Dockerfile.web
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [private]
 
   pocketbase:
     build:
@@ -55,7 +98,6 @@ services:
     restart: unless-stopped
     volumes:
       - pocketbase_data:/pb/pb_data
-      - pocketbase_migrations:/pb/pb_migrations
     networks: [private, egress]
 
   postgres:
@@ -99,6 +141,6 @@ volumes:
   caddy_data:
   caddy_config:
   pocketbase_data:
-  pocketbase_migrations:
   postgres_data:
   redis_data:
+  online_uploads:
