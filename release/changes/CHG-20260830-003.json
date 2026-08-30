@@ -1,0 +1,80 @@
+{
+  "id": "CHG-20260830-003",
+  "title": "修复线上 Worker 空队列轮询退出与 Redis 瞬时故障恢复",
+  "type": "fix",
+  "base_version": "1.3.6",
+  "status": "registered",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "online-worker",
+    "online-redis-queue",
+    "hong-kong-deployment"
+  ],
+  "files": [
+    "apps/online_api/storylens_online/config.py",
+    "apps/online_api/storylens_online/services/queue.py",
+    "apps/online_api/storylens_online/worker.py",
+    "apps/online_api/tests/test_queue_contract.py",
+    "apps/online_api/tests/test_worker_redis_reliability.py",
+    "infra/online/.env.example",
+    "infra/online/README.md",
+    "infra/online/docker-compose.yml",
+    "release/changes/CHG-20260830-003.json"
+  ],
+  "user_summary": "修复香港 Phase 2A Worker 在 Redis 空队列阻塞轮询时因客户端读取超时而退出的问题，并让短暂 Redis 故障恢复后无需人工重启即可继续消费。",
+  "technical_summary": "经代码和 redis-py 8.1.0 运行时配置验证，BRPOPLPUSH 的 5 秒阻塞轮询与客户端默认 5 秒 socket 读取超时发生竞争，客户端可在 Redis 正常返回空结果前抛出 TimeoutError；原 Worker 主循环未处理该队列传输异常，Fake Redis 测试也没有模拟阻塞读取。修复为 Worker 专用 Redis 客户端显式使用 15 秒读取超时和 5 秒连接超时，并在配置启动校验中强制读取超时至少比阻塞轮询多 2 秒；Worker 将空结果作为正常状态，对残余 TimeoutError/ConnectionError 重置连接池、以 1 至 15 秒有界指数退避重试、每次故障期只记录一次告警，并在恢复轮询前先将 processing 队列安全移回 pending。任务执行异常仍不进入 Redis 空队列处理路径。",
+  "acceptance_criteria": [
+    "空 pending 队列连续多个阻塞轮询周期不导致 Worker 退出或产生任务写入",
+    "Redis socket 读取超时严格晚于阻塞轮询超时且非法配置在连接前失败",
+    "残余 Redis TimeoutError 或短暂 ConnectionError 不终止 Worker，并使用有界退避避免忙循环和日志洪泛",
+    "Redis 恢复后 Worker 先恢复 processing 队列再继续消费，无需人工重启",
+    "真正的任务执行错误不被当作空队列吞掉，任务不会被错误确认或错误标记",
+    "现有 PostgreSQL 原子领取、租约、终态检查和重复消费幂等语义保持不变",
+    "Phase 2A Worker 不创建钱包交易、付费预留或模型使用账单",
+    "VERSION 保持 1.3.6，前端、桌面端、本地 API、数据库模型、PocketBase migration 和冻结发布文件零修改"
+  ],
+  "tests": [
+    "apps/online_api 全部测试",
+    "Worker 空队列三周期、读取超时、断连恢复、processing 恢复、退避、日志去洪泛与任务错误隔离回归测试",
+    "Redis 客户端显式 socket/connect timeout 合同测试与配置约束测试",
+    "Ruff check 与 format check",
+    "Python compileall",
+    "Docker Compose config",
+    "scripts/check_project.py",
+    "git diff --check、真实密钥模式扫描与范围隔离审计"
+  ],
+  "verification_evidence": [
+    "apps/online_api 线上单测：29 passed",
+    "Worker、队列与 Phase 2A 任务闭环定向回归：15 passed",
+    "Ruff check 与 format check：passed",
+    "Python compileall：passed",
+    "docker compose config --quiet：passed",
+    "scripts/check_project.py：passed（VERSION、变更登记和项目骨架检查通过）",
+    "git diff --check、真实密钥模式扫描与桌面/本地 API/前端/数据库模型/PocketBase migration/冻结文件范围审计：passed",
+    "本机 Docker Desktop Linux engine 未运行，因此未声称镜像构建或真实 Redis 烟测通过",
+    "真实 Redis 三轮空队列与恢复烟测仍须由操作者在香港隔离环境执行后才能正式接受 Phase 2A"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "不修改数据库模型或 PocketBase migration；只调整 Worker 的 Redis 队列连接、轮询恢复和非秘密运行参数。pending/processing 双队列与 PostgreSQL 幂等领取机制保持不变。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "related_changes": [
+    {
+      "id": "CHG-20260830-002",
+      "relationship": "修复该 Phase 2A 用户任务闭环在真实 Redis 空队列环境中暴露的 Worker 可靠性阻断；不修改或替代其既有验证证据。"
+    }
+  ],
+  "blocker_level": "none",
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-08-30T00:00:00Z",
+  "updated_at": "2026-08-30T00:00:00Z"
+}

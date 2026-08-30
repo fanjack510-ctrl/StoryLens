@@ -27,6 +27,11 @@ or contact Afdian. A result identifies itself as `phase2a_smoke`,
   only after processing; startup recovers unacknowledged jobs. PostgreSQL
   compare-and-update claims, leases, and terminal-state checks make duplicate
   delivery safe for the single-worker Phase 2A deployment.
+- A blocking empty-queue poll is normal. The worker uses a socket read timeout
+  with explicit safety margin, treats residual Redis timeouts/disconnects as
+  transient, resets the connection pool, recovers the in-flight list, and
+  retries with bounded exponential backoff. Only the first failure in an outage
+  is logged; a later successful Redis command logs recovery.
 
 The PocketBase image contains version-controlled JavaScript migrations in
 `/pb/pb_migrations`. Only `pb_data` is mounted, so the persistent data volume
@@ -53,6 +58,13 @@ desktop provider configuration, local database, licence data, and API keys are
 not read or copied by this stack. `UPLOAD_MAX_BYTES` is non-secret and defaults
 to 10485760 (10 MiB).
 
+Worker Redis timing is also non-secret. The defaults are a 5-second blocking
+poll, a 15-second socket read timeout, a 5-second connect timeout, and bounded
+retry delays from 1 to 15 seconds. Startup validation requires the socket read
+timeout to exceed the blocking poll by at least 2 seconds and requires the
+maximum retry delay to be no smaller than the initial delay. Invalid timing
+combinations stop the worker before it connects and never print the Redis URL.
+
 ## Validate and start
 
 ```bash
@@ -75,6 +87,19 @@ The same check can be run explicitly:
 ```bash
 docker compose run --rm online-api python -m storylens_online.db.init_schema
 ```
+
+Before formal Phase 2A acceptance, run an isolated real-Redis worker smoke test:
+
+1. Start with the pending and processing queues empty.
+2. Observe the worker for at least three complete poll periods.
+3. Confirm its container restart count does not increase.
+4. Confirm logs contain no `Timeout reading from socket`.
+5. Enqueue one isolated smoke job and confirm the worker consumes it
+   successfully.
+
+This smoke test is a deployment gate, not evidence that may be inferred from
+Fake Redis tests. It must be repeated in the Hong Kong isolated environment by
+the operator before Phase 2A is accepted.
 
 This creates missing PostgreSQL tables only. PocketBase owns only its auth
 collection migration and is never responsible for StoryLens Online SQL schema.

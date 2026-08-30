@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import cast
 
+import pytest
 from redis import Redis
+from storylens_online.services import queue as queue_module
 from storylens_online.services.queue import RedisJobQueue
 
 
@@ -52,3 +54,32 @@ def test_redis_queue_uses_inflight_list_for_recovery_and_acknowledgement() -> No
     queue.acknowledge("job-2")
     assert redis.lists[queue.processing_name] == []
     assert queue.dequeue(1) == "job-1"
+
+
+def test_worker_queue_uses_explicit_socket_and_connect_timeouts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    fake_client = FakeRedis()
+
+    def from_url(redis_url: str, **options: object):
+        captured["redis_url"] = redis_url
+        captured.update(options)
+        return cast(Redis, fake_client)
+
+    monkeypatch.setattr(queue_module.Redis, "from_url", from_url)
+
+    RedisJobQueue(
+        "redis://private-host:6379/0",
+        "storylens:phase2a:jobs",
+        socket_timeout_seconds=15,
+        connect_timeout_seconds=5,
+    )
+
+    assert captured == {
+        "redis_url": "redis://private-host:6379/0",
+        "decode_responses": True,
+        "retry_on_timeout": False,
+        "socket_timeout": 15,
+        "socket_connect_timeout": 5,
+    }

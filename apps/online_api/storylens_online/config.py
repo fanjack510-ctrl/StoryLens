@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+REDIS_BLOCKING_TIMEOUT_MARGIN_SECONDS = 2.0
+
 
 class OnlineConfigSnapshot(BaseModel):
     runtime: str
@@ -25,6 +27,7 @@ class OnlineSettings(BaseSettings):
         env_file=None,
         extra="ignore",
         case_sensitive=False,
+        hide_input_in_errors=True,
     )
 
     runtime: str = "hong_kong_beta"
@@ -37,6 +40,10 @@ class OnlineSettings(BaseSettings):
     upload_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1, le=100 * 1024 * 1024)
     job_queue_name: str = "storylens:phase2a:jobs"
     worker_poll_seconds: int = Field(default=5, ge=1, le=60)
+    redis_socket_timeout_seconds: float = Field(default=15.0, ge=3.0, le=300.0)
+    redis_connect_timeout_seconds: float = Field(default=5.0, ge=0.5, le=60.0)
+    worker_redis_retry_initial_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
+    worker_redis_retry_max_seconds: float = Field(default=15.0, ge=0.1, le=300.0)
     worker_lease_seconds: int = Field(default=900, ge=30, le=3600)
     session_cookie_max_age_seconds: int = Field(
         default=7 * 24 * 60 * 60,
@@ -79,6 +86,14 @@ class OnlineSettings(BaseSettings):
         scheme = urlparse(self.database_url).scheme.lower()
         if not scheme.startswith("postgresql"):
             raise ValueError("StoryLens Online requires PostgreSQL; desktop SQLite is not accepted")
+        minimum_socket_timeout = self.worker_poll_seconds + REDIS_BLOCKING_TIMEOUT_MARGIN_SECONDS
+        if self.redis_socket_timeout_seconds < minimum_socket_timeout:
+            raise ValueError(
+                "worker Redis socket timeout must include at least two seconds "
+                "beyond the blocking poll timeout"
+            )
+        if self.worker_redis_retry_max_seconds < self.worker_redis_retry_initial_seconds:
+            raise ValueError("worker Redis maximum retry delay must not be below its initial delay")
         return self
 
     @property
