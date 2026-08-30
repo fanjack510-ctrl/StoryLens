@@ -1,0 +1,112 @@
+{
+  "id": "CHG-20260830-004",
+  "title": "在 PocketBase serve 前安全预置内部超级管理员",
+  "type": "security",
+  "base_version": "1.3.6",
+  "status": "registered",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "pocketbase-auth",
+    "hong-kong-deployment"
+  ],
+  "files": [
+    "apps/online_api/tests/test_pocketbase_bootstrap_security.py",
+    "infra/online/.env.example",
+    "infra/online/.gitignore",
+    "infra/online/README.md",
+    "infra/online/docker-compose.yml",
+    "infra/online/pocketbase/Dockerfile",
+    "infra/online/pocketbase/init-superuser.sh",
+    "release/changes/CHG-20260830-004.json"
+  ],
+  "user_summary": "阻止全新 PocketBase 数据卷在启动日志中生成带 Token 的首次安装地址，并把服务器内部超级管理员凭据限制在一次性初始化容器内。",
+  "technical_summary": "香港真实 PocketBase 0.40.1 数据卷在尚无超级管理员时执行 serve，会按官方首次安装流程创建系统超级管理员并向日志写入含短时 Token 的 pbinstall URL。修复新增与正式 PocketBase 使用同一镜像和同一 pb_data 卷的 network_mode:none 一次性 pocketbase-init 服务；它先执行 migrate up，再执行官方 superuser upsert EMAIL PASS，成功后正式 PocketBase 才可通过 service_completed_successfully 启动。两个管理员值只由 Compose 文件型 secrets 挂载到 init。由于 Docker Compose 对 file 来源 secret 无法重映射 root:root 600 文件的 UID/GID，init 壳层以 root 读取文件后立即通过 su-exec 让所有 PocketBase 数据库命令以原 pocketbase 用户运行，避免改变数据卷所有权。CLI 原始输出全部抑制，成功或失败只输出固定文本。",
+  "fault_evidence": [
+    "f171c471 在香港正式数据卷首次启动 PocketBase 0.40.1 时，serve 日志输出了包含可用短时 Token 的首次超级管理员安装 URL",
+    "PocketBase 8090 未映射、Caddy 未代理且 Token 会过期，但项目日志安全边界禁止任何 Token 进入日志，因此 Phase 2A 回滚至 9d0f413f",
+    "未复用、记录或尝试使用现场泄露的 Token"
+  ],
+  "acceptance_criteria": [
+    "PocketBase migration 与超级管理员 upsert 在 serve 前完成，init 失败时正式 PocketBase 不启动",
+    "缺失、空白、非法邮箱或低于 PocketBase 8 字符最低要求的密码使 init 以固定安全错误失败",
+    "生产操作文档要求至少 32 个随机密码字符，且值不进入 Git、环境变量、Compose、镜像层、日志、API、浏览器或测试报告",
+    "只有 pocketbase-init 挂载两个文件型 secret；API、Worker、Web、Gateway 和正式 PocketBase 均无法读取",
+    "init 与正式 PocketBase 使用同一镜像和同一 pb_data 卷，数据库命令均以 pocketbase 用户运行",
+    "重复 init 不删除 collection、普通用户或数据；同一邮箱只更新已有超级管理员，支持密码轮换",
+    "PocketBase、管理接口和 8090 不公开，公网仍只有 Caddy 80/443",
+    "不修改现有 users auth migration、数据库模型、前端、认证/API 合同、计费、桌面端、VERSION 或冻结文件"
+  ],
+  "tests": [
+    "PocketBase init secret 缺失、空白、邮箱格式、密码长度、固定日志、失败净化、特殊字符、重复执行和密码轮换单元测试",
+    "Compose 同镜像/同卷、secret 最小授权、network_mode:none、service_completed_successfully 和 service_healthy 启动依赖静态测试",
+    "Docker Compose config 管道验证超级管理员 secret 值不出现在渲染结果",
+    "Caddy 与 Compose 公网端口审计",
+    "PocketBase 0.40.1 官方二进制 migrate/upsert、幂等和密码轮换临时目录探针",
+    "apps/online_api 全部测试、Worker 回归、Ruff、Python compileall",
+    "apps/online_web TypeScript、Vitest 和生产构建",
+    "Docker Compose config、scripts/check_project.py、git diff --check、秘密模式扫描和范围审计"
+  ],
+  "verification_evidence": [
+    "在线后端全量测试：44 passed（包含原 29 项、Worker 可靠性回归及 15 项 PocketBase init 安全测试）",
+    "PocketBase init 安全定向测试：15 passed",
+    "PocketBase 0.40.1 官方 Windows 二进制真实 CLI 探针：migration 记录 1、users collection 1、同邮箱 superuser 1、轮换后密码哈希变化",
+    "PocketBase 0.40.1 本地真实 serve 探针：初始化后的临时数据目录健康接口返回 200，捕获日志无 pbinstall、安装路由或 JWT 模式",
+    "Ruff check、Ruff format --check、Python compileall：passed",
+    "在线前端 TypeScript、Vitest（2 files / 4 tests）及 production build：passed",
+    "Docker Compose config --quiet：passed",
+    "Compose 静态审计：仅 pocketbase-init 挂载管理员 secrets，仅 gateway 发布 80/443，init/PocketBase 同镜像同卷且启动依赖正确",
+    "运行时日志模式、shell 语法、变更 JSON、git diff --check、VERSION/范围/真实秘密模式及 scripts/check_project.py 审计：passed",
+    "本机 Docker Desktop Linux engine 未运行，因此未声称镜像构建、docker inspect 或真实 Linux 空卷容器烟测通过",
+    "香港隔离环境必须完成空卷启动、重复启动、密码轮换、失败关闭和日志模式扫描后 Phase 2A 才可接受"
+  ],
+  "secret_boundary": {
+    "host_files": [
+      "/opt/storylens/shared/secrets/pocketbase-superuser-email",
+      "/opt/storylens/shared/secrets/pocketbase-superuser-password"
+    ],
+    "host_owner_mode": "root:root 600",
+    "granted_service": "pocketbase-init",
+    "excluded_services": [
+      "gateway",
+      "online-api",
+      "online-worker",
+      "online-web",
+      "pocketbase",
+      "postgres",
+      "redis"
+    ],
+    "notes": "online.env 仅保存两个文件路径。Compose 与 docker inspect 的持久命令不含邮箱、密码或 Token；init 不启用 set -x，PocketBase CLI 原始输出不进入日志。"
+  },
+  "deployment_and_rollback": {
+    "deploy": "备份命名卷，停止 Gateway/API/Worker/PocketBase，使用 root:root 600 服务器 secret 文件运行 networkless pocketbase-init，成功后再启动正式服务并执行非打印式配置、inspect 和日志扫描。",
+    "password_rotation": "保持邮箱不变，离线替换密码文件，停止 PocketBase，重新运行 init；官方 upsert 更新同一超级管理员。",
+    "rollback": "保留命名卷和 secret 文件；不得在无超级管理员的新卷上启动旧的易泄露 PocketBase 定义，回滚前仍须让本修复 init 成功或恢复包含超级管理员的配套备份。"
+  },
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "不新增或修改 migration、数据库模型或用户 collection；只在 serve 前幂等应用既有 migration 并 upsert PocketBase 系统超级管理员。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "related_changes": [
+    {
+      "id": "CHG-20260830-002",
+      "relationship": "修复其 Phase 2A PocketBase 首次启动日志安全阻断，不修改已有用户闭环、migration 或验证证据。"
+    },
+    {
+      "id": "CHG-20260830-003",
+      "relationship": "与 Worker Redis 可靠性修复正交；保留其队列、超时、恢复逻辑和验证证据。"
+    }
+  ],
+  "blocker_level": "none",
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-08-30T00:00:00Z",
+  "updated_at": "2026-08-30T12:57:07Z"
+}

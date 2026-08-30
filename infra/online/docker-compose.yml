@@ -11,7 +11,7 @@ services:
     image: caddy:2.10-alpine
     restart: unless-stopped
     environment:
-      STORYLENS_DOMAIN: ${STORYLENS_DOMAIN:?set STORYLENS_DOMAIN in .env}
+      STORYLENS_DOMAIN: ${STORYLENS_DOMAIN:?set STORYLENS_DOMAIN in online.env}
     ports:
       - "80:80"
       - "443:443"
@@ -53,7 +53,7 @@ services:
       redis:
         condition: service_healthy
       pocketbase:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - online_uploads:/srv/storylens-online/uploads
     networks: [private, egress]
@@ -79,6 +79,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      pocketbase:
+        condition: service_healthy
     volumes:
       - online_uploads:/srv/storylens-online/uploads
     networks: [private]
@@ -95,14 +97,40 @@ services:
       retries: 5
     networks: [private]
 
+  pocketbase-init:
+    image: storylens-online-pocketbase:local
+    build:
+      context: ./pocketbase
+      args:
+        POCKETBASE_VERSION: ${POCKETBASE_VERSION:-0.40.1}
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/pb/init-superuser.sh"]
+    command: []
+    volumes:
+      - pocketbase_data:/pb/pb_data
+    secrets:
+      - pocketbase_superuser_email
+      - pocketbase_superuser_password
+    network_mode: none
+
   pocketbase:
+    image: storylens-online-pocketbase:local
     build:
       context: ./pocketbase
       args:
         POCKETBASE_VERSION: ${POCKETBASE_VERSION:-0.40.1}
     restart: unless-stopped
+    depends_on:
+      pocketbase-init:
+        condition: service_completed_successfully
     volumes:
       - pocketbase_data:/pb/pb_data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks: [private, egress]
 
   postgres:
@@ -149,3 +177,9 @@ volumes:
   postgres_data:
   redis_data:
   online_uploads:
+
+secrets:
+  pocketbase_superuser_email:
+    file: ${POCKETBASE_SUPERUSER_EMAIL_FILE:?set POCKETBASE_SUPERUSER_EMAIL_FILE to the server secret path}
+  pocketbase_superuser_password:
+    file: ${POCKETBASE_SUPERUSER_PASSWORD_FILE:?set POCKETBASE_SUPERUSER_PASSWORD_FILE to the server secret path}

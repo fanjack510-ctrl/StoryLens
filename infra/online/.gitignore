@@ -1,4 +1,5 @@
 .env
+online.env
 backups/
 *.dump
 *.sqlite*

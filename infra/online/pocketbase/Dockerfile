@@ -3,7 +3,7 @@ FROM alpine:3.22
 ARG POCKETBASE_VERSION=0.40.1
 ARG TARGETARCH=amd64
 
-RUN apk add --no-cache ca-certificates unzip wget \
+RUN apk add --no-cache ca-certificates su-exec unzip wget \
     && case "${TARGETARCH}" in \
          amd64) PB_ARCH="amd64" ;; \
          arm64) PB_ARCH="arm64" ;; \
@@ -18,6 +18,8 @@ RUN apk add --no-cache ca-certificates unzip wget \
     && chown -R pocketbase:pocketbase /pb
 
 COPY --chown=pocketbase:pocketbase pb_migrations /pb/pb_migrations
+COPY --chown=root:root init-superuser.sh /pb/init-superuser.sh
+RUN chmod 0555 /pb/init-superuser.sh
 
 USER pocketbase
 WORKDIR /pb
