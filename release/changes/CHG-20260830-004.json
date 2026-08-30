@@ -3,15 +3,23 @@
   "title": "在 PocketBase serve 前安全预置内部超级管理员",
   "type": "security",
   "base_version": "1.3.6",
-  "status": "registered",
+  "status": "verified",
   "include_in_next_release": false,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "ad89605651439ede3ed52692111fcda2b6848e5a",
+      "message": "fix(online): provision PocketBase superuser before serve (CHG-20260830-004)",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "pocketbase-auth",
     "hong-kong-deployment"
   ],
   "files": [
     "apps/online_api/tests/test_pocketbase_bootstrap_security.py",
+    "docs/online/01-hong-kong-beta-foundation.md",
     "infra/online/.env.example",
     "infra/online/.gitignore",
     "infra/online/README.md",
@@ -57,8 +65,11 @@
     "Docker Compose config --quiet：passed",
     "Compose 静态审计：仅 pocketbase-init 挂载管理员 secrets，仅 gateway 发布 80/443，init/PocketBase 同镜像同卷且启动依赖正确",
     "运行时日志模式、shell 语法、变更 JSON、git diff --check、VERSION/范围/真实秘密模式及 scripts/check_project.py 审计：passed",
-    "本机 Docker Desktop Linux engine 未运行，因此未声称镜像构建、docker inspect 或真实 Linux 空卷容器烟测通过",
-    "香港隔离环境必须完成空卷启动、重复启动、密码轮换、失败关闭和日志模式扫描后 Phase 2A 才可接受"
+    "香港服务器空卷首次启动：migration、超级管理员预置、PocketBase serve 与 users auth collection 验收通过",
+    "香港服务器重复初始化、失败关闭和 Secret 最小挂载审计：passed",
+    "香港生产日志扫描：PRODUCTION_LOG_SAFETY=OK",
+    "正式栈网站根地址 HTTP 200，API、Web、PocketBase、PostgreSQL、Redis 均 healthy，Worker 正常运行，pocketbase-init Exited (0)",
+    "隔离验收容器、数据卷和临时文件已清理；正式 Secret、备份与回滚镜像保留"
   ],
   "secret_boundary": {
     "host_files": [
@@ -77,6 +88,38 @@
       "redis"
     ],
     "notes": "online.env 仅保存两个文件路径。Compose 与 docker inspect 的持久命令不含邮箱、密码或 Token；init 不启用 set -x，PocketBase CLI 原始输出不进入日志。"
+  },
+  "deployment_status": {
+    "environment": "hong_kong_beta",
+    "state": "verified",
+    "deployed_commit": "ad89605651439ede3ed52692111fcda2b6848e5a",
+    "release_directory": "/opt/storylens/releases/ad896056",
+    "current_symlink": "/opt/storylens/current",
+    "current_target": "/opt/storylens/releases/ad896056",
+    "public_root_http_status": 200,
+    "services": {
+      "online_api": "healthy",
+      "online_web": "healthy",
+      "pocketbase": "healthy",
+      "postgresql": "healthy",
+      "redis": "healthy",
+      "online_worker": "running",
+      "pocketbase_init": "exited_0"
+    },
+    "production_acceptance": [
+      "empty_volume_first_start_passed",
+      "repeat_initialization_passed",
+      "fail_closed_passed",
+      "secret_mount_audit_passed",
+      "production_log_safety_ok"
+    ],
+    "cleanup": "隔离验收容器、数据卷和临时文件已清理",
+    "retained": "正式 Secret、备份与回滚镜像已保留",
+    "repository_actions": {
+      "pushed": false,
+      "published": false,
+      "tag_created": false
+    }
   },
   "deployment_and_rollback": {
     "deploy": "备份命名卷，停止 Gateway/API/Worker/PocketBase，使用 root:root 600 服务器 secret 文件运行 networkless pocketbase-init，成功后再启动正式服务并执行非打印式配置、inspect 和日志扫描。",
@@ -106,7 +149,7 @@
     }
   ],
   "blocker_level": "none",
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-30T00:00:00Z",
-  "updated_at": "2026-08-30T12:57:07Z"
+  "updated_at": "2026-08-30T14:15:23Z"
 }
