@@ -35,6 +35,27 @@ curl https://YOUR_DOMAIN/health/live
 curl https://YOUR_DOMAIN/health/ready
 ```
 
+After PostgreSQL reports healthy, the `online-api` container runs
+`python -m storylens_online.db.init_schema` before starting Uvicorn. The
+initializer creates the five missing `online_` tables with SQLAlchemy
+`metadata.create_all`, is safe to run repeatedly, and never drops or truncates
+existing data. If schema initialization fails, Uvicorn is not started and the
+container exits so the failure remains visible to Docker instead of serving an
+API against an empty database.
+
+The same idempotent initialization can be rerun explicitly when diagnosing a
+deployment:
+
+```bash
+docker compose run --rm online-api python -m storylens_online.db.init_schema
+```
+
+This bootstrap step owns only the StoryLens Online PostgreSQL tables. It is not
+a PocketBase migration and does not change the Redis, PocketBase or Caddy
+boundaries. Future destructive or structural schema changes still require a
+versioned migration mechanism; this initializer only creates currently missing
+tables.
+
 Create the first PocketBase superuser from the server terminal; never expose
 the PocketBase port publicly:
 

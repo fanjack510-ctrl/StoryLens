@@ -403,7 +403,7 @@ def commit_entry_sha(entry: Any) -> str | None:
 def registered_commit_map(root: Path) -> dict[str, list[str]]:
     """Map full sha -> list of change ids."""
     mapping: dict[str, list[str]] = {}
-    for change in load_release_pool_changes(root):
+    for change in load_all_changes(root):
         for entry in change.get("commits") or []:
             sha = commit_entry_sha(entry)
             if isinstance(sha, str) and sha:

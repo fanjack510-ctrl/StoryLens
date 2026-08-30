@@ -468,6 +468,36 @@ def _minimal_change(
     return payload
 
 
+def test_check_accepts_registered_commit_for_excluded_change(
+    fixture_repo: Path,
+) -> None:
+    _write(fixture_repo / "apps" / "api" / "app" / "online.py", "online-only\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "online-only source")
+    source_sha = _git(fixture_repo, "rev-parse", "HEAD")
+
+    change_id = "CHG-20260830-001"
+    change = _minimal_change(
+        change_id,
+        commits=[
+            {
+                "sha": source_sha,
+                "message": "online-only source",
+                "primary": True,
+                "multi_change_reason": None,
+            }
+        ],
+    )
+    change["include_in_next_release"] = False
+    _write(
+        fixture_repo / "release" / "changes" / f"{change_id}.json",
+        json.dumps(change, indent=2) + "\n",
+    )
+
+    result = _run(fixture_repo, "check")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_check_allows_integrated_into_for_non_ancestor_commit(fixture_repo: Path) -> None:
     main_branch = _git(fixture_repo, "branch", "--show-current")
     base = _git(fixture_repo, "rev-parse", "HEAD")

@@ -16,4 +16,4 @@ USER storylens
 
 EXPOSE 8080
 
-CMD ["uvicorn", "storylens_online.main:app", "--host", "0.0.0.0", "--port", "8080", "--no-server-header"]
+CMD ["sh", "-c", "python -m storylens_online.db.init_schema && exec uvicorn storylens_online.main:app --host 0.0.0.0 --port 8080 --no-server-header"]

@@ -5,7 +5,14 @@
   "base_version": "1.3.6",
   "status": "tested",
   "include_in_next_release": false,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "84ad5d33563f2517c7a142ab246e8c04f836a003",
+      "message": "feat(online): add HK beta foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "online-api",
     "online-billing-foundation",
@@ -13,36 +20,45 @@
   ],
   "files": [
     "apps/online_api/",
+    "apps/online_api/storylens_online/db/init_schema.py",
+    "apps/online_api/tests/test_schema_initialization.py",
     "infra/online/",
     "docs/online/01-hong-kong-beta-foundation.md",
-    "scripts/change_registry.py"
+    "scripts/change_registry.py",
+    "apps/api/tests/test_change_registry.py"
   ],
-  "user_summary": "新增独立线上服务和香港内测部署基础，不修改 StoryLens 1.3.6 桌面版运行路径。",
-  "technical_summary": "新增线上专用FastAPI健康契约、PostgreSQL钱包和模型用量账本模型、整本分析汇总后按实际模型成本2倍且仅取整一次的Decimal计算器、爱发电订单查询签名适配器，以及不暴露PocketBase和数据库端口的香港Docker Compose基础栈。",
+  "user_summary": "新增独立线上服务和香港内测部署基础，并确保首次部署会自动、幂等地创建线上数据库表，不修改 StoryLens 1.3.6 桌面版运行路径。",
+  "technical_summary": "新增线上专用FastAPI健康契约、PostgreSQL钱包和模型用量账本模型、整本分析汇总后按实际模型成本2倍且仅取整一次的Decimal计算器、爱发电订单查询签名适配器，以及不暴露PocketBase和数据库端口的香港Docker Compose基础栈；线上API容器在PostgreSQL健康后先通过OnlineBase.metadata.create_all幂等初始化5张online_表，成功后才启动Uvicorn，初始化失败则保持容器启动失败；变更登记器可识别明确排除出冻结发布池、但已在独立变更记录中登记的线上提交。",
   "acceptance_criteria": [
     "根目录VERSION保持1.3.6且现有桌面和本地API文件零修改",
     "线上配置拒绝SQLite并且公开健康响应不包含爱发电密钥",
     "输入输出Token按定价版本核算且用户费用为实际成本2倍",
     "平台自动重试不向用户计费",
-    "香港部署栈仅公开80和443端口"
+    "香港部署栈仅公开80和443端口",
+    "全新PostgreSQL数据卷会在Uvicorn启动前创建5张online_表",
+    "数据库初始化可重复执行、不删除已有数据且失败时阻止API启动"
   ],
   "tests": [
     "apps/online_api 定向pytest",
     "scripts/check_project.py",
+    "数据库初始化建表、幂等与失败释放定向测试",
+    "排除发布池的线上变更提交登记回归测试",
+    "Docker Compose config校验",
     "离线代码路径git diff隔离审计"
   ],
   "verification_evidence": [
-    "apps/online_api/tests: 10 passed",
-    "ruff check and format: passed",
-    "python compileall: passed",
-    "docker compose config: passed",
-    "scripts/check_project.py: passed"
+    "apps/online_api线上单测：12 passed",
+    "数据库初始化与变更登记定向回归：20 passed",
+    "Ruff check：passed",
+    "Python compileall：passed",
+    "docker compose config --quiet：passed",
+    "scripts/check_project.py：passed（VERSION 1.3.6、变更登记与项目骨架检查均通过）"
   ],
   "data_compatibility": {
-    "database_changed": false,
+    "database_changed": true,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "仅新增online_前缀的线上模型定义；没有迁移或读取桌面SQLite。"
+    "notes": "启动时只对现有online_模型执行幂等create_all；不删除已有数据、不迁移或读取桌面SQLite。"
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -51,7 +67,7 @@
     "breaking_change": false
   },
   "blocker_level": "none",
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-30T00:00:00Z",
-  "updated_at": "2026-08-30T05:26:52Z"
+  "updated_at": "2026-08-30T09:24:14Z"
 }
