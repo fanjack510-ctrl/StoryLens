@@ -91,8 +91,9 @@ def _extract_embedded_python(sidecar: Path, destination: Path) -> None:
     archive = CArchiveReader(str(sidecar))
     candidates = [
         name
-        for name in archive.toc
+        for name, (*_, typecode) in archive.toc.items()
         if name == "Python" or name.endswith(("/Python", "\\Python"))
+        if typecode != "n"
     ]
     if len(candidates) != 1:
         raise RuntimeError(
