@@ -29,6 +29,12 @@
       "message": "fix(macos): resolve embedded Python framework aliases",
       "primary": false,
       "multi_change_reason": "同一签名门禁对 PyInstaller Framework 符号链接的兼容修复"
+    },
+    {
+      "sha": "9a6199cb847cd33749b5e38a54d5a6fbae97ee7b",
+      "message": "fix(macos): verify packaged app from generated DMG",
+      "primary": false,
+      "multi_change_reason": "同一签名门禁对 Tauri 生成 DMG 后清理中间 app 的兼容修复"
     }
   ],
   "modules": [
@@ -49,7 +55,7 @@
     "scripts/smoke_macos_release.sh"
   ],
   "user_summary": "修复 Apple Silicon 上 StoryLens 主程序可以打开、但本地分析服务随即退出的问题，并在查看详情中显示真实退出原因。",
-  "technical_summary": "除复制 bundled sidecar 到可写 runtime 目录外，进一步修复 PyInstaller onefile 内嵌 Python Framework 与 Tauri 重签外层 sidecar 的 Team ID 不一致：临时签名构建先把 Python Framework 统一为 ad-hoc，Developer ID 构建把同一身份传入 PyInstaller；构建和 DMG 冒烟均解包 onefile 并强制比较外层与内嵌 Python 的 Team ID。",
+  "technical_summary": "除复制 bundled sidecar 到可写 runtime 目录外，进一步修复 PyInstaller onefile 内嵌 Python Framework 与 Tauri 重签外层 sidecar 的 Team ID 不一致：临时签名构建先把 Python Framework 统一为 ad-hoc，Developer ID 构建把同一身份传入 PyInstaller；构建和 DMG 冒烟均解包 onefile 并强制比较外层与内嵌 Python 的 Team ID，Tauri 清理中间 app 时直接挂载最终 DMG 校验实际交付内容。",
   "acceptance_criteria": [
     "ARM64 DMG 内桌面程序能在 bundled sidecar 带 quarantine 时拉起运行副本",
     "桌面拉起的 sidecar /health 返回成功",
@@ -72,7 +78,8 @@
     "Published ARM64 SHA256 64130b96936fae6ee50fc8104aad51e33026ac1ecb5eb18deeea94f390a87b00",
     "User machine rejected embedded Python.framework with different Team IDs; previous CI smoke was insufficient",
     "Local signature contract tests: 4 passed",
-    "GitHub Actions run 33300136440 correctly blocked the first candidate because the archive checker treated two Framework symlinks as separate Python binaries"
+    "GitHub Actions run 33300136440 correctly blocked the first candidate because the archive checker treated two Framework symlinks as separate Python binaries",
+    "GitHub Actions run 33300709850 confirmed standalone outer_team=adhoc and embedded_python_team=adhoc; build then exposed Tauri cleanup of the intermediate app and was correctly blocked before upload"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -89,5 +96,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-08-30T07:58:36Z"
+  "updated_at": "2026-08-30T08:12:09Z"
 }
