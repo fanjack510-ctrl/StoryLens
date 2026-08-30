@@ -1,0 +1,1 @@
+"""Online-only service adapters."""

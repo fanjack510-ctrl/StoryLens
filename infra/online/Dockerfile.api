@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/srv/storylens-online
+
+WORKDIR /srv/storylens-online
+
+COPY apps/online_api/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY apps/online_api/storylens_online ./storylens_online
+
+RUN useradd --create-home --uid 10001 storylens
+USER storylens
+
+EXPOSE 8080
+
+CMD ["uvicorn", "storylens_online.main:app", "--host", "0.0.0.0", "--port", "8080", "--no-server-header"]

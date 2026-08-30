@@ -1103,8 +1103,14 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
         if not (changes_dir(root) / f"{cid}.json").is_file():
             errors.append(f"unreleased.changes references missing file: {cid}")
     for change in changes:
-        if change["id"] not in listed and change.get("status") != "released":
-            # soft: auto-include expectation
+        if (
+            change["id"] not in listed
+            and change.get("status") != "released"
+            and change.get("include_in_next_release", True)
+        ):
+            # Included work is expected to be collected automatically. Explicitly
+            # excluded work may live on an isolated product branch while another
+            # release pool is frozen.
             errors.append(f"change {change['id']} not listed in unreleased.changes")
 
     classified = classify_commits(root, baseline.get("git_commit"))

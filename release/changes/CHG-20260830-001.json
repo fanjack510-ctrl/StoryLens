@@ -1,0 +1,57 @@
+{
+  "id": "CHG-20260830-001",
+  "title": "建立隔离的 StoryLens Online 香港内测基础骨架",
+  "type": "feature",
+  "base_version": "1.3.6",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "online-api",
+    "online-billing-foundation",
+    "hong-kong-deployment"
+  ],
+  "files": [
+    "apps/online_api/",
+    "infra/online/",
+    "docs/online/01-hong-kong-beta-foundation.md",
+    "scripts/change_registry.py"
+  ],
+  "user_summary": "新增独立线上服务和香港内测部署基础，不修改 StoryLens 1.3.6 桌面版运行路径。",
+  "technical_summary": "新增线上专用FastAPI健康契约、PostgreSQL钱包和模型用量账本模型、整本分析汇总后按实际模型成本2倍且仅取整一次的Decimal计算器、爱发电订单查询签名适配器，以及不暴露PocketBase和数据库端口的香港Docker Compose基础栈。",
+  "acceptance_criteria": [
+    "根目录VERSION保持1.3.6且现有桌面和本地API文件零修改",
+    "线上配置拒绝SQLite并且公开健康响应不包含爱发电密钥",
+    "输入输出Token按定价版本核算且用户费用为实际成本2倍",
+    "平台自动重试不向用户计费",
+    "香港部署栈仅公开80和443端口"
+  ],
+  "tests": [
+    "apps/online_api 定向pytest",
+    "scripts/check_project.py",
+    "离线代码路径git diff隔离审计"
+  ],
+  "verification_evidence": [
+    "apps/online_api/tests: 10 passed",
+    "ruff check and format: passed",
+    "python compileall: passed",
+    "docker compose config: passed",
+    "scripts/check_project.py: passed"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "仅新增online_前缀的线上模型定义；没有迁移或读取桌面SQLite。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "none",
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-08-30T00:00:00Z",
+  "updated_at": "2026-08-30T05:26:52Z"
+}

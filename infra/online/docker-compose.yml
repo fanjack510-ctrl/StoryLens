@@ -1,0 +1,104 @@
+name: storylens-online
+
+services:
+  gateway:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      STORYLENS_DOMAIN: ${STORYLENS_DOMAIN:?set STORYLENS_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      online-api:
+        condition: service_healthy
+    networks: [edge, private]
+
+  online-api:
+    build:
+      context: ../..
+      dockerfile: infra/online/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      STORYLENS_ONLINE_RUNTIME: hong_kong_beta
+      STORYLENS_ONLINE_DATABASE_URL: postgresql+psycopg://storylens:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/storylens_online
+      STORYLENS_ONLINE_REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379/0
+      STORYLENS_ONLINE_POCKETBASE_URL: http://pocketbase:8090
+      STORYLENS_ONLINE_FRONTEND_ORIGIN: https://${STORYLENS_DOMAIN:?set STORYLENS_DOMAIN}
+      STORYLENS_ONLINE_BILLING_MULTIPLIER: "2.0"
+      STORYLENS_ONLINE_AFDIAN_USER_ID: ${AFDIAN_USER_ID:-}
+      STORYLENS_ONLINE_AFDIAN_API_TOKEN: ${AFDIAN_API_TOKEN:-}
+      STORYLENS_ONLINE_AFDIAN_ALLOWED_PLAN_IDS: ${AFDIAN_ALLOWED_PLAN_IDS:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live', timeout=3).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pocketbase:
+        condition: service_started
+    networks: [private, egress]
+
+  pocketbase:
+    build:
+      context: ./pocketbase
+      args:
+        POCKETBASE_VERSION: ${POCKETBASE_VERSION:-0.40.1}
+    restart: unless-stopped
+    volumes:
+      - pocketbase_data:/pb/pb_data
+      - pocketbase_migrations:/pb/pb_migrations
+    networks: [private, egress]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: storylens_online
+      POSTGRES_USER: storylens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storylens -d storylens_online"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    networks: [private]
+
+networks:
+  edge:
+  private:
+    internal: true
+  egress:
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pocketbase_data:
+  pocketbase_migrations:
+  postgres_data:
+  redis_data:
