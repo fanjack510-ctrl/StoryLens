@@ -101,24 +101,51 @@ npx vite build
 npm run tauri -- build --bundles dmg
 popd >/dev/null
 
-APP_BUNDLE="$ROOT/apps/desktop/src-tauri/target/release/bundle/macos/StoryLens.app"
-if [[ ! -d "$APP_BUNDLE" ]]; then
-  echo "App bundle not found after Tauri build: $APP_BUNDLE" >&2
-  exit 4
-fi
-"$PYTHON" scripts/check_macos_sidecar_signature.py \
-  "$APP_BUNDLE/Contents/MacOS/storylens-api" --signing-mode "$SIGNING_MODE"
-codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
-
-RELEASE_DIR="$ROOT/dist/release-macos-$ARCH_LABEL"
-rm -rf "$RELEASE_DIR"
-mkdir -p "$RELEASE_DIR"
-
 DMG_SOURCE="$(find apps/desktop/src-tauri/target/release/bundle/dmg -maxdepth 1 -type f -name '*.dmg' -print -quit)"
 if [[ -z "$DMG_SOURCE" || ! -f "$DMG_SOURCE" ]]; then
   echo "DMG not found under the Tauri bundle directory" >&2
   exit 4
 fi
+
+APP_BUNDLE="$ROOT/apps/desktop/src-tauri/target/release/bundle/macos/StoryLens.app"
+VERIFY_TMP=""
+VERIFY_MOUNT=""
+cleanup_verify_mount() {
+  if [[ -n "$VERIFY_MOUNT" && -d "$VERIFY_MOUNT" ]]; then
+    hdiutil detach "$VERIFY_MOUNT" -quiet 2>/dev/null || \
+      hdiutil detach "$VERIFY_MOUNT" -force -quiet 2>/dev/null || true
+  fi
+  if [[ -n "$VERIFY_TMP" ]]; then
+    rm -rf "$VERIFY_TMP"
+  fi
+}
+trap cleanup_verify_mount EXIT
+
+# Tauri may remove the intermediate .app after producing the DMG. In that
+# case, inspect the actual application shipped in the DMG instead of treating
+# the expected cleanup as a build failure.
+if [[ -d "$APP_BUNDLE" ]]; then
+  PACKAGED_APP="$APP_BUNDLE"
+else
+  VERIFY_TMP="$(mktemp -d)"
+  VERIFY_MOUNT="$VERIFY_TMP/mount"
+  mkdir -p "$VERIFY_MOUNT"
+  hdiutil attach "$DMG_SOURCE" -readonly -nobrowse -mountpoint "$VERIFY_MOUNT" -quiet
+  PACKAGED_APP="$VERIFY_MOUNT/StoryLens.app"
+  if [[ ! -d "$PACKAGED_APP" ]]; then
+    echo "StoryLens.app not found in generated DMG: $DMG_SOURCE" >&2
+    exit 4
+  fi
+fi
+"$PYTHON" scripts/check_macos_sidecar_signature.py \
+  "$PACKAGED_APP/Contents/MacOS/storylens-api" --signing-mode "$SIGNING_MODE"
+codesign --verify --deep --strict --verbose=2 "$PACKAGED_APP"
+cleanup_verify_mount
+trap - EXIT
+
+RELEASE_DIR="$ROOT/dist/release-macos-$ARCH_LABEL"
+rm -rf "$RELEASE_DIR"
+mkdir -p "$RELEASE_DIR"
 
 DMG_TARGET="$RELEASE_DIR/StoryLens_${VERSION}_${ARCH_LABEL}.dmg"
 cp "$DMG_SOURCE" "$DMG_TARGET"
