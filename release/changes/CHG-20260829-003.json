@@ -23,6 +23,12 @@
       "message": "fix(macos): unify sidecar embedded Python signature",
       "primary": false,
       "multi_change_reason": "同一 ARM64 sidecar 启动缺陷的 Team ID 签名链修复"
+    },
+    {
+      "sha": "6ad4d903f5aa022f11cef644ef60948941cb2d6c",
+      "message": "fix(macos): resolve embedded Python framework aliases",
+      "primary": false,
+      "multi_change_reason": "同一签名门禁对 PyInstaller Framework 符号链接的兼容修复"
     }
   ],
   "modules": [
@@ -65,7 +71,8 @@
     "ARM64 smoke injected quarantine into bundled sidecar, launched the desktop, and reached /health",
     "Published ARM64 SHA256 64130b96936fae6ee50fc8104aad51e33026ac1ecb5eb18deeea94f390a87b00",
     "User machine rejected embedded Python.framework with different Team IDs; previous CI smoke was insufficient",
-    "Local signature contract tests: 3 passed"
+    "Local signature contract tests: 4 passed",
+    "GitHub Actions run 33300136440 correctly blocked the first candidate because the archive checker treated two Framework symlinks as separate Python binaries"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -82,5 +89,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-08-30T07:47:23Z"
+  "updated_at": "2026-08-30T07:58:36Z"
 }
