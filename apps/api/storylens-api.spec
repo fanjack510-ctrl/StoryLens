@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for the StoryLens FastAPI desktop sidecar.
 
+import os
 import sys
 from pathlib import Path
 
@@ -9,6 +10,9 @@ from PyInstaller.utils.hooks import collect_all, collect_submodules
 block_cipher = None
 SPECDIR = Path(SPEC).resolve().parent
 REPO = SPECDIR.parents[1]
+PYINSTALLER_CODESIGN_IDENTITY = (
+    os.environ.get("STORYLENS_PYINSTALLER_CODESIGN_IDENTITY", "").strip() or None
+)
 
 datas = [
     (str(REPO / "packages" / "prompts"), "packages/prompts"),
@@ -134,6 +138,6 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
-    codesign_identity=None,
+    codesign_identity=PYINSTALLER_CODESIGN_IDENTITY,
     entitlements_file=None,
 )

@@ -13,8 +13,11 @@ esac
 
 SIDECAR="$ROOT/apps/api/dist-sidecar/storylens-api"
 DMG="$ROOT/dist/release-macos-$ARCH_LABEL/StoryLens_$(tr -d '[:space:]' < VERSION)_${ARCH_LABEL}.dmg"
+BUILD_SUMMARY="$ROOT/dist/release-macos-$ARCH_LABEL/build-summary.json"
 [[ -x "$SIDECAR" ]] || { echo "Missing executable sidecar" >&2; exit 3; }
 [[ -f "$DMG" ]] || { echo "Missing DMG" >&2; exit 3; }
+[[ -f "$BUILD_SUMMARY" ]] || { echo "Missing macOS build summary" >&2; exit 3; }
+SIGNING_MODE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["signing_mode"])' "$BUILD_SUMMARY")"
 
 TMP_ROOT="$(mktemp -d)"
 MOUNT_POINT="$TMP_ROOT/mount"
@@ -90,6 +93,8 @@ DESKTOP_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$A
   find "$APP/Contents" -maxdepth 4 -type f -print >&2
   exit 5
 }
+"$ROOT/.venv/bin/python" scripts/check_macos_sidecar_signature.py \
+  "$APP/Contents/MacOS/storylens-api" --signing-mode "$SIGNING_MODE"
 codesign --verify --deep --strict --verbose=2 "$APP" || {
   echo "StoryLens.app signature verification failed" >&2
   exit 6

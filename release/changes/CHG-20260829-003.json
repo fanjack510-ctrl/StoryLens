@@ -3,7 +3,7 @@
   "title": "修复 macOS 隔离状态下内置分析服务退出",
   "type": "fix",
   "base_version": "1.3.4",
-  "status": "ready-for-staging",
+  "status": "implemented",
   "include_in_next_release": true,
   "commits": [
     {
@@ -30,26 +30,36 @@
     "apps/desktop/src/components/desktop/DesktopBootstrap.tsx",
     "apps/desktop/src/components/desktop/DesktopBootstrap.test.tsx",
     "apps/desktop/src/services/desktopRuntime.ts",
+    "apps/api/storylens-api.spec",
+    "apps/api/tests/test_macos_sidecar_signature.py",
+    "scripts/build_macos_release.sh",
+    "scripts/check_macos_sidecar_signature.py",
     "scripts/smoke_macos_release.sh"
   ],
   "user_summary": "修复 Apple Silicon 上 StoryLens 主程序可以打开、但本地分析服务随即退出的问题，并在查看详情中显示真实退出原因。",
-  "technical_summary": "macOS 启动时将已签名 bundled sidecar 原子复制到用户可写 runtime 目录再执行，避免直接运行仍带 quarantine 的嵌套文件；启动失败保留退出状态与 stderr 摘要；DMG 冒烟为嵌套 sidecar 注入 quarantine 后验证桌面端到服务健康检查。",
+  "technical_summary": "除复制 bundled sidecar 到可写 runtime 目录外，进一步修复 PyInstaller onefile 内嵌 Python Framework 与 Tauri 重签外层 sidecar 的 Team ID 不一致：临时签名构建先把 Python Framework 统一为 ad-hoc，Developer ID 构建把同一身份传入 PyInstaller；构建和 DMG 冒烟均解包 onefile 并强制比较外层与内嵌 Python 的 Team ID。",
   "acceptance_criteria": [
     "ARM64 DMG 内桌面程序能在 bundled sidecar 带 quarantine 时拉起运行副本",
     "桌面拉起的 sidecar /health 返回成功",
-    "查看详情能显示 sidecar 退出状态与错误摘要"
+    "查看详情能显示 sidecar 退出状态与错误摘要",
+    "ARM64 sidecar 外层可执行文件与 onefile 内嵌 Python Framework 使用相同 Team ID",
+    "签名不一致时构建必须失败，不能再上传表面通过的 DMG"
   ],
   "tests": [
     "Rust desktop runtime 定向测试",
     "前端 DesktopBootstrap 定向测试",
-    "GitHub macOS ARM64 quarantine 桌面端到 sidecar 启动冒烟"
+    "macOS sidecar 签名解析与 Team ID 配对单元测试",
+    "GitHub macOS ARM64 quarantine 桌面端到 sidecar 启动冒烟",
+    "DMG 内 onefile 嵌入 Python 签名一致性门禁"
   ],
   "verification_evidence": [
     "Rust backend targeted tests: 4 passed",
     "DesktopBootstrap targeted tests: 3 passed",
     "GitHub Actions run 33258766423: ARM64 and x64 passed",
     "ARM64 smoke injected quarantine into bundled sidecar, launched the desktop, and reached /health",
-    "Published ARM64 SHA256 64130b96936fae6ee50fc8104aad51e33026ac1ecb5eb18deeea94f390a87b00"
+    "Published ARM64 SHA256 64130b96936fae6ee50fc8104aad51e33026ac1ecb5eb18deeea94f390a87b00",
+    "User machine rejected embedded Python.framework with different Team IDs; previous CI smoke was insufficient",
+    "Local signature contract tests: 3 passed"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -66,5 +76,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-08-29T15:25:00Z"
+  "updated_at": "2026-08-30T07:40:03Z"
 }

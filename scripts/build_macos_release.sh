@@ -31,8 +31,10 @@ esac
 export APPLE_SIGNING_IDENTITY="${APPLE_SIGNING_IDENTITY:--}"
 if [[ "$APPLE_SIGNING_IDENTITY" == "-" ]]; then
   SIGNING_MODE="adhoc"
+  export STORYLENS_PYINSTALLER_CODESIGN_IDENTITY=""
 else
   SIGNING_MODE="developer-id"
+  export STORYLENS_PYINSTALLER_CODESIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
 fi
 
 echo "==> Version consistency"
@@ -46,6 +48,29 @@ fi
 
 echo "==> Python sidecar"
 "$PYTHON" scripts/check_sidecar_imports.py
+
+# actions/setup-python supplies a Python.org framework that carries the Python
+# team's signature. PyInstaller onefile embeds that framework, while Tauri
+# later re-signs the outer sidecar. On downloaded Apple Silicon apps, macOS
+# Library Validation rejects that mixed-Team pair. For public ad-hoc builds,
+# normalize the source framework binary to the same ad-hoc identity before it
+# enters the onefile archive. Developer ID builds are signed consistently by
+# PyInstaller via STORYLENS_PYINSTALLER_CODESIGN_IDENTITY instead.
+if [[ "$SIGNING_MODE" == "adhoc" ]]; then
+  PYTHON_SHARED="$("$PYTHON" -c 'import sys; from pathlib import Path; print(Path(sys.base_prefix) / "Python")')"
+  if [[ ! -f "$PYTHON_SHARED" ]]; then
+    echo "Python framework shared library not found: $PYTHON_SHARED" >&2
+    exit 3
+  fi
+  if [[ -w "$PYTHON_SHARED" ]]; then
+    codesign --force --sign - "$PYTHON_SHARED"
+  else
+    sudo codesign --force --sign - "$PYTHON_SHARED"
+  fi
+  codesign --verify --strict --verbose=2 "$PYTHON_SHARED"
+  "$PYTHON" -c 'import sys; print(sys.version)'
+fi
+
 rm -rf apps/api/dist-sidecar apps/api/build/pyinstaller
 "$PYTHON" -m PyInstaller \
   --noconfirm \
@@ -59,6 +84,8 @@ if [[ ! -x "$BUILT_SIDECAR" ]]; then
   echo "Sidecar binary missing: $BUILT_SIDECAR" >&2
   exit 3
 fi
+"$PYTHON" scripts/check_macos_sidecar_signature.py \
+  "$BUILT_SIDECAR" --signing-mode "$SIGNING_MODE"
 "$PYTHON" scripts/check_sidecar_contract_current.py --write
 
 BIN_DIR="$ROOT/apps/desktop/src-tauri/binaries"
@@ -73,6 +100,15 @@ npm ci
 npx vite build
 npm run tauri -- build --bundles dmg
 popd >/dev/null
+
+APP_BUNDLE="$ROOT/apps/desktop/src-tauri/target/release/bundle/macos/StoryLens.app"
+if [[ ! -d "$APP_BUNDLE" ]]; then
+  echo "App bundle not found after Tauri build: $APP_BUNDLE" >&2
+  exit 4
+fi
+"$PYTHON" scripts/check_macos_sidecar_signature.py \
+  "$APP_BUNDLE/Contents/MacOS/storylens-api" --signing-mode "$SIGNING_MODE"
+codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 
 RELEASE_DIR="$ROOT/dist/release-macos-$ARCH_LABEL"
 rm -rf "$RELEASE_DIR"
