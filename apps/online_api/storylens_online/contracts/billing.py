@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 ZERO = Decimal(0)
 
@@ -13,6 +13,15 @@ class UsageDisposition(StrEnum):
     BILLABLE = "billable"
     PLATFORM_RETRY = "platform_retry"
     PROVIDER_FAILED = "provider_failed"
+
+
+class ModelAttemptStatus(StrEnum):
+    STARTED = "started"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    INVALID_RESPONSE = "invalid_response"
+    UNKNOWN = "unknown"
+    ACCOUNTING_INCOMPLETE = "accounting_incomplete"
 
 
 class RechargeOrderStatus(StrEnum):
@@ -38,6 +47,7 @@ class ModelPricingSnapshot(BaseModel):
     model: str = Field(min_length=1, max_length=128)
     pricing_version: str = Field(min_length=1, max_length=64)
     input_per_million_cny: Decimal = Field(ge=ZERO)
+    cached_input_per_million_cny: Decimal = Field(default=ZERO, ge=ZERO)
     output_per_million_cny: Decimal = Field(ge=ZERO)
 
 
@@ -47,9 +57,44 @@ class ModelUsageEntry(BaseModel):
     invocation_id: str = Field(min_length=1, max_length=128)
     analysis_run_id: str = Field(min_length=1, max_length=64)
     input_tokens: int = Field(ge=0)
+    cached_tokens: int = Field(default=0, ge=0)
     output_tokens: int = Field(ge=0)
     disposition: UsageDisposition = UsageDisposition.BILLABLE
     pricing: ModelPricingSnapshot
+
+    @field_validator("cached_tokens")
+    @classmethod
+    def cached_tokens_do_not_exceed_input(cls, value: int, info: ValidationInfo) -> int:
+        input_tokens = info.data.get("input_tokens")
+        if input_tokens is not None and value > input_tokens:
+            raise ValueError("cached tokens must not exceed input tokens")
+        return value
+
+
+class InternalModelCost(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    input_tokens: int = Field(ge=0)
+    cached_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    provider_cost_cny: Decimal = Field(ge=ZERO)
+    customer_charge_cny: Decimal = Field(default=ZERO, ge=ZERO, le=ZERO)
+
+
+class ModelUsageAggregate(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    analysis_run_id: str = Field(min_length=1, max_length=64)
+    attempt_count: int = Field(ge=0)
+    input_tokens: int = Field(ge=0)
+    cached_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    provider_cost_cny: Decimal = Field(ge=ZERO)
+    usage_complete: bool
+    has_unknown_attempt: bool
+    customer_charge_cny: Decimal = Field(default=ZERO, ge=ZERO, le=ZERO)
 
 
 class UsageCharge(BaseModel):

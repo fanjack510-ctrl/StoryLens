@@ -1,15 +1,21 @@
-# StoryLens Online — Hong Kong Beta Phase 2A
+# StoryLens Online — Hong Kong Beta Phase 2A / internal Phase 2B1 gate
 
 This stack is isolated from the packaged StoryLens 1.3.6 desktop runtime. Phase
 2A provides one deliberately small online chain:
 
 `register/login -> upload TXT -> enqueue -> local worker -> poll -> view result`
 
-The worker only calculates deterministic text statistics. It does not call an
-AI provider, reserve or deduct wallet funds, write a model-usage ledger entry,
-or contact Afdian. A result identifies itself as `phase2a_smoke`,
+The default `phase2a_smoke` worker path only calculates deterministic text
+statistics. It does not call an AI provider, reserve or deduct wallet funds,
+write a model-usage ledger entry, or contact Afdian. A result identifies itself as `phase2a_smoke`,
 `real_ai_analysis: false`, `billing_status: not_billable`, and
 `charged_cny: 0`.
+
+Phase 2B1 adds a separate, default-off internal gate for one controlled TXT
+analysis through a fixed Aliyun Bailian Beijing model. Only allowlisted users
+can reach that path. It records internal model usage and provider cost, but it
+still never charges a wallet: `billing_status` remains `not_billable` and
+`charged_cny` remains zero.
 
 ## Architecture and public boundary
 
@@ -110,6 +116,61 @@ timeout to exceed the blocking poll by at least 2 seconds and requires the
 maximum retry delay to be no smaller than the initial delay. Invalid timing
 combinations stop the worker before it connects and never print the Redis URL.
 
+### Provision the Phase 2B1 Worker-only Provider secret
+
+The provider credential is a Docker file-backed secret named
+`storylens_online_aliyun_bailian_api_key`. Only `online-worker` mounts it. The
+API, web, gateway, PocketBase, init service, images, build arguments, rendered
+Compose configuration, and application environment never receive the key.
+
+Create the file directly on the server without placing the key in shell
+history. Keep the global gate disabled and the allowlist empty until isolated
+acceptance is approved:
+
+```bash
+sudo install -m 600 -o root -g root /dev/null \
+  /opt/storylens/shared/secrets/aliyun-bailian-api-key
+sudoedit /opt/storylens/shared/secrets/aliyun-bailian-api-key
+```
+
+`online.env` contains only the host path and non-secret policy values:
+
+```dotenv
+PHASE2B1_ENABLED=false
+PHASE2B1_ALLOWLISTED_USER_IDS=
+PHASE2B1_CHAT_COMPLETIONS_URL=https://WORKSPACE_ID.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions
+PHASE2B1_API_KEY_FILE=/opt/storylens/shared/secrets/aliyun-bailian-api-key
+```
+
+The endpoint validator permits only HTTPS, one workspace label followed by
+`.cn-beijing.maas.aliyuncs.com`, and the exact path
+`/compatible-mode/v1/chat/completions`. User info, explicit ports, query
+strings, fragments, redirects, browser-selected providers, URLs, or models are
+rejected. The fixed model is `qwen3.7-plus-2026-05-26`; thinking, streaming,
+search, explicit caching, and session caching are disabled. Worker request and
+retry timing must fit inside its lease with a 30-second safety margin or startup
+validation fails closed.
+
+Before enabling the gate, confirm Secret placement without printing its value:
+
+```bash
+docker compose --env-file online.env config | grep -q 'storylens_online_aliyun_bailian_api_key'
+worker_id="$(docker compose --env-file online.env ps -q online-worker)"
+docker inspect "$worker_id" | grep -q '/run/secrets/storylens_online_aliyun_bailian_api_key'
+for service in gateway online-api online-web pocketbase pocketbase-init; do
+  service_id="$(docker compose --env-file online.env ps -aq "$service")"
+  if [ -n "$service_id" ] && docker inspect "$service_id" | \
+    grep -q '/run/secrets/storylens_online_aliyun_bailian_api_key'; then
+    echo "Provider secret boundary failed for $service" >&2
+    exit 1
+  fi
+done
+```
+
+Never print, hash, copy, or scan the secret value itself as part of routine
+verification. Logs and public errors must not include API keys, uploaded TXT,
+prompts, raw provider bodies, or endpoint credentials.
+
 ## Validate and start
 
 ```bash
@@ -192,6 +253,37 @@ This smoke test is a deployment gate, not evidence that may be inferred from
 Fake Redis tests. It must be repeated in the Hong Kong isolated environment by
 the operator before Phase 2A is accepted.
 
+### Phase 2B1 private acceptance (do not enable for public users)
+
+After the fake-transport and migration suites pass, the Hong Kong operator must
+use an isolated deployment and exactly one internal PocketBase user ID:
+
+1. Keep `phase2a_smoke` as the default and confirm it makes no outbound model
+   request and creates no `online_model_usage_ledger` row.
+2. Mount the real key file only into `online-worker`, enable the Phase 2B1 gate,
+   and place only the internal user ID in the allowlist.
+3. Submit one non-sensitive TXT fixture and confirm every public overview/finding
+   cites an input `P000001`-style paragraph ID.
+4. Reconcile every Provider attempt's prompt, completion, total and cached Token
+   values with the ledger. Recalculate its Decimal price snapshot and compare the
+   task aggregate; public `charged_cny` and ledger `customer_charge_cny` remain 0.
+5. Exercise one 429 retry, one usage-complete invalid structured response, and one
+   post-send timeout. The first two may use at most two total calls; the timeout
+   becomes `unknown` and must not be retried.
+6. Restart a worker after an attempt has been durably started. The recovered
+   attempt becomes `unknown`, the job stops safely, and no second model call is
+   made.
+7. Confirm wallet, reservation, transaction, recharge and Afdian records did not
+   change. Scan logs for Secret, fixture text, Prompt and raw Provider response
+   patterns without printing those values.
+8. Inspect every container and image history. Only `online-worker` may reference
+   `/run/secrets/storylens_online_aliyun_bailian_api_key`; no image layer or
+   rendered environment may contain the key.
+
+Disable the gate and clear the allowlist after the isolated run. Phase 2B1 is not
+production-accepted until these real-Provider checks are recorded in its Change
+ID; local Fake transport results cannot substitute for them.
+
 This creates missing PostgreSQL tables only. PocketBase owns only its auth
 collection migration and is never responsible for StoryLens Online SQL schema.
 Future changes to existing columns still require a versioned SQL migration.
@@ -248,8 +340,8 @@ Compose command, environment variable, or migration.
    schema change, stop application traffic and restore the matching pre-upgrade
    backups as a coordinated data rollback.
 
-Do not run `docker compose down -v`, delete volumes, or manually remove the two
-Phase 2A tables as a rollback shortcut.
+Do not run `docker compose down -v`, delete volumes, or manually remove Online
+tables as a rollback shortcut.
 
 ## Security and operating boundaries
 
@@ -264,5 +356,6 @@ Phase 2A tables as a rollback shortcut.
   storage keys, enforce the configured size limit, and persist SHA-256.
 - Every upload, job, and result query is scoped to the authenticated PocketBase
   user ID to prevent cross-user access.
-- Phase 2A is not the formal public Beta: real whole-book analysis, model APIs,
-  x2 billing, Afdian recharge, and public onboarding remain out of scope.
+- Phase 2B1 is an internal real-model gate, not a public paid Beta: whole-book
+  analysis, wallet billing, Afdian recharge, and public onboarding remain out of
+  scope.

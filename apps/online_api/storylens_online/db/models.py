@@ -7,6 +7,7 @@ from uuid import uuid4
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     Integer,
@@ -97,24 +98,81 @@ class BillingReservation(TimestampMixin, OnlineBase):
 class ModelUsageLedger(TimestampMixin, OnlineBase):
     __tablename__ = "online_model_usage_ledger"
     __table_args__ = (
+        UniqueConstraint(
+            "analysis_run_id",
+            "attempt_no",
+            name="uq_online_usage_run_attempt",
+        ),
+        CheckConstraint("attempt_no > 0", name="ck_online_usage_attempt_positive"),
+        CheckConstraint(
+            "status IN ('started', 'succeeded', 'failed', 'invalid_response', "
+            "'unknown', 'accounting_incomplete')",
+            name="ck_online_usage_status",
+        ),
         CheckConstraint("input_tokens >= 0", name="ck_online_usage_input_tokens_nonnegative"),
         CheckConstraint("output_tokens >= 0", name="ck_online_usage_output_tokens_nonnegative"),
+        CheckConstraint("total_tokens >= 0", name="ck_online_usage_total_tokens_nonnegative"),
+        CheckConstraint("cached_tokens >= 0", name="ck_online_usage_cached_tokens_nonnegative"),
+        CheckConstraint(
+            "cached_tokens <= input_tokens",
+            name="ck_online_usage_cached_not_above_input",
+        ),
+        CheckConstraint(
+            "input_per_million_cny >= 0",
+            name="ck_online_usage_input_price_nonnegative",
+        ),
+        CheckConstraint(
+            "cached_input_per_million_cny >= 0",
+            name="ck_online_usage_cached_price_nonnegative",
+        ),
+        CheckConstraint(
+            "output_per_million_cny >= 0",
+            name="ck_online_usage_output_price_nonnegative",
+        ),
         CheckConstraint("provider_cost_cny >= 0", name="ck_online_usage_provider_cost_nonnegative"),
         CheckConstraint("customer_charge_cny >= 0", name="ck_online_usage_charge_nonnegative"),
+        CheckConstraint(
+            "disposition <> 'not_billable' OR customer_charge_cny = 0",
+            name="ck_online_usage_not_billable_charge_zero",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     invocation_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
     analysis_run_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)
     user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     provider: Mapped[str] = mapped_column(String(64), nullable=False)
     model: Mapped[str] = mapped_column(String(128), nullable=False)
     pricing_version: Mapped[str] = mapped_column(String(64), nullable=False)
-    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
-    output_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
-    provider_cost_cny: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
-    customer_charge_cny: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
-    disposition: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    provider_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cached_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    usage_reported: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    http_request_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    input_per_million_cny: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), nullable=False, default=Decimal(0)
+    )
+    cached_input_per_million_cny: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), nullable=False, default=Decimal(0)
+    )
+    output_per_million_cny: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), nullable=False, default=Decimal(0)
+    )
+    provider_cost_cny: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), nullable=False, default=Decimal(0)
+    )
+    customer_charge_cny: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), nullable=False, default=Decimal(0)
+    )
+    disposition: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="not_billable", index=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class OnlineBookUpload(TimestampMixin, OnlineBase):

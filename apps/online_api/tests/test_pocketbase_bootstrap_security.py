@@ -213,7 +213,7 @@ def test_init_is_repeatable_and_accepts_password_rotation(tmp_path: Path) -> Non
     ]
 
 
-def test_compose_grants_superuser_secrets_only_to_isolated_init() -> None:
+def test_compose_grants_each_secret_only_to_its_intended_service() -> None:
     compose = yaml.safe_load(COMPOSE_FILE.read_text(encoding="utf-8"))
     services = compose["services"]
     init = services["pocketbase-init"]
@@ -231,8 +231,14 @@ def test_compose_grants_superuser_secrets_only_to_isolated_init() -> None:
     assert init["volumes"] == pocketbase["volumes"]
     assert init["build"] == pocketbase["build"]
     assert init["image"] == pocketbase["image"] == "storylens-online-pocketbase:local"
+    assert services["online-worker"]["secrets"] == [
+        {
+            "source": "storylens_online_aliyun_bailian_api_key",
+            "target": "storylens_online_aliyun_bailian_api_key",
+        }
+    ]
     for service_name, service in services.items():
-        if service_name != "pocketbase-init":
+        if service_name not in {"pocketbase-init", "online-worker"}:
             assert "secrets" not in service
 
     assert pocketbase["depends_on"]["pocketbase-init"]["condition"] == (

@@ -1,7 +1,10 @@
 export interface User {
   id: string;
   email: string;
+  available_pipelines: PipelineName[];
 }
+
+export type PipelineName = "phase2a_smoke" | "phase2b1_txt_evidence_summary";
 
 export interface UploadRecord {
   id: string;
@@ -16,7 +19,7 @@ export type JobStatus = "queued" | "running" | "succeeded" | "failed";
 export interface Job {
   id: string;
   upload_id: string;
-  pipeline: "phase2a_smoke";
+  pipeline: PipelineName;
   status: JobStatus;
   progress: number;
   public_error_code: string | null;
@@ -37,9 +40,25 @@ export interface Phase2AResult {
   charged_cny: 0;
 }
 
+export interface EvidenceConclusion {
+  text: string;
+  evidence_paragraph_ids: string[];
+}
+
+export interface Phase2B1TxtEvidenceResult {
+  pipeline: "phase2b1_txt_evidence_summary";
+  overview: EvidenceConclusion;
+  findings: EvidenceConclusion[];
+  paragraph_count: number;
+  character_count: number;
+  real_ai_analysis: true;
+  billing_status: "not_billable";
+  charged_cny: 0;
+}
+
 export interface JobResult {
   job_id: string;
-  result: Phase2AResult;
+  result: Phase2AResult | Phase2B1TxtEvidenceResult;
 }
 
 interface ErrorEnvelope {
@@ -111,10 +130,14 @@ export function uploadTxt(file: File): Promise<UploadRecord> {
   return request<UploadRecord>("/api/v1/uploads", { method: "POST", body: form });
 }
 
-export function createJob(uploadId: string, idempotencyKey: string): Promise<Job> {
+export function createJob(
+  uploadId: string,
+  idempotencyKey: string,
+  pipeline: PipelineName = "phase2a_smoke",
+): Promise<Job> {
   return request<Job>("/api/v1/jobs", {
     method: "POST",
-    body: JSON.stringify({ upload_id: uploadId, idempotency_key: idempotencyKey }),
+    body: JSON.stringify({ upload_id: uploadId, idempotency_key: idempotencyKey, pipeline }),
   });
 }
 

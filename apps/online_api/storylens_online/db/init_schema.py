@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 
 from storylens_online.config import OnlineSettings
 from storylens_online.db.models import OnlineBase
+from storylens_online.db.phase2b1_migration import migrate_phase2b1_usage_ledger
 
 
 def initialize_schema(settings: OnlineSettings | None = None) -> None:
@@ -13,6 +14,7 @@ def initialize_schema(settings: OnlineSettings | None = None) -> None:
     engine = create_engine(active_settings.database_url)
     try:
         OnlineBase.metadata.create_all(engine)
+        migrate_phase2b1_usage_ledger(engine)
     finally:
         engine.dispose()
 

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from storylens_online.db.models import OnlineAnalysisJob, OnlineBookUpload
+from storylens_online.contracts.billing import (
+    ModelAttemptStatus,
+    ModelPricingSnapshot,
+    ModelUsageAggregate,
+)
+from storylens_online.db.models import ModelUsageLedger, OnlineAnalysisJob, OnlineBookUpload
+from storylens_online.services.model_cost import ZERO_CNY, calculate_internal_model_cost
 from storylens_online.services.storage import StoredUpload
 
 
@@ -44,6 +51,7 @@ class OnlineRepository:
         user_id: str,
         upload_id: str,
         idempotency_key: str,
+        pipeline: str = "phase2a_smoke",
     ) -> tuple[OnlineAnalysisJob, bool]:
         existing = session.scalar(
             select(OnlineAnalysisJob).where(
@@ -60,7 +68,7 @@ class OnlineRepository:
             idempotency_key=idempotency_key,
             status="queued",
             progress=0,
-            pipeline="phase2a_smoke",
+            pipeline=pipeline,
         )
         session.add(job)
         try:
@@ -189,4 +197,195 @@ class OnlineRepository:
                 lease_expires_at=None,
                 public_error_code=None,
             )
+        )
+
+    @staticmethod
+    def begin_model_attempt(
+        session: Session,
+        *,
+        job_id: str,
+        user_id: str,
+        attempt_no: int,
+        pricing: ModelPricingSnapshot,
+    ) -> tuple[ModelUsageLedger, bool]:
+        """Persist the deterministic attempt boundary before any Provider I/O."""
+
+        if attempt_no < 1:
+            raise ValueError("Provider attempt number must be positive")
+        invocation_id = f"{job_id}:{attempt_no}"
+        if len(invocation_id) > 128:
+            raise ValueError("Provider invocation id is too long")
+        existing = session.scalar(
+            select(ModelUsageLedger).where(
+                ModelUsageLedger.analysis_run_id == job_id,
+                ModelUsageLedger.attempt_no == attempt_no,
+            )
+        )
+        if existing is not None:
+            return existing, False
+        attempt = ModelUsageLedger(
+            invocation_id=invocation_id,
+            analysis_run_id=job_id,
+            attempt_no=attempt_no,
+            user_id=user_id,
+            provider=pricing.provider,
+            model=pricing.model,
+            pricing_version=pricing.pricing_version,
+            status=ModelAttemptStatus.STARTED.value,
+            input_tokens=0,
+            cached_tokens=0,
+            output_tokens=0,
+            total_tokens=0,
+            usage_reported=False,
+            http_request_sent=False,
+            input_per_million_cny=pricing.input_per_million_cny,
+            cached_input_per_million_cny=pricing.cached_input_per_million_cny,
+            output_per_million_cny=pricing.output_per_million_cny,
+            provider_cost_cny=ZERO_CNY,
+            customer_charge_cny=ZERO_CNY,
+            disposition="not_billable",
+        )
+        session.add(attempt)
+        try:
+            session.flush()
+        except IntegrityError:
+            session.rollback()
+            existing = session.scalar(
+                select(ModelUsageLedger).where(
+                    ModelUsageLedger.analysis_run_id == job_id,
+                    ModelUsageLedger.attempt_no == attempt_no,
+                )
+            )
+            if existing is None:
+                raise
+            return existing, False
+        return attempt, True
+
+    @staticmethod
+    def finish_model_attempt(
+        session: Session,
+        *,
+        job_id: str,
+        attempt_no: int,
+        status: ModelAttemptStatus,
+        http_request_sent: bool,
+        usage_reported: bool,
+        total_tokens: int,
+        input_tokens: int = 0,
+        cached_tokens: int = 0,
+        output_tokens: int = 0,
+        provider_request_id: str | None = None,
+        error_code: str | None = None,
+    ) -> ModelUsageLedger:
+        if status is ModelAttemptStatus.STARTED:
+            raise ValueError("a completed Provider attempt cannot remain started")
+        attempt = session.scalar(
+            select(ModelUsageLedger).where(
+                ModelUsageLedger.analysis_run_id == job_id,
+                ModelUsageLedger.attempt_no == attempt_no,
+            )
+        )
+        if attempt is None:
+            raise ValueError("Provider attempt does not exist")
+        if attempt.status != ModelAttemptStatus.STARTED.value:
+            return attempt
+        if not usage_reported and any((input_tokens, cached_tokens, output_tokens, total_tokens)):
+            raise ValueError("token counts require Provider-reported usage")
+        pricing = ModelPricingSnapshot(
+            provider=attempt.provider,
+            model=attempt.model,
+            pricing_version=attempt.pricing_version,
+            input_per_million_cny=attempt.input_per_million_cny,
+            cached_input_per_million_cny=attempt.cached_input_per_million_cny,
+            output_per_million_cny=attempt.output_per_million_cny,
+        )
+        cost = calculate_internal_model_cost(
+            input_tokens=input_tokens,
+            cached_tokens=cached_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            pricing=pricing,
+        )
+        attempt.status = status.value
+        attempt.provider_request_id = provider_request_id
+        attempt.input_tokens = cost.input_tokens
+        attempt.cached_tokens = cost.cached_tokens
+        attempt.output_tokens = cost.output_tokens
+        attempt.total_tokens = cost.total_tokens
+        attempt.usage_reported = usage_reported
+        attempt.http_request_sent = http_request_sent
+        attempt.error_code = error_code
+        attempt.provider_cost_cny = cost.provider_cost_cny if usage_reported else ZERO_CNY
+        attempt.customer_charge_cny = ZERO_CNY
+        attempt.disposition = "not_billable"
+        attempt.completed_at = datetime.now(UTC)
+        session.flush()
+        return attempt
+
+    @staticmethod
+    def recover_started_model_attempts(session: Session, job_id: str) -> int:
+        """Conservatively close crash-left attempts whose request state is ambiguous."""
+
+        recovered = session.execute(
+            update(ModelUsageLedger)
+            .where(
+                ModelUsageLedger.analysis_run_id == job_id,
+                ModelUsageLedger.status == ModelAttemptStatus.STARTED.value,
+            )
+            .values(
+                status=ModelAttemptStatus.UNKNOWN.value,
+                http_request_sent=True,
+                usage_reported=False,
+                error_code="attempt_interrupted",
+                completed_at=datetime.now(UTC),
+                customer_charge_cny=ZERO_CNY,
+                disposition="not_billable",
+            )
+        )
+        return int(recovered.rowcount or 0)
+
+    @staticmethod
+    def list_model_attempts(session: Session, job_id: str) -> list[ModelUsageLedger]:
+        return list(
+            session.scalars(
+                select(ModelUsageLedger)
+                .where(ModelUsageLedger.analysis_run_id == job_id)
+                .order_by(ModelUsageLedger.attempt_no)
+            )
+        )
+
+    @staticmethod
+    def aggregate_model_usage(session: Session, job_id: str) -> ModelUsageAggregate:
+        attempts = OnlineRepository.list_model_attempts(session, job_id)
+        return ModelUsageAggregate(
+            analysis_run_id=job_id,
+            attempt_count=len(attempts),
+            input_tokens=sum(attempt.input_tokens for attempt in attempts),
+            cached_tokens=sum(attempt.cached_tokens for attempt in attempts),
+            output_tokens=sum(attempt.output_tokens for attempt in attempts),
+            total_tokens=sum(attempt.total_tokens for attempt in attempts),
+            provider_cost_cny=sum(
+                (attempt.provider_cost_cny for attempt in attempts),
+                start=Decimal("0.000000"),
+            ),
+            usage_complete=not any(
+                attempt.status
+                in {
+                    ModelAttemptStatus.UNKNOWN.value,
+                    ModelAttemptStatus.ACCOUNTING_INCOMPLETE.value,
+                }
+                or (
+                    attempt.status
+                    in {
+                        ModelAttemptStatus.SUCCEEDED.value,
+                        ModelAttemptStatus.INVALID_RESPONSE.value,
+                    }
+                    and not attempt.usage_reported
+                )
+                for attempt in attempts
+            ),
+            has_unknown_attempt=any(
+                attempt.status == ModelAttemptStatus.UNKNOWN.value for attempt in attempts
+            ),
+            customer_charge_cny=ZERO_CNY,
         )

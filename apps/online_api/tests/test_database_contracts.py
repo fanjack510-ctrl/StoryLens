@@ -26,4 +26,5 @@ def test_recharge_and_ledger_idempotency_keys_are_unique() -> None:
     assert ("external_order_no",) in recharge_unique
     assert ("idempotency_key",) in transaction_unique
     assert ("invocation_id",) in usage_unique
+    assert ("analysis_run_id", "attempt_no") in usage_unique
     assert ("user_id", "idempotency_key") in job_unique

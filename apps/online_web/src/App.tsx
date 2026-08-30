@@ -4,6 +4,7 @@ import {
   ApiError,
   Job,
   JobResult,
+  PipelineName,
   User,
   createJob,
   getJobResult,
@@ -27,7 +28,25 @@ const FAILURE_LABELS: Record<string, string> = {
   upload_integrity_mismatch: "文件完整性检查失败，请重新上传。",
   upload_invalid_encoding: "文件编码无效，请使用 UTF-8。",
   queue_unavailable: "任务队列暂时不可用。",
-  processing_failed: "本地统计处理失败，请重新创建任务。",
+  processing_failed: "任务处理失败，请重新创建任务。",
+  pipeline_unavailable: "该分析任务尚未对当前账户开放。",
+  phase2b1_not_available: "AI 证据摘要当前未对该账户开放。",
+  phase2b1_text_bytes_exceeded: "TXT 文件字节数超过当前分析上限。",
+  phase2b1_text_characters_exceeded: "TXT 字符数超过当前分析上限。",
+  phase2b1_text_empty: "TXT 没有可供分析的正文段落。",
+  phase2b1_prompt_tokens_exceeded: "分析输入超过当前模型上限。",
+  provider_cost_cap_exceeded: "任务已在发送前触发内部成本保护。",
+  provider_outcome_unknown: "模型调用结果不确定，系统已停止自动重试。",
+  provider_accounting_incomplete: "模型用量信息不完整，系统已停止任务。",
+  provider_response_invalid: "模型返回未通过结构或证据校验。",
+  provider_request_failed: "模型服务未能完成本次请求。",
+  provider_attempt_limit_exceeded: "模型调用已达到本任务次数上限。",
+  provider_usage_limit_exceeded: "模型返回的用量超过任务上限。",
+};
+
+const PIPELINE_LABELS: Record<PipelineName, string> = {
+  phase2a_smoke: "本地文本统计",
+  phase2b1_txt_evidence_summary: "AI 证据摘要",
 };
 
 function errorMessage(error: unknown): string {
@@ -100,8 +119,12 @@ export function App() {
       </header>
 
       <section className="notice" aria-label="阶段说明">
-        <strong>Phase 2A 链路验证</strong>
-        <span>只执行本地文本统计，不调用 AI，不产生费用。</span>
+        <strong>{user?.available_pipelines.includes("phase2b1_txt_evidence_summary")
+          ? "Phase 2B1 内部验证"
+          : "Phase 2A 链路验证"}</strong>
+        <span>{user?.available_pipelines.includes("phase2b1_txt_evidence_summary")
+          ? "白名单账户可选择受控 AI 证据摘要；当前阶段不向用户扣费。"
+          : "只执行本地文本统计，不调用 AI，不产生费用。"}</span>
       </section>
 
       {error && (
@@ -115,6 +138,7 @@ export function App() {
 
       {user ? (
         <Dashboard
+          user={user}
           jobs={jobs}
           result={result}
           onJobsChanged={refreshJobs}
@@ -204,12 +228,14 @@ function AuthPanel({
 }
 
 function Dashboard({
+  user,
   jobs,
   result,
   onJobsChanged,
   onResult,
   onError,
 }: {
+  user: User;
   jobs: Job[];
   result: JobResult | null;
   onJobsChanged: () => Promise<void>;
@@ -217,6 +243,7 @@ function Dashboard({
   onError: (error: unknown) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineName>("phase2a_smoke");
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent) {
@@ -226,7 +253,7 @@ function Dashboard({
     onResult(null);
     try {
       const saved = await uploadTxt(file);
-      await createJob(saved.id, crypto.randomUUID());
+      await createJob(saved.id, crypto.randomUUID(), pipeline);
       setFile(null);
       await onJobsChanged();
     } catch (requestError) {
@@ -251,6 +278,22 @@ function Dashboard({
         <h1>上传 UTF-8 TXT</h1>
         <p>单个文件最大 10MB。文件名仅用于展示，服务端会生成独立存储键。</p>
         <form onSubmit={(event) => void submit(event)}>
+          {user.available_pipelines.includes("phase2b1_txt_evidence_summary") && (
+            <label>
+              任务类型
+              <select
+                aria-label="任务类型"
+                value={pipeline}
+                onChange={(event) => setPipeline(event.target.value as PipelineName)}
+              >
+                {user.available_pipelines.map((availablePipeline) => (
+                  <option key={availablePipeline} value={availablePipeline}>
+                    {PIPELINE_LABELS[availablePipeline]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="file-picker">
             <span>{file?.name ?? "选择 TXT 文件"}</span>
             <input
@@ -261,7 +304,7 @@ function Dashboard({
             />
           </label>
           <button className="primary-button" type="submit" disabled={!file || submitting}>
-            {submitting ? "创建任务中…" : "上传并创建统计任务"}
+            {submitting ? "创建任务中…" : `上传并创建${PIPELINE_LABELS[pipeline]}任务`}
           </button>
         </form>
       </section>
@@ -285,6 +328,7 @@ function Dashboard({
                 <div className="job-row">
                   <div>
                     <strong>{STATUS_LABELS[job.status]}</strong>
+                    <span>{PIPELINE_LABELS[job.pipeline]}</span>
                     <code>{job.id.slice(0, 8)}</code>
                   </div>
                   <span>{job.progress}%</span>
@@ -308,24 +352,44 @@ function Dashboard({
 
       <section className="panel result-panel">
         <p className="eyebrow">03 结果</p>
-        <h2>本地文本统计</h2>
+        <h2>{result ? PIPELINE_LABELS[result.result.pipeline] : "分析结果"}</h2>
         {!result ? (
           <p className="empty-state">任务完成后选择“查看统计结果”。</p>
         ) : (
-          <div className="result-grid">
-            <ResultMetric label="字符数" value={result.result.character_count.toLocaleString()} />
-            <ResultMetric label="非空行" value={result.result.nonempty_line_count.toLocaleString()} />
-            <ResultMetric label="文件字节" value={result.result.file_size_bytes.toLocaleString()} />
-            <ResultMetric label="处理耗时" value={`${result.result.processing_duration_ms} ms`} />
-            <div className="hash-row">
-              <span>SHA256</span>
-              <code>{result.result.sha256}</code>
+          result.result.pipeline === "phase2a_smoke" ? (
+            <div className="result-grid">
+              <ResultMetric label="字符数" value={result.result.character_count.toLocaleString()} />
+              <ResultMetric label="非空行" value={result.result.nonempty_line_count.toLocaleString()} />
+              <ResultMetric label="文件字节" value={result.result.file_size_bytes.toLocaleString()} />
+              <ResultMetric label="处理耗时" value={`${result.result.processing_duration_ms} ms`} />
+              <div className="hash-row">
+                <span>SHA256</span>
+                <code>{result.result.sha256}</code>
+              </div>
+              <div className="result-boundary">
+                <span>AI 分析：未执行</span>
+                <span>计费：¥0</span>
+              </div>
             </div>
-            <div className="result-boundary">
-              <span>AI 分析：未执行</span>
-              <span>计费：¥0</span>
+          ) : (
+            <div className="evidence-result">
+              <p>{result.result.overview.text}</p>
+              <span>概述证据：{result.result.overview.evidence_paragraph_ids.join("、")}</span>
+              <div className="result-boundary">
+                <span>段落：{result.result.paragraph_count}</span>
+                <span>字符：{result.result.character_count.toLocaleString()}</span>
+                <span>计费：¥0</span>
+              </div>
+              <ul>
+                {result.result.findings.map((finding, index) => (
+                  <li key={`${index}-${finding.evidence_paragraph_ids.join("-")}`}>
+                    <strong>{finding.text}</strong>
+                    <span>证据段落：{finding.evidence_paragraph_ids.join("、")}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )
         )}
       </section>
     </div>

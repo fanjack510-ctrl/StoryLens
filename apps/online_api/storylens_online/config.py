@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import re
 from decimal import Decimal
+from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REDIS_BLOCKING_TIMEOUT_MARGIN_SECONDS = 2.0
+PHASE2B1_LEASE_SAFETY_MARGIN_SECONDS = 30.0
+PHASE2B1_ALLOWLIST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
 class OnlineConfigSnapshot(BaseModel):
@@ -20,7 +25,7 @@ class OnlineConfigSnapshot(BaseModel):
 
 
 class OnlineSettings(BaseSettings):
-    """Server-side settings; secrets are accepted only through environment variables."""
+    """Server settings; provider credentials are read from worker-only secret files."""
 
     model_config = SettingsConfigDict(
         env_prefix="STORYLENS_ONLINE_",
@@ -58,6 +63,35 @@ class OnlineSettings(BaseSettings):
 
     billing_multiplier: Decimal = Field(default=Decimal("2.0"), ge=Decimal("1.0"))
 
+    # Phase 2B1 is an internal-only, fixed-provider gate. The API consumes only
+    # the feature flag, allowlist, and public-safe limits. Endpoint and secret
+    # file settings are supplied exclusively to the worker container.
+    phase2b1_enabled: bool = False
+    phase2b1_allowlisted_user_ids_csv: str = ""
+    phase2b1_provider: Literal["aliyun_bailian"] = "aliyun_bailian"
+    phase2b1_model: Literal["qwen3.7-plus-2026-05-26"] = "qwen3.7-plus-2026-05-26"
+    phase2b1_chat_completions_url: str | None = None
+    phase2b1_api_key_file: str | None = None
+    phase2b1_text_max_characters: int = Field(default=20_000, ge=1, le=20_000)
+    phase2b1_text_max_bytes: int = Field(default=60_000, ge=1, le=60_000)
+    phase2b1_prompt_max_tokens: int = Field(default=64_000, ge=1, le=64_000)
+    phase2b1_max_completion_tokens: int = Field(default=2_048, ge=1, le=2_048)
+    phase2b1_max_provider_calls: int = Field(default=2, ge=1, le=2)
+    phase2b1_cost_cap_cny: Decimal = Field(
+        default=Decimal("0.35"),
+        gt=Decimal(0),
+        le=Decimal("0.35"),
+    )
+    phase2b1_request_timeout_seconds: float = Field(default=120.0, ge=1.0, le=300.0)
+    phase2b1_retry_initial_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
+    phase2b1_retry_max_seconds: float = Field(default=10.0, ge=0.1, le=120.0)
+    phase2b1_pricing_version: Literal["aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30"] = (
+        "aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30"
+    )
+    phase2b1_input_per_million_cny: Decimal = Field(default=Decimal(2), ge=Decimal(0))
+    phase2b1_cached_per_million_cny: Decimal = Field(default=Decimal("0.4"), ge=Decimal(0))
+    phase2b1_output_per_million_cny: Decimal = Field(default=Decimal(8), ge=Decimal(0))
+
     @field_validator("frontend_origin")
     @classmethod
     def validate_frontend_origin(cls, value: str) -> str:
@@ -81,6 +115,35 @@ class OnlineSettings(BaseSettings):
             raise ValueError("runtime path and names must not be empty")
         return value.strip()
 
+    @field_validator("phase2b1_chat_completions_url")
+    @classmethod
+    def validate_phase2b1_url(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        from storylens_online.providers.aliyun_bailian import (
+            validate_chat_completions_url,
+        )
+
+        return validate_chat_completions_url(value.strip())
+
+    @field_validator("phase2b1_api_key_file")
+    @classmethod
+    def validate_phase2b1_api_key_file(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        path = Path(value.strip())
+        if not path.is_absolute():
+            raise ValueError("Phase 2B1 API key file path must be absolute")
+        return str(path)
+
+    @field_validator("phase2b1_allowlisted_user_ids_csv")
+    @classmethod
+    def validate_phase2b1_allowlist(cls, value: str) -> str:
+        user_ids = [item.strip() for item in value.split(",") if item.strip()]
+        if any(not PHASE2B1_ALLOWLIST_ID_PATTERN.fullmatch(item) for item in user_ids):
+            raise ValueError("Phase 2B1 allowlist contains an invalid user identifier")
+        return ",".join(dict.fromkeys(user_ids))
+
     @model_validator(mode="after")
     def reject_desktop_database(self) -> OnlineSettings:
         scheme = urlparse(self.database_url).scheme.lower()
@@ -94,12 +157,39 @@ class OnlineSettings(BaseSettings):
             )
         if self.worker_redis_retry_max_seconds < self.worker_redis_retry_initial_seconds:
             raise ValueError("worker Redis maximum retry delay must not be below its initial delay")
+        if self.phase2b1_retry_max_seconds < self.phase2b1_retry_initial_seconds:
+            raise ValueError("Phase 2B1 maximum retry delay must not be below its initial delay")
+        if self.phase2b1_enabled:
+            request_budget = (
+                self.phase2b1_request_timeout_seconds * self.phase2b1_max_provider_calls
+                + self.phase2b1_retry_max_seconds * (self.phase2b1_max_provider_calls - 1)
+                + PHASE2B1_LEASE_SAFETY_MARGIN_SECONDS
+            )
+            if request_budget >= self.worker_lease_seconds:
+                raise ValueError(
+                    "Phase 2B1 request and retry budget must remain below the worker lease"
+                )
+        frozen_prices = (
+            self.phase2b1_input_per_million_cny,
+            self.phase2b1_cached_per_million_cny,
+            self.phase2b1_output_per_million_cny,
+        )
+        if frozen_prices != (Decimal(2), Decimal("0.4"), Decimal(8)):
+            raise ValueError("Phase 2B1 pricing must match the approved immutable snapshot")
         return self
 
     @property
     def allowed_afdian_plan_ids(self) -> frozenset[str]:
         return frozenset(
             item.strip() for item in self.afdian_allowed_plan_ids.split(",") if item.strip()
+        )
+
+    @property
+    def phase2b1_allowlisted_user_ids(self) -> frozenset[str]:
+        return frozenset(
+            item.strip()
+            for item in self.phase2b1_allowlisted_user_ids_csv.split(",")
+            if item.strip()
         )
 
     def public_snapshot(self) -> OnlineConfigSnapshot:

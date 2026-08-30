@@ -22,7 +22,7 @@ from storylens_online.contracts.beta import (
     PublicErrorResponse,
     UploadResponse,
     UserResponse,
-    phase2a_result_from_json,
+    phase_result_from_json,
 )
 from storylens_online.db.models import OnlineAnalysisJob
 from storylens_online.db.session import OnlineDatabase
@@ -54,8 +54,19 @@ def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=body.model_dump(mode="json"))
 
 
-def _user_response(session: AuthSession) -> UserResponse:
-    return UserResponse(id=session.user.id, email=session.user.email)
+def _available_pipelines(settings: OnlineSettings, user_id: str) -> tuple[str, ...]:
+    pipelines = ["phase2a_smoke"]
+    if settings.phase2b1_enabled and user_id in settings.phase2b1_allowlisted_user_ids:
+        pipelines.append("phase2b1_txt_evidence_summary")
+    return tuple(pipelines)
+
+
+def _user_response(session: AuthSession, settings: OnlineSettings) -> UserResponse:
+    return UserResponse(
+        id=session.user.id,
+        email=session.user.email,
+        available_pipelines=_available_pipelines(settings, session.user.id),
+    )
 
 
 def _set_session_cookie(response: Response, token: str, settings: OnlineSettings) -> None:
@@ -171,13 +182,13 @@ def create_app(
     ) -> UserResponse:
         session = await active_auth.register(credentials.email, credentials.password)
         _set_session_cookie(response, session.token, active_settings)
-        return _user_response(session)
+        return _user_response(session, active_settings)
 
     @app.post("/api/v1/auth/login", response_model=UserResponse)
     async def login(credentials: AuthCredentials, response: Response) -> UserResponse:
         session = await active_auth.login(credentials.email, credentials.password)
         _set_session_cookie(response, session.token, active_settings)
-        return _user_response(session)
+        return _user_response(session, active_settings)
 
     @app.post("/api/v1/auth/logout", status_code=204)
     async def logout(response: Response) -> None:
@@ -195,7 +206,7 @@ def create_app(
         session: AuthSession = Depends(current_session),  # noqa: B008
     ) -> UserResponse:
         _set_session_cookie(response, session.token, active_settings)
-        return _user_response(session)
+        return _user_response(session, active_settings)
 
     @app.post("/api/v1/uploads", response_model=UploadResponse, status_code=201)
     async def upload_txt(
@@ -218,6 +229,8 @@ def create_app(
         request: JobCreateRequest,
         session: AuthSession = Depends(current_session),  # noqa: B008
     ) -> JobResponse:
+        if request.pipeline not in _available_pipelines(active_settings, session.user.id):
+            raise PublicApiError(403, "pipeline_unavailable", "该分析任务尚未对当前账户开放。")
         with active_database.session() as db_session:
             upload = repository.get_upload_for_user(
                 db_session,
@@ -231,8 +244,9 @@ def create_app(
                 user_id=session.user.id,
                 upload_id=upload.id,
                 idempotency_key=request.idempotency_key,
+                pipeline=request.pipeline,
             )
-            if not created and job.upload_id != upload.id:
+            if not created and (job.upload_id != upload.id or job.pipeline != request.pipeline):
                 raise PublicApiError(409, "idempotency_conflict", "幂等键已用于其他任务。")
             result = JobResponse.model_validate(job)
         if created:
@@ -270,7 +284,7 @@ def create_app(
             raise PublicApiError(409, "job_not_succeeded", "任务尚未成功完成。")
         return JobResultResponse(
             job_id=job.id,
-            result=phase2a_result_from_json(job.result_json),
+            result=phase_result_from_json(job.result_json),
         )
 
     return app

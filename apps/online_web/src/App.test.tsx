@@ -19,7 +19,11 @@ vi.mock("./api", async () => {
   };
 });
 
-const user = { id: "user-1", email: "reader@example.com" };
+const user: api.User = {
+  id: "user-1",
+  email: "reader@example.com",
+  available_pipelines: ["phase2a_smoke"],
+};
 const queuedJob: api.Job = {
   id: "job-12345678",
   upload_id: "upload-1",
@@ -79,10 +83,97 @@ describe("StoryLens Online Beta", () => {
     const picker = await screen.findByLabelText("选择 TXT 文件");
     const file = new File(["hello"], "book.txt", { type: "text/plain" });
     fireEvent.change(picker, { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: "上传并创建统计任务" }));
+    fireEvent.click(screen.getByRole("button", { name: "上传并创建本地文本统计任务" }));
 
     await waitFor(() => expect(api.uploadTxt).toHaveBeenCalledWith(file));
-    expect(api.createJob).toHaveBeenCalledWith("upload-1", "browser-request-uuid");
+    expect(api.createJob).toHaveBeenCalledWith(
+      "upload-1",
+      "browser-request-uuid",
+      "phase2a_smoke",
+    );
     expect(await screen.findByText("等待处理")).toBeVisible();
+  });
+
+  it("offers the real analysis pipeline only to an allowlisted user", async () => {
+    const allowlistedUser: api.User = {
+      ...user,
+      available_pipelines: ["phase2a_smoke", "phase2b1_txt_evidence_summary"],
+    };
+    vi.mocked(api.me).mockResolvedValue(allowlistedUser);
+    vi.mocked(api.uploadTxt).mockResolvedValue({
+      id: "upload-1",
+      original_filename: "book.txt",
+      sha256: "a".repeat(64),
+      file_size_bytes: 5,
+      created_at: "2026-08-30T00:00:00Z",
+    });
+    vi.mocked(api.createJob).mockResolvedValue({
+      ...queuedJob,
+      pipeline: "phase2b1_txt_evidence_summary",
+    });
+    render(<App />);
+
+    const picker = await screen.findByLabelText("选择 TXT 文件");
+    fireEvent.change(screen.getByLabelText("任务类型"), {
+      target: { value: "phase2b1_txt_evidence_summary" },
+    });
+    fireEvent.change(picker, {
+      target: { files: [new File(["hello"], "book.txt", { type: "text/plain" })] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "上传并创建AI 证据摘要任务" }));
+
+    await waitFor(() =>
+      expect(api.createJob).toHaveBeenCalledWith(
+        "upload-1",
+        "browser-request-uuid",
+        "phase2b1_txt_evidence_summary",
+      ),
+    );
+    expect(screen.getByText("Phase 2B1 内部验证")).toBeVisible();
+  });
+
+  it("renders evidence results without internal Provider metadata", async () => {
+    const allowlistedUser: api.User = {
+      ...user,
+      available_pipelines: ["phase2a_smoke", "phase2b1_txt_evidence_summary"],
+    };
+    vi.mocked(api.me).mockResolvedValue(allowlistedUser);
+    vi.mocked(api.listJobs).mockResolvedValue([
+      {
+        ...queuedJob,
+        pipeline: "phase2b1_txt_evidence_summary",
+        status: "succeeded",
+        progress: 100,
+      },
+    ]);
+    vi.mocked(api.getJobResult).mockResolvedValue({
+      job_id: queuedJob.id,
+      result: {
+        pipeline: "phase2b1_txt_evidence_summary",
+        overview: {
+          text: "故事围绕一次失踪展开。",
+          evidence_paragraph_ids: ["P000001"],
+        },
+        findings: [
+          {
+            text: "失踪前出现异常征兆。",
+            evidence_paragraph_ids: ["P000001"],
+          },
+        ],
+        paragraph_count: 2,
+        character_count: 20,
+        real_ai_analysis: true,
+        billing_status: "not_billable",
+        charged_cny: 0,
+      },
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "查看统计结果" }));
+    expect(await screen.findByText("故事围绕一次失踪展开。")).toBeVisible();
+    expect(screen.getByText("失踪前出现异常征兆。")).toBeVisible();
+    expect(screen.getByText("证据段落：P000001")).toBeVisible();
+    expect(screen.queryByText(/provider/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/qwen/i)).not.toBeInTheDocument();
   });
 });
