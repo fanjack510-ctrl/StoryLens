@@ -1,6 +1,5 @@
 """Worker-only model provider gateway for StoryLens Online."""
 
-from storylens_online.providers.aliyun_bailian import AliyunBailianProvider
 from storylens_online.providers.base import (
     ModelProvider,
     ModelRequest,
@@ -8,9 +7,10 @@ from storylens_online.providers.base import (
     ModelUsage,
     ProviderRequestError,
 )
+from storylens_online.providers.deepseek import DeepSeekProvider
 
 __all__ = [
-    "AliyunBailianProvider",
+    "DeepSeekProvider",
     "ModelProvider",
     "ModelRequest",
     "ModelResponse",

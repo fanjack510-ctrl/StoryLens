@@ -18,48 +18,39 @@ from storylens_online.providers.base import (
     ProviderRequestError,
 )
 
-PROVIDER_NAME = "aliyun_bailian"
-MODEL_NAME = "qwen3.7-plus-2026-05-26"
-ALIYUN_HOST_SUFFIX = ".cn-beijing.maas.aliyuncs.com"
-CHAT_COMPLETIONS_PATH = "/compatible-mode/v1/chat/completions"
-_WORKSPACE_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62})$")
+PROVIDER_NAME = "deepseek"
+MODEL_NAME = "deepseek-v4-flash"
+BASE_URL = "https://api.deepseek.com"
+CHAT_COMPLETIONS_PATH = "/chat/completions"
 _REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,255}$")
 
 
-def validate_chat_completions_url(value: str) -> str:
-    """Accept only the frozen Bailian Beijing workspace endpoint shape."""
+def validate_base_url(value: str) -> str:
+    """Accept only the frozen official DeepSeek API origin."""
 
     parsed = urlparse(value)
-    hostname = parsed.hostname or ""
-    workspace = (
-        hostname[: -len(ALIYUN_HOST_SUFFIX)] if hostname.endswith(ALIYUN_HOST_SUFFIX) else ""
-    )
     invalid = (
         parsed.scheme != "https"
+        or parsed.hostname != "api.deepseek.com"
         or parsed.username is not None
         or parsed.password is not None
         or parsed.port is not None
-        or not _WORKSPACE_PATTERN.fullmatch(workspace)
-        or parsed.path != CHAT_COMPLETIONS_PATH
+        or parsed.path not in {"", "/"}
         or bool(parsed.params)
         or bool(parsed.query)
         or bool(parsed.fragment)
     )
     if invalid:
-        raise ValueError("Phase 2B1 endpoint must be the approved Aliyun Beijing workspace URL")
-    return value
+        raise ValueError("Phase 2B1 base URL must be the approved DeepSeek HTTPS origin")
+    return BASE_URL
 
 
-def _provider_request_id(response: httpx.Response, data: object | None = None) -> str | None:
-    for name in ("x-request-id", "request-id", "x-acs-request-id"):
-        value = response.headers.get(name)
-        if value and _REQUEST_ID_PATTERN.fullmatch(value):
-            return value
-    if isinstance(data, dict):
-        for field_name in ("request_id", "id"):
-            value = data.get(field_name)
-            if isinstance(value, str) and _REQUEST_ID_PATTERN.fullmatch(value):
-                return value
+def _provider_request_id(data: object | None) -> str | None:
+    if not isinstance(data, dict):
+        return None
+    value = data.get("id")
+    if isinstance(value, str) and _REQUEST_ID_PATTERN.fullmatch(value):
+        return value
     return None
 
 
@@ -77,24 +68,17 @@ def _parse_usage(data: object) -> ModelUsage | None:
     usage = data.get("usage")
     if not isinstance(usage, dict):
         return None
-    input_tokens = _integer_or_none(usage.get("prompt_tokens"))
-    output_tokens = _integer_or_none(usage.get("completion_tokens"))
-    total_tokens = _integer_or_none(usage.get("total_tokens"))
-    details = usage.get("prompt_tokens_details")
-    cached_tokens = None
-    if isinstance(details, dict):
-        cached_tokens = _integer_or_none(details.get("cached_tokens"))
-    if cached_tokens is None:
-        cached_tokens = _integer_or_none(usage.get("prompt_cache_hit_tokens"))
-    if input_tokens is None or output_tokens is None or total_tokens is None:
+    values = {
+        "prompt_tokens": _integer_or_none(usage.get("prompt_tokens")),
+        "completion_tokens": _integer_or_none(usage.get("completion_tokens")),
+        "total_tokens": _integer_or_none(usage.get("total_tokens")),
+        "prompt_cache_hit_tokens": _integer_or_none(usage.get("prompt_cache_hit_tokens")),
+        "prompt_cache_miss_tokens": _integer_or_none(usage.get("prompt_cache_miss_tokens")),
+    }
+    if any(value is None for value in values.values()):
         return None
     try:
-        return ModelUsage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-            cached_tokens=cached_tokens or 0,
-        )
+        return ModelUsage.model_validate(values)
     except ValidationError:
         return None
 
@@ -113,8 +97,8 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
             return None
 
 
-class AliyunBailianProvider(ModelProvider):
-    """Fixed Aliyun Bailian OpenAI-compatible provider for Phase 2B1."""
+class DeepSeekProvider(ModelProvider):
+    """Fixed official DeepSeek JSON Object provider for Phase 2B1."""
 
     name = PROVIDER_NAME
     model = MODEL_NAME
@@ -122,12 +106,13 @@ class AliyunBailianProvider(ModelProvider):
     def __init__(
         self,
         *,
-        chat_completions_url: str,
+        base_url: str,
         api_key_file: str | Path,
         timeout_seconds: float,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self.chat_completions_url = validate_chat_completions_url(chat_completions_url)
+        self.base_url = validate_base_url(base_url)
+        self.chat_completions_url = f"{self.base_url}{CHAT_COMPLETIONS_PATH}"
         self.api_key_file = Path(api_key_file)
         if not self.api_key_file.is_absolute():
             raise ValueError("Phase 2B1 API key file path must be absolute")
@@ -167,18 +152,10 @@ class AliyunBailianProvider(ModelProvider):
         return {
             "model": MODEL_NAME,
             "messages": request.messages,
-            "enable_thinking": False,
-            "enable_search": False,
+            "thinking": {"type": "disabled"},
             "stream": False,
-            "max_completion_tokens": request.max_completion_tokens,
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "storylens_phase2b1_result",
-                    "strict": True,
-                    "schema": request.response_schema,
-                },
-            },
+            "max_tokens": request.max_completion_tokens,
+            "response_format": {"type": "json_object"},
         }
 
     @staticmethod
@@ -195,13 +172,19 @@ class AliyunBailianProvider(ModelProvider):
             code = "PROVIDER_SERVER_ERROR"
         else:
             code = "PROVIDER_HTTP_ERROR"
+        response_model = data.get("model") if isinstance(data, dict) else None
+        system_fingerprint = data.get("system_fingerprint") if isinstance(data, dict) else None
         raise ProviderRequestError(
             error_code=code,
             http_request_sent=True,
             http_status_code=status,
-            provider_request_id=_provider_request_id(response, data),
+            provider_request_id=_provider_request_id(data),
             retry_after_seconds=_retry_after_seconds(response),
             usage=_parse_usage(data),
+            response_model=response_model if isinstance(response_model, str) else None,
+            system_fingerprint=(
+                system_fingerprint if isinstance(system_fingerprint, str) else None
+            ),
         )
 
     async def generate(self, request: ModelRequest) -> ModelResponse:
@@ -260,27 +243,36 @@ class AliyunBailianProvider(ModelProvider):
                 error_code="PROVIDER_RESPONSE_INVALID",
                 http_request_sent=True,
                 http_status_code=response.status_code,
-                provider_request_id=_provider_request_id(response),
             ) from exc
 
-        request_id = _provider_request_id(response, data)
+        request_id = _provider_request_id(data)
         usage = _parse_usage(data)
-        if usage is None:
+        response_model_value = data.get("model") if isinstance(data, dict) else None
+        response_model = response_model_value if isinstance(response_model_value, str) else None
+        fingerprint_value = data.get("system_fingerprint") if isinstance(data, dict) else None
+        system_fingerprint = fingerprint_value if isinstance(fingerprint_value, str) else None
+        if usage is None or request_id is None:
             raise ProviderRequestError(
                 error_code="PROVIDER_RESPONSE_INVALID",
                 http_request_sent=True,
                 http_status_code=response.status_code,
                 provider_request_id=request_id,
+                usage=usage,
+                response_model=response_model,
+                system_fingerprint=system_fingerprint,
             )
         try:
             choice = data["choices"][0]
             text = choice["message"]["content"]
             finish_reason = choice.get("finish_reason")
-            response_model = data.get("model", MODEL_NAME)
+            response_model = data["model"]
+            system_fingerprint = data.get("system_fingerprint")
             if (
                 not isinstance(text, str)
                 or not isinstance(response_model, str)
                 or response_model != MODEL_NAME
+                or not isinstance(finish_reason, str)
+                or (system_fingerprint is not None and not isinstance(system_fingerprint, str))
             ):
                 raise TypeError
         except (KeyError, IndexError, TypeError, AttributeError) as exc:
@@ -290,11 +282,24 @@ class AliyunBailianProvider(ModelProvider):
                 http_status_code=response.status_code,
                 provider_request_id=request_id,
                 usage=usage,
+                response_model=response_model,
+                system_fingerprint=system_fingerprint,
             ) from exc
+        if finish_reason != "stop":
+            raise ProviderRequestError(
+                error_code="PROVIDER_RESPONSE_INVALID",
+                http_request_sent=True,
+                http_status_code=response.status_code,
+                provider_request_id=request_id,
+                usage=usage,
+                response_model=response_model,
+                system_fingerprint=system_fingerprint,
+            )
         return ModelResponse(
             text=text,
             model=response_model,
             usage=usage,
             provider_request_id=request_id,
-            finish_reason=finish_reason if isinstance(finish_reason, str) else None,
+            finish_reason=finish_reason,
+            system_fingerprint=system_fingerprint,
         )

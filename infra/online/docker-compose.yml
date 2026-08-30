@@ -49,7 +49,7 @@ services:
       STORYLENS_ONLINE_PHASE2B1_PROMPT_MAX_TOKENS: "64000"
       STORYLENS_ONLINE_PHASE2B1_MAX_COMPLETION_TOKENS: "2048"
       STORYLENS_ONLINE_PHASE2B1_MAX_PROVIDER_CALLS: "2"
-      STORYLENS_ONLINE_PHASE2B1_COST_CAP_CNY: "0.35"
+      STORYLENS_ONLINE_PHASE2B1_COST_CAP_CNY: "0.50"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live', timeout=3).read()"]
       interval: 15s
@@ -84,23 +84,17 @@ services:
       STORYLENS_ONLINE_WORKER_REDIS_RETRY_MAX_SECONDS: ${WORKER_REDIS_RETRY_MAX_SECONDS:-15}
       STORYLENS_ONLINE_PHASE2B1_ENABLED: ${PHASE2B1_ENABLED:-false}
       STORYLENS_ONLINE_PHASE2B1_ALLOWLISTED_USER_IDS_CSV: ${PHASE2B1_ALLOWLISTED_USER_IDS:-}
-      STORYLENS_ONLINE_PHASE2B1_PROVIDER: aliyun_bailian
-      STORYLENS_ONLINE_PHASE2B1_MODEL: qwen3.7-plus-2026-05-26
-      STORYLENS_ONLINE_PHASE2B1_CHAT_COMPLETIONS_URL: ${PHASE2B1_CHAT_COMPLETIONS_URL:-}
-      STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE: /run/secrets/storylens_online_aliyun_bailian_api_key
+      STORYLENS_ONLINE_PHASE2B1_BASE_URL: https://api.deepseek.com
+      STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE: /run/secrets/storylens_online_deepseek_api_key
       STORYLENS_ONLINE_PHASE2B1_TEXT_MAX_CHARACTERS: "20000"
       STORYLENS_ONLINE_PHASE2B1_TEXT_MAX_BYTES: "60000"
       STORYLENS_ONLINE_PHASE2B1_PROMPT_MAX_TOKENS: "64000"
       STORYLENS_ONLINE_PHASE2B1_MAX_COMPLETION_TOKENS: "2048"
       STORYLENS_ONLINE_PHASE2B1_MAX_PROVIDER_CALLS: "2"
-      STORYLENS_ONLINE_PHASE2B1_COST_CAP_CNY: "0.35"
+      STORYLENS_ONLINE_PHASE2B1_COST_CAP_CNY: "0.50"
       STORYLENS_ONLINE_PHASE2B1_REQUEST_TIMEOUT_SECONDS: ${PHASE2B1_REQUEST_TIMEOUT_SECONDS:-120}
       STORYLENS_ONLINE_PHASE2B1_RETRY_INITIAL_SECONDS: ${PHASE2B1_RETRY_INITIAL_SECONDS:-1}
       STORYLENS_ONLINE_PHASE2B1_RETRY_MAX_SECONDS: ${PHASE2B1_RETRY_MAX_SECONDS:-10}
-      STORYLENS_ONLINE_PHASE2B1_PRICING_VERSION: aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30
-      STORYLENS_ONLINE_PHASE2B1_INPUT_PER_MILLION_CNY: "2"
-      STORYLENS_ONLINE_PHASE2B1_CACHED_PER_MILLION_CNY: "0.4"
-      STORYLENS_ONLINE_PHASE2B1_OUTPUT_PER_MILLION_CNY: "8"
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,8 +105,8 @@ services:
     volumes:
       - online_uploads:/srv/storylens-online/uploads
     secrets:
-      - source: storylens_online_aliyun_bailian_api_key
-        target: storylens_online_aliyun_bailian_api_key
+      - source: storylens_online_deepseek_api_key
+        target: storylens_online_deepseek_api_key
     networks: [private, egress]
 
   online-web:
@@ -213,5 +207,5 @@ secrets:
     file: ${POCKETBASE_SUPERUSER_EMAIL_FILE:?set POCKETBASE_SUPERUSER_EMAIL_FILE to the server secret path}
   pocketbase_superuser_password:
     file: ${POCKETBASE_SUPERUSER_PASSWORD_FILE:?set POCKETBASE_SUPERUSER_PASSWORD_FILE to the server secret path}
-  storylens_online_aliyun_bailian_api_key:
-    file: ${PHASE2B1_API_KEY_FILE:-/opt/storylens/shared/secrets/aliyun-bailian-api-key}
+  storylens_online_deepseek_api_key:
+    file: ${PHASE2B1_API_KEY_FILE:-/opt/storylens/shared/secrets/deepseek-api-key}

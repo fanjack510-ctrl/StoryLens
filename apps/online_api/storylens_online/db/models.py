@@ -114,8 +114,16 @@ class ModelUsageLedger(TimestampMixin, OnlineBase):
         CheckConstraint("total_tokens >= 0", name="ck_online_usage_total_tokens_nonnegative"),
         CheckConstraint("cached_tokens >= 0", name="ck_online_usage_cached_tokens_nonnegative"),
         CheckConstraint(
+            "prompt_cache_miss_tokens >= 0",
+            name="ck_online_usage_cache_miss_nonnegative",
+        ),
+        CheckConstraint(
             "cached_tokens <= input_tokens",
             name="ck_online_usage_cached_not_above_input",
+        ),
+        CheckConstraint(
+            "cached_tokens + prompt_cache_miss_tokens = input_tokens",
+            name="ck_online_usage_cache_split_matches_input",
         ),
         CheckConstraint(
             "input_per_million_cny >= 0",
@@ -130,6 +138,20 @@ class ModelUsageLedger(TimestampMixin, OnlineBase):
             name="ck_online_usage_output_price_nonnegative",
         ),
         CheckConstraint("provider_cost_cny >= 0", name="ck_online_usage_provider_cost_nonnegative"),
+        CheckConstraint("provider_cost_usd >= 0", name="ck_online_usage_usd_cost_nonnegative"),
+        CheckConstraint("fx_rate_to_cny >= 0", name="ck_online_usage_fx_rate_nonnegative"),
+        CheckConstraint(
+            "pricing_currency IN ('USD', 'CNY')",
+            name="ck_online_usage_pricing_currency",
+        ),
+        CheckConstraint(
+            "pricing_tier IN ('peak', 'off_peak', 'legacy')",
+            name="ck_online_usage_pricing_tier",
+        ),
+        CheckConstraint(
+            "pricing_currency <> 'USD' OR fx_rate_to_cny > 0",
+            name="ck_online_usage_usd_fx_positive",
+        ),
         CheckConstraint("customer_charge_cny >= 0", name="ck_online_usage_charge_nonnegative"),
         CheckConstraint(
             "disposition <> 'not_billable' OR customer_charge_cny = 0",
@@ -147,13 +169,37 @@ class ModelUsageLedger(TimestampMixin, OnlineBase):
     pricing_version: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     provider_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    provider_response_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    system_fingerprint: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    request_sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cached_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prompt_cache_miss_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     usage_reported: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     http_request_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    pricing_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
+    pricing_tier: Mapped[str] = mapped_column(String(16), nullable=False, default="off_peak")
+    cache_hit_usd_per_million: Mapped[Decimal] = mapped_column(
+        Numeric(18, 9), nullable=False, default=Decimal(0)
+    )
+    cache_miss_usd_per_million: Mapped[Decimal] = mapped_column(
+        Numeric(18, 9), nullable=False, default=Decimal(0)
+    )
+    output_usd_per_million: Mapped[Decimal] = mapped_column(
+        Numeric(18, 9), nullable=False, default=Decimal(0)
+    )
+    provider_cost_usd: Mapped[Decimal] = mapped_column(
+        Numeric(18, 9), nullable=False, default=Decimal(0)
+    )
+    fx_rate_to_cny: Mapped[Decimal] = mapped_column(
+        Numeric(18, 6), nullable=False, default=Decimal(0)
+    )
+    fx_rate_version: Mapped[str] = mapped_column(String(64), nullable=False, default="legacy-no-fx")
     input_per_million_cny: Mapped[Decimal] = mapped_column(
         Numeric(18, 6), nullable=False, default=Decimal(0)
     )

@@ -13,7 +13,11 @@ from storylens_online.contracts.billing import (
     ModelUsageAggregate,
 )
 from storylens_online.db.models import ModelUsageLedger, OnlineAnalysisJob, OnlineBookUpload
-from storylens_online.services.model_cost import ZERO_CNY, calculate_internal_model_cost
+from storylens_online.services.model_cost import (
+    ZERO_CNY,
+    ZERO_USD,
+    calculate_internal_model_cost,
+)
 from storylens_online.services.storage import StoredUpload
 
 
@@ -232,12 +236,22 @@ class OnlineRepository:
             model=pricing.model,
             pricing_version=pricing.pricing_version,
             status=ModelAttemptStatus.STARTED.value,
+            request_sent_at=pricing.request_sent_at or datetime.now(UTC),
             input_tokens=0,
             cached_tokens=0,
+            prompt_cache_miss_tokens=0,
             output_tokens=0,
             total_tokens=0,
             usage_reported=False,
             http_request_sent=False,
+            pricing_currency=pricing.pricing_currency,
+            pricing_tier=pricing.pricing_tier,
+            cache_hit_usd_per_million=pricing.cache_hit_usd_per_million,
+            cache_miss_usd_per_million=pricing.cache_miss_usd_per_million,
+            output_usd_per_million=pricing.output_usd_per_million,
+            provider_cost_usd=ZERO_USD,
+            fx_rate_to_cny=pricing.fx_rate_to_cny,
+            fx_rate_version=pricing.fx_rate_version,
             input_per_million_cny=pricing.input_per_million_cny,
             cached_input_per_million_cny=pricing.cached_input_per_million_cny,
             output_per_million_cny=pricing.output_per_million_cny,
@@ -273,8 +287,11 @@ class OnlineRepository:
         total_tokens: int,
         input_tokens: int = 0,
         cached_tokens: int = 0,
+        prompt_cache_miss_tokens: int | None = None,
         output_tokens: int = 0,
         provider_request_id: str | None = None,
+        provider_response_model: str | None = None,
+        system_fingerprint: str | None = None,
         error_code: str | None = None,
     ) -> ModelUsageLedger:
         if status is ModelAttemptStatus.STARTED:
@@ -291,10 +308,25 @@ class OnlineRepository:
             return attempt
         if not usage_reported and any((input_tokens, cached_tokens, output_tokens, total_tokens)):
             raise ValueError("token counts require Provider-reported usage")
+        request_sent_at = attempt.request_sent_at
+        if request_sent_at is not None:
+            request_sent_at = (
+                request_sent_at.replace(tzinfo=UTC)
+                if request_sent_at.tzinfo is None
+                else request_sent_at.astimezone(UTC)
+            )
         pricing = ModelPricingSnapshot(
             provider=attempt.provider,
             model=attempt.model,
             pricing_version=attempt.pricing_version,
+            pricing_currency=attempt.pricing_currency,
+            pricing_tier=attempt.pricing_tier,
+            cache_hit_usd_per_million=attempt.cache_hit_usd_per_million,
+            cache_miss_usd_per_million=attempt.cache_miss_usd_per_million,
+            output_usd_per_million=attempt.output_usd_per_million,
+            fx_rate_to_cny=attempt.fx_rate_to_cny,
+            fx_rate_version=attempt.fx_rate_version,
+            request_sent_at=request_sent_at,
             input_per_million_cny=attempt.input_per_million_cny,
             cached_input_per_million_cny=attempt.cached_input_per_million_cny,
             output_per_million_cny=attempt.output_per_million_cny,
@@ -305,16 +337,21 @@ class OnlineRepository:
             output_tokens=output_tokens,
             total_tokens=total_tokens,
             pricing=pricing,
+            prompt_cache_miss_tokens=prompt_cache_miss_tokens,
         )
         attempt.status = status.value
         attempt.provider_request_id = provider_request_id
+        attempt.provider_response_model = provider_response_model
+        attempt.system_fingerprint = system_fingerprint
         attempt.input_tokens = cost.input_tokens
         attempt.cached_tokens = cost.cached_tokens
+        attempt.prompt_cache_miss_tokens = cost.prompt_cache_miss_tokens
         attempt.output_tokens = cost.output_tokens
         attempt.total_tokens = cost.total_tokens
         attempt.usage_reported = usage_reported
         attempt.http_request_sent = http_request_sent
         attempt.error_code = error_code
+        attempt.provider_cost_usd = cost.provider_cost_usd if usage_reported else ZERO_USD
         attempt.provider_cost_cny = cost.provider_cost_cny if usage_reported else ZERO_CNY
         attempt.customer_charge_cny = ZERO_CNY
         attempt.disposition = "not_billable"
@@ -364,6 +401,10 @@ class OnlineRepository:
             cached_tokens=sum(attempt.cached_tokens for attempt in attempts),
             output_tokens=sum(attempt.output_tokens for attempt in attempts),
             total_tokens=sum(attempt.total_tokens for attempt in attempts),
+            provider_cost_usd=sum(
+                (attempt.provider_cost_usd for attempt in attempts),
+                start=Decimal("0.000000000"),
+            ),
             provider_cost_cny=sum(
                 (attempt.provider_cost_cny for attempt in attempts),
                 start=Decimal("0.000000"),

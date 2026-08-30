@@ -233,8 +233,8 @@ def test_compose_grants_each_secret_only_to_its_intended_service() -> None:
     assert init["image"] == pocketbase["image"] == "storylens-online-pocketbase:local"
     assert services["online-worker"]["secrets"] == [
         {
-            "source": "storylens_online_aliyun_bailian_api_key",
-            "target": "storylens_online_aliyun_bailian_api_key",
+            "source": "storylens_online_deepseek_api_key",
+            "target": "storylens_online_deepseek_api_key",
         }
     ]
     for service_name, service in services.items():

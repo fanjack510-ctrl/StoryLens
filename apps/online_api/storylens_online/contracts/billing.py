@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 ZERO = Decimal(0)
 
@@ -46,9 +47,41 @@ class ModelPricingSnapshot(BaseModel):
     provider: str = Field(min_length=1, max_length=64)
     model: str = Field(min_length=1, max_length=128)
     pricing_version: str = Field(min_length=1, max_length=64)
-    input_per_million_cny: Decimal = Field(ge=ZERO)
+    pricing_currency: Literal["CNY", "USD"] = "CNY"
+    pricing_tier: Literal["legacy", "peak", "off_peak"] = "legacy"
+    cache_hit_usd_per_million: Decimal = Field(default=ZERO, ge=ZERO)
+    cache_miss_usd_per_million: Decimal = Field(default=ZERO, ge=ZERO)
+    output_usd_per_million: Decimal = Field(default=ZERO, ge=ZERO)
+    fx_rate_to_cny: Decimal = Field(default=ZERO, ge=ZERO)
+    fx_rate_version: str = Field(default="legacy-no-fx", min_length=1, max_length=64)
+    request_sent_at: datetime | None = None
+    input_per_million_cny: Decimal = Field(default=ZERO, ge=ZERO)
     cached_input_per_million_cny: Decimal = Field(default=ZERO, ge=ZERO)
-    output_per_million_cny: Decimal = Field(ge=ZERO)
+    output_per_million_cny: Decimal = Field(default=ZERO, ge=ZERO)
+
+    @model_validator(mode="after")
+    def validate_currency_snapshot(self) -> ModelPricingSnapshot:
+        if self.pricing_currency == "USD" and (
+            self.pricing_tier == "legacy"
+            or self.request_sent_at is None
+            or self.request_sent_at.tzinfo is None
+            or self.fx_rate_to_cny <= 0
+            or min(
+                self.cache_hit_usd_per_million,
+                self.cache_miss_usd_per_million,
+                self.output_usd_per_million,
+            )
+            <= 0
+            or any(
+                (
+                    self.input_per_million_cny,
+                    self.cached_input_per_million_cny,
+                    self.output_per_million_cny,
+                )
+            )
+        ):
+            raise ValueError("USD pricing snapshot is incomplete or mixes currencies")
+        return self
 
 
 class ModelUsageEntry(BaseModel):
@@ -76,8 +109,10 @@ class InternalModelCost(BaseModel):
 
     input_tokens: int = Field(ge=0)
     cached_tokens: int = Field(ge=0)
+    prompt_cache_miss_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     total_tokens: int = Field(ge=0)
+    provider_cost_usd: Decimal = Field(default=ZERO, ge=ZERO)
     provider_cost_cny: Decimal = Field(ge=ZERO)
     customer_charge_cny: Decimal = Field(default=ZERO, ge=ZERO, le=ZERO)
 
@@ -91,6 +126,7 @@ class ModelUsageAggregate(BaseModel):
     cached_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     total_tokens: int = Field(ge=0)
+    provider_cost_usd: Decimal = Field(default=ZERO, ge=ZERO)
     provider_cost_cny: Decimal = Field(ge=ZERO)
     usage_complete: bool
     has_unknown_attempt: bool

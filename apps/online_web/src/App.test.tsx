@@ -174,6 +174,7 @@ describe("StoryLens Online Beta", () => {
     expect(screen.getByText("失踪前出现异常征兆。")).toBeVisible();
     expect(screen.getByText("证据段落：P000001")).toBeVisible();
     expect(screen.queryByText(/provider/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/qwen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/deepseek/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/内部成本/i)).not.toBeInTheDocument();
   });
 });

@@ -66,8 +66,8 @@ Phase 2A 在其冻结范围内已完成实现、香港服务器部署和真实�
 门禁。本次只形成待部署包，不改变上述已经 verified 的香港生产基线：
 
 - 新 pipeline 固定为 `phase2b1_txt_evidence_summary`；`phase2a_smoke` 仍是默认值；
-- Provider 固定为阿里云百炼华北 2 OpenAI 兼容接口，模型固定为
-  `qwen3.7-plus-2026-05-26`；浏览器和 API 不能选择 Provider、URL 或模型；
+- 受控 AI 分析固定走 Worker-only Provider 网关；浏览器和 API 不能选择或覆盖
+  Provider、URL、模型、thinking、定价或汇率；
 - API 创建任务和 Worker 执行前分别检查全局开关及用户 ID 白名单；
 - Worker 为 TXT 生成确定性 `P000001` 格式段落 ID，模型的概述和每条发现都必须引用
   输入中真实存在的 ID；结构先由 Pydantic 校验，再校验证据集合；
@@ -83,14 +83,16 @@ Phase 2A 在其冻结范围内已完成实现、香港服务器部署和真实�
 冻结成本公式使用 `Decimal`，每次尝试分别计算后再按任务汇总：
 
 ```text
-provider_cost_cny =
-  ((输入 token - 缓存输入 token) × 2 + 缓存输入 token × 0.4 + 输出 token × 8)
-  / 1,000,000
+provider_cost_usd =
+  (cache miss token × miss USD 单价 + cache hit token × hit USD 单价
+   + output token × output USD 单价) / 1,000,000
+provider_cost_cny = provider_cost_usd × 6.7811
 ```
 
-价格版本为
-`aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30`。单任务最多两次 Provider
-调用，发送前按本次最坏成本叠加既有实际成本检查 `0.35 CNY` 上限。
+价格版本为 `deepseek-v4-flash@2026-08-30`，汇率版本为
+`safe-usdcny-central-parity-2026-08-28`。每次尝试按 `request_sent_at` 的 UTC 峰谷时段
+冻结三项美元单价；单任务最多两次 Provider 调用，发送前按本次最坏成本叠加既有实际
+成本检查 `0.50 CNY` 上限。
 
 ## Phase 2B1 香港私有验收门禁
 

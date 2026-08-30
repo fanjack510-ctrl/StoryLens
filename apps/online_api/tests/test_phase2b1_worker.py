@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -35,8 +36,8 @@ from test_beta_vertical_slice import (
 
 
 class FakeProvider(ModelProvider):
-    name = "aliyun_bailian"
-    model = "qwen3.7-plus-2026-05-26"
+    name = "deepseek"
+    model = "deepseek-v4-flash"
 
     def __init__(self, outcomes: list[ModelResponse | ProviderRequestError]) -> None:
         self.outcomes = outcomes
@@ -109,14 +110,16 @@ def provider_response(
         }
     return ModelResponse(
         text=json.dumps(body, ensure_ascii=False) if isinstance(body, dict) else body,
-        model="qwen3.7-plus-2026-05-26",
+        model="deepseek-v4-flash",
         usage=ModelUsage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            prompt_tokens=input_tokens,
+            completion_tokens=output_tokens,
             total_tokens=total_tokens,
-            cached_tokens=0,
+            prompt_cache_hit_tokens=0,
+            prompt_cache_miss_tokens=input_tokens,
         ),
         provider_request_id=request_id,
+        system_fingerprint="fp_test",
     )
 
 
@@ -164,6 +167,11 @@ def test_real_pipeline_succeeds_with_evidence_and_internal_usage_only(
         assert ledger is not None
         assert ledger.status == ModelAttemptStatus.SUCCEEDED.value
         assert ledger.provider_request_id == "request-1"
+        assert ledger.provider_response_model == "deepseek-v4-flash"
+        assert ledger.system_fingerprint == "fp_test"
+        assert ledger.pricing_currency == "USD"
+        assert ledger.pricing_tier in {"peak", "off_peak"}
+        assert ledger.prompt_cache_miss_tokens == 100
         assert ledger.total_tokens == 150
         assert ledger.customer_charge_cny == 0
         for model in (WalletAccount, RechargeOrder, WalletTransaction, BillingReservation):
@@ -189,6 +197,7 @@ def test_real_pipeline_succeeds_with_evidence_and_internal_usage_only(
             ),
             ModelAttemptStatus.FAILED.value,
         ),
+        (provider_response(body="", request_id="empty-content"), "invalid_response"),
         (provider_response(body="not-json", request_id="bad-json"), "invalid_response"),
         (
             provider_response(
@@ -286,7 +295,13 @@ def test_server_error_with_usage_is_costed_but_not_retried(beta_harness: BetaHar
                 http_request_sent=True,
                 http_status_code=503,
                 provider_request_id="failed-request",
-                usage=ModelUsage(input_tokens=100, output_tokens=10, total_tokens=110),
+                usage=ModelUsage(
+                    prompt_tokens=100,
+                    completion_tokens=10,
+                    total_tokens=110,
+                    prompt_cache_hit_tokens=0,
+                    prompt_cache_miss_tokens=100,
+                ),
             ),
             provider_response(),
         ]
@@ -344,12 +359,17 @@ def test_crash_left_started_attempt_becomes_unknown_and_job_is_not_requeued(
 ) -> None:
     job = create_real_job(beta_harness)
     pricing = ModelPricingSnapshot(
-        provider="aliyun_bailian",
-        model="qwen3.7-plus-2026-05-26",
-        pricing_version="aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30",
-        input_per_million_cny=Decimal(2),
-        cached_input_per_million_cny=Decimal("0.4"),
-        output_per_million_cny=Decimal(8),
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        pricing_version="deepseek-v4-flash@2026-08-30",
+        pricing_currency="USD",
+        pricing_tier="off_peak",
+        cache_hit_usd_per_million=Decimal("0.007"),
+        cache_miss_usd_per_million=Decimal("0.22"),
+        output_usd_per_million=Decimal("0.66"),
+        fx_rate_to_cny=Decimal("6.7811"),
+        fx_rate_version="safe-usdcny-central-parity-2026-08-28",
+        request_sent_at=datetime(2026, 8, 30, 12, tzinfo=UTC),
     )
     with beta_harness.database.session() as session:
         claimed = OnlineRepository.claim_job(session, job["id"], lease_seconds=900)

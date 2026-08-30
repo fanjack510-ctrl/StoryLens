@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -15,6 +16,7 @@ from storylens_online.db.models import (
     WalletTransaction,
 )
 from storylens_online.services.model_cost import calculate_internal_model_cost
+from storylens_online.services.phase2b1_analysis import phase2b1_pricing_snapshot
 from storylens_online.services.repository import OnlineRepository
 from test_beta_vertical_slice import BetaHarness, beta_harness, create_job, register, upload
 
@@ -23,13 +25,63 @@ __all__ = ["beta_harness"]
 
 def _pricing() -> ModelPricingSnapshot:
     return ModelPricingSnapshot(
-        provider="aliyun_bailian",
-        model="qwen3.7-plus-2026-05-26",
-        pricing_version="aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30",
-        input_per_million_cny=Decimal(2),
-        cached_input_per_million_cny=Decimal("0.4"),
-        output_per_million_cny=Decimal(8),
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        pricing_version="deepseek-v4-flash@2026-08-30",
+        pricing_currency="USD",
+        pricing_tier="off_peak",
+        cache_hit_usd_per_million=Decimal("0.007"),
+        cache_miss_usd_per_million=Decimal("0.22"),
+        output_usd_per_million=Decimal("0.66"),
+        fx_rate_to_cny=Decimal("6.7811"),
+        fx_rate_version="safe-usdcny-central-parity-2026-08-28",
+        request_sent_at=datetime(2026, 8, 30, 12, tzinfo=UTC),
     )
+
+
+def _pricing_at(request_sent_at: datetime) -> ModelPricingSnapshot:
+    return phase2b1_pricing_snapshot(
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        pricing_version="deepseek-v4-flash@2026-08-30",
+        request_sent_at=request_sent_at,
+        fx_rate_to_cny=Decimal("6.7811"),
+        fx_rate_version="safe-usdcny-central-parity-2026-08-28",
+        off_peak_cache_hit_usd=Decimal("0.007"),
+        off_peak_cache_miss_usd=Decimal("0.22"),
+        off_peak_output_usd=Decimal("0.66"),
+        peak_cache_hit_usd=Decimal("0.014"),
+        peak_cache_miss_usd=Decimal("0.44"),
+        peak_output_usd=Decimal("1.32"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("request_sent_at", "expected_tier"),
+    [
+        (datetime(2026, 8, 31, 0, 59, 59, tzinfo=UTC), "off_peak"),
+        (datetime(2026, 8, 31, 1, 0, 0, tzinfo=UTC), "peak"),
+        (datetime(2026, 8, 31, 3, 59, 59, tzinfo=UTC), "peak"),
+        (datetime(2026, 8, 31, 4, 0, 0, tzinfo=UTC), "off_peak"),
+        (datetime(2026, 8, 31, 6, 0, 0, tzinfo=UTC), "peak"),
+        (datetime(2026, 8, 31, 9, 59, 59, tzinfo=UTC), "peak"),
+        (datetime(2026, 8, 31, 10, 0, 0, tzinfo=UTC), "off_peak"),
+        (datetime(2026, 8, 30, 2, 0, 0, tzinfo=UTC), "off_peak"),
+    ],
+)
+def test_deepseek_peak_time_boundaries_are_left_closed_right_open(
+    request_sent_at: datetime,
+    expected_tier: str,
+) -> None:
+    assert _pricing_at(request_sent_at).pricing_tier == expected_tier
+
+
+def test_peak_price_is_exactly_the_frozen_double_rate() -> None:
+    peak = _pricing_at(datetime(2026, 8, 31, 1, tzinfo=UTC))
+    off_peak = _pricing_at(datetime(2026, 8, 31, 4, tzinfo=UTC))
+    assert peak.cache_hit_usd_per_million == off_peak.cache_hit_usd_per_million * 2
+    assert peak.cache_miss_usd_per_million == off_peak.cache_miss_usd_per_million * 2
+    assert peak.output_usd_per_million == off_peak.output_usd_per_million * 2
 
 
 def test_internal_cost_uses_decimal_and_cached_input_price() -> None:
@@ -38,9 +90,11 @@ def test_internal_cost_uses_decimal_and_cached_input_price() -> None:
         cached_tokens=250_000,
         output_tokens=100_000,
         total_tokens=1_234_567,
+        prompt_cache_miss_tokens=750_000,
         pricing=_pricing(),
     )
-    assert cost.provider_cost_cny == Decimal("2.400000")
+    assert cost.provider_cost_usd == Decimal("0.232750000")
+    assert cost.provider_cost_cny == Decimal("1.578301")
     assert cost.customer_charge_cny == Decimal("0.000000")
     assert cost.total_tokens == 1_234_567
 
@@ -69,6 +123,7 @@ def test_attempts_preserve_provider_totals_and_aggregate_all_retries(
             usage_reported=True,
             input_tokens=100_000,
             cached_tokens=20_000,
+            prompt_cache_miss_tokens=80_000,
             output_tokens=10_000,
             total_tokens=115_000,
             provider_request_id="provider-request-1",
@@ -91,6 +146,7 @@ def test_attempts_preserve_provider_totals_and_aggregate_all_retries(
             usage_reported=True,
             input_tokens=80_000,
             cached_tokens=0,
+            prompt_cache_miss_tokens=80_000,
             output_tokens=20_000,
             total_tokens=101_000,
             provider_request_id="provider-request-2",
@@ -101,7 +157,8 @@ def test_attempts_preserve_provider_totals_and_aggregate_all_retries(
         assert aggregate.cached_tokens == 20_000
         assert aggregate.output_tokens == 30_000
         assert aggregate.total_tokens == 216_000
-        assert aggregate.provider_cost_cny == Decimal("0.568000")
+        assert aggregate.provider_cost_usd == Decimal("0.055140000")
+        assert aggregate.provider_cost_cny == Decimal("0.373910")
         assert aggregate.customer_charge_cny == Decimal("0.000000")
         assert aggregate.usage_complete is True
         assert aggregate.has_unknown_attempt is False
@@ -315,8 +372,8 @@ def test_result_endpoint_returns_only_validated_public_evidence(beta_harness: Be
     assert payload == {"job_id": job["id"], "result": public_result}
     serialized = response.text
     for forbidden_value in (
-        "aliyun_bailian",
-        "qwen3.7-plus-2026-05-26",
+        "deepseek",
+        "deepseek-v4-flash",
         "provider_request_id",
         "provider_cost_cny",
         "pricing_version",

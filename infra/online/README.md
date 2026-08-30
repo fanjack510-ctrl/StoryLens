@@ -12,7 +12,7 @@ write a model-usage ledger entry, or contact Afdian. A result identifies itself 
 `charged_cny: 0`.
 
 Phase 2B1 adds a separate, default-off internal gate for one controlled TXT
-analysis through a fixed Aliyun Bailian Beijing model. Only allowlisted users
+analysis through a fixed Worker-only DeepSeek provider. Only allowlisted users
 can reach that path. It records internal model usage and provider cost, but it
 still never charges a wallet: `billing_status` remains `not_billable` and
 `charged_cny` remains zero.
@@ -119,7 +119,7 @@ combinations stop the worker before it connects and never print the Redis URL.
 ### Provision the Phase 2B1 Worker-only Provider secret
 
 The provider credential is a Docker file-backed secret named
-`storylens_online_aliyun_bailian_api_key`. Only `online-worker` mounts it. The
+`storylens_online_deepseek_api_key`. Only `online-worker` mounts it. The
 API, web, gateway, PocketBase, init service, images, build arguments, rendered
 Compose configuration, and application environment never receive the key.
 
@@ -129,8 +129,8 @@ acceptance is approved:
 
 ```bash
 sudo install -m 600 -o root -g root /dev/null \
-  /opt/storylens/shared/secrets/aliyun-bailian-api-key
-sudoedit /opt/storylens/shared/secrets/aliyun-bailian-api-key
+  /opt/storylens/shared/secrets/deepseek-api-key
+sudoedit /opt/storylens/shared/secrets/deepseek-api-key
 ```
 
 `online.env` contains only the host path and non-secret policy values:
@@ -138,29 +138,36 @@ sudoedit /opt/storylens/shared/secrets/aliyun-bailian-api-key
 ```dotenv
 PHASE2B1_ENABLED=false
 PHASE2B1_ALLOWLISTED_USER_IDS=
-PHASE2B1_CHAT_COMPLETIONS_URL=https://WORKSPACE_ID.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions
-PHASE2B1_API_KEY_FILE=/opt/storylens/shared/secrets/aliyun-bailian-api-key
+PHASE2B1_API_KEY_FILE=/opt/storylens/shared/secrets/deepseek-api-key
 ```
 
-The endpoint validator permits only HTTPS, one workspace label followed by
-`.cn-beijing.maas.aliyuncs.com`, and the exact path
-`/compatible-mode/v1/chat/completions`. User info, explicit ports, query
-strings, fragments, redirects, browser-selected providers, URLs, or models are
-rejected. The fixed model is `qwen3.7-plus-2026-05-26`; thinking, streaming,
-search, explicit caching, and session caching are disabled. Worker request and
-retry timing must fit inside its lease with a 30-second safety margin or startup
-validation fails closed.
+The provider base URL is frozen to the exact HTTPS origin
+`https://api.deepseek.com`; the Worker posts only to `/chat/completions` and
+never follows redirects. User info, explicit ports, paths on the configured
+origin, query strings, fragments, browser-selected providers, URLs, models,
+thinking parameters, pricing, or exchange rates are rejected. The fixed model
+uses non-thinking, non-streaming JSON Object mode with a 2,048-token output
+limit. Worker request and retry timing must fit inside its lease with a
+30-second safety margin or startup validation fails closed.
+
+Every HTTP attempt freezes its own Decimal price snapshot from the UTC
+`request_sent_at`. Monday-Friday 01:00-04:00 and 06:00-10:00 UTC are peak
+intervals (left-closed, right-open): cache hit/miss/output cost
+`0.014/0.44/1.32 USD` per million Token. All other times use
+`0.007/0.22/0.66 USD`. The fixed conversion is `1 USD = 6.7811 CNY` under
+`safe-usdcny-central-parity-2026-08-28`; the per-task Provider cap is `0.50 CNY`.
+These values are code-frozen and are not accepted from browser or API payloads.
 
 Before enabling the gate, confirm Secret placement without printing its value:
 
 ```bash
-docker compose --env-file online.env config | grep -q 'storylens_online_aliyun_bailian_api_key'
+docker compose --env-file online.env config | grep -q 'storylens_online_deepseek_api_key'
 worker_id="$(docker compose --env-file online.env ps -q online-worker)"
-docker inspect "$worker_id" | grep -q '/run/secrets/storylens_online_aliyun_bailian_api_key'
+docker inspect "$worker_id" | grep -q '/run/secrets/storylens_online_deepseek_api_key'
 for service in gateway online-api online-web pocketbase pocketbase-init; do
   service_id="$(docker compose --env-file online.env ps -aq "$service")"
   if [ -n "$service_id" ] && docker inspect "$service_id" | \
-    grep -q '/run/secrets/storylens_online_aliyun_bailian_api_key'; then
+    grep -q '/run/secrets/storylens_online_deepseek_api_key'; then
     echo "Provider secret boundary failed for $service" >&2
     exit 1
   fi
@@ -264,9 +271,11 @@ use an isolated deployment and exactly one internal PocketBase user ID:
    and place only the internal user ID in the allowlist.
 3. Submit one non-sensitive TXT fixture and confirm every public overview/finding
    cites an input `P000001`-style paragraph ID.
-4. Reconcile every Provider attempt's prompt, completion, total and cached Token
-   values with the ledger. Recalculate its Decimal price snapshot and compare the
-   task aggregate; public `charged_cny` and ledger `customer_charge_cny` remain 0.
+4. Reconcile every Provider attempt's prompt, completion, total, cache-hit and
+   cache-miss Token values with the ledger. Confirm hit plus miss equals prompt,
+   recalculate the UTC peak/off-peak USD snapshot and frozen USD/CNY conversion,
+   then compare the task aggregate; public `charged_cny` and ledger
+   `customer_charge_cny` remain 0.
 5. Exercise one 429 retry, one usage-complete invalid structured response, and one
    post-send timeout. The first two may use at most two total calls; the timeout
    becomes `unknown` and must not be retried.
@@ -277,7 +286,7 @@ use an isolated deployment and exactly one internal PocketBase user ID:
    change. Scan logs for Secret, fixture text, Prompt and raw Provider response
    patterns without printing those values.
 8. Inspect every container and image history. Only `online-worker` may reference
-   `/run/secrets/storylens_online_aliyun_bailian_api_key`; no image layer or
+   `/run/secrets/storylens_online_deepseek_api_key`; no image layer or
    rendered environment may contain the key.
 
 Disable the gate and clear the allowlist after the isolated run. Phase 2B1 is not

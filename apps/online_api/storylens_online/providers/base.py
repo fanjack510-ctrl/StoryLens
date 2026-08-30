@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -16,23 +15,37 @@ class ModelRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     messages: list[dict[str, str]] = Field(min_length=1)
-    response_schema: dict[str, Any]
     max_completion_tokens: int = Field(ge=1, le=2_048)
 
 
 class ModelUsage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    input_tokens: int = Field(ge=0)
-    output_tokens: int = Field(ge=0)
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
     total_tokens: int = Field(ge=0)
-    cached_tokens: int = Field(default=0, ge=0)
+    prompt_cache_hit_tokens: int = Field(ge=0)
+    prompt_cache_miss_tokens: int = Field(ge=0)
 
     @model_validator(mode="after")
     def validate_totals(self) -> ModelUsage:
-        if self.cached_tokens > self.input_tokens:
-            raise ValueError("cached token count cannot exceed input token count")
+        if self.prompt_cache_hit_tokens + self.prompt_cache_miss_tokens != self.prompt_tokens:
+            raise ValueError("cache hit and miss token counts must equal prompt tokens")
+        if self.prompt_tokens + self.completion_tokens != self.total_tokens:
+            raise ValueError("prompt and completion token counts must equal total tokens")
         return self
+
+    @property
+    def input_tokens(self) -> int:
+        return self.prompt_tokens
+
+    @property
+    def output_tokens(self) -> int:
+        return self.completion_tokens
+
+    @property
+    def cached_tokens(self) -> int:
+        return self.prompt_cache_hit_tokens
 
 
 class ModelResponse(BaseModel):
@@ -43,6 +56,7 @@ class ModelResponse(BaseModel):
     usage: ModelUsage
     provider_request_id: str | None = None
     finish_reason: str | None = None
+    system_fingerprint: str | None = None
 
 
 _SAFE_ERROR_MESSAGES = {
@@ -76,6 +90,8 @@ class ProviderRequestError(RuntimeError):
         provider_request_id: str | None = None,
         retry_after_seconds: float | None = None,
         usage: ModelUsage | None = None,
+        response_model: str | None = None,
+        system_fingerprint: str | None = None,
     ) -> None:
         super().__init__(_SAFE_ERROR_MESSAGES.get(error_code, "Provider request failed safely."))
         self.error_code = error_code
@@ -84,6 +100,8 @@ class ProviderRequestError(RuntimeError):
         self.provider_request_id = provider_request_id
         self.retry_after_seconds = retry_after_seconds
         self.usage = usage
+        self.response_model = response_model
+        self.system_fingerprint = system_fingerprint
 
     def as_safe_dict(self) -> dict[str, object | None]:
         return {

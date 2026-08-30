@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 COMPOSE_FILE = REPO_ROOT / "infra" / "online" / "docker-compose.yml"
 ENV_EXAMPLE = REPO_ROOT / "infra" / "online" / ".env.example"
 API_DOCKERFILE = REPO_ROOT / "infra" / "online" / "Dockerfile.api"
-PROVIDER_SECRET = "storylens_online_aliyun_bailian_api_key"
+PROVIDER_SECRET = "storylens_online_deepseek_api_key"
 
 
 def test_provider_secret_is_mounted_only_into_worker() -> None:
@@ -29,7 +29,7 @@ def test_provider_secret_is_mounted_only_into_worker() -> None:
 
     worker_environment = services["online-worker"]["environment"]
     assert worker_environment["STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE"] == (
-        "/run/secrets/storylens_online_aliyun_bailian_api_key"
+        "/run/secrets/storylens_online_deepseek_api_key"
     )
     for service in services.values():
         environment_text = str(service.get("environment", {})).lower()
@@ -58,13 +58,13 @@ def test_api_receives_only_gate_allowlist_and_limits() -> None:
     assert "STORYLENS_ONLINE_PHASE2B1_ENABLED" in api_environment
     assert "STORYLENS_ONLINE_PHASE2B1_ALLOWLISTED_USER_IDS_CSV" in api_environment
     assert "STORYLENS_ONLINE_PHASE2B1_TEXT_MAX_BYTES" in api_environment
-    assert "STORYLENS_ONLINE_PHASE2B1_CHAT_COMPLETIONS_URL" not in api_environment
+    assert "STORYLENS_ONLINE_PHASE2B1_BASE_URL" not in api_environment
     assert "STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE" not in api_environment
     assert "STORYLENS_ONLINE_PHASE2B1_PRICING_VERSION" not in api_environment
 
-    assert "STORYLENS_ONLINE_PHASE2B1_CHAT_COMPLETIONS_URL" in worker_environment
+    assert worker_environment["STORYLENS_ONLINE_PHASE2B1_BASE_URL"] == ("https://api.deepseek.com")
     assert "STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE" in worker_environment
-    assert "STORYLENS_ONLINE_PHASE2B1_PRICING_VERSION" in worker_environment
+    assert "STORYLENS_ONLINE_PHASE2B1_PRICING_VERSION" not in worker_environment
 
 
 def test_secret_value_is_absent_from_tracked_configuration_and_image() -> None:
@@ -78,3 +78,21 @@ def test_secret_value_is_absent_from_tracked_configuration_and_image() -> None:
     assert "API_KEY" not in dockerfile
     assert "ARG STORYLENS_ONLINE_PHASE2B1" not in dockerfile
     assert "Authorization" not in compose
+
+
+def test_superseded_provider_has_no_runtime_test_or_deployment_reference() -> None:
+    roots = (
+        REPO_ROOT / "apps" / "online_api",
+        REPO_ROOT / "apps" / "online_web" / "src",
+        REPO_ROOT / "infra" / "online",
+        REPO_ROOT / "docs" / "online",
+    )
+    banned = ("ali" + "yun", "bai" + "lian", "qw" + "en")
+    for root in roots:
+        for path in root.rglob("*"):
+            if not path.is_file() or "__pycache__" in path.parts:
+                continue
+            if path.suffix not in {".py", ".ts", ".tsx", ".yml", ".yaml", ".md", ".example"}:
+                continue
+            lowered = path.read_text(encoding="utf-8").lower()
+            assert not any(marker in lowered for marker in banned), path

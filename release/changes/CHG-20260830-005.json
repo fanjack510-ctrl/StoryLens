@@ -5,7 +5,14 @@
   "base_version": "1.3.6",
   "status": "registered",
   "include_in_next_release": false,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "f089b5323244d439c3a291fa25e15da30fe1788b",
+      "message": "feat(online): add guarded real model analysis (CHG-20260830-005)",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "online-api",
     "online-web",
@@ -21,47 +28,56 @@
     "release/changes/CHG-20260830-005.json"
   ],
   "user_summary": "为香港 Online Beta 增加仅对白名单开放的受控 TXT 真实模型分析，逐次记录 Token 与内部人民币成本，保持用户不扣费。",
-  "technical_summary": "Phase 2B1 固定使用阿里云百炼华北2 OpenAI 兼容 Chat Completions 和 qwen3.7-plus-2026-05-26，由 Worker-only 文件型 Secret 提供 API Key；复用 Phase 2A 上传、任务、Redis 队列、租约、幂等和结果接口，新增确定性段落 ID、严格 JSON Schema/Pydantic/证据集合三重校验、逐 HTTP 尝试用量账本、Decimal 价格快照和单任务成本上限。明确连接前失败与 429 可在两次总调用内重试；完整响应但结构或证据非法在 usage 完整时可重试；post-send timeout、响应丢失和遗留 started 关闭为 unknown 且禁止自动重试；usage 缺失但可能计费时关闭为 accounting_incomplete。phase2a_smoke 保持默认且不调用 Provider。",
+  "technical_summary": "f089b5323244d439c3a291fa25e15da30fe1788b 是未部署的阿里云百炼/Qwen Phase 2B1 初始实现，本追加变更将它完整替换为 DeepSeek 官方 HTTPS API 与固定 deepseek-v4-flash 模型，不保留双 Provider 运行时。Worker-only 文件型 Secret 提供 API Key；请求固定关闭 thinking/stream，使用 JSON Object，返回后再执行 JSON、Pydantic 和真实段落 ID 校验。账本精确记录 DeepSeek prompt/completion/total 以及 cache hit/miss Token、响应 ID/模型/指纹、UTC 发送时间、峰值或非峰值美元单价、美元成本、固定汇率版本与 Decimal 人民币成本。连接前失败、明确 429 以及 usage 完整的无效响应可在两次总调用内受控重试；post-send timeout、响应中断、5xx 和遗留 started 保守关闭＋usage 或缓存拆分不完整时写 accounting_incomplete 并禁止再调用。phase2a_smoke 保持默认且零 Provider 调用。",
   "acceptance_criteria": [
     "phase2a_smoke 保持默认、零 Provider 调用、零用量账本写入",
     "phase2b1_txt_evidence_summary 仅在全局开关开启且用户位于服务端白名单时可创建和执行",
     "每次 Provider 尝试在调用前持久化，成功、失败、无效响应和未知状态均可审计并参与任务汇总",
     "所有模型文学结论通过 Pydantic 与真实段落 ID 双重校验",
     "Provider API Key 仅由 online-worker 的文件型 Secret 读取，不进入环境变量、镜像、日志、API、Web 或测试快照",
-    "实际 Provider 成本使用 Decimal 和冻结价格快照记录，customer_charge_cny 与公开 charged_cny 永远为零",
+    "实际 Provider 成本使用 Decimal，按 request_sent_at UTC 冻结 DeepSeek 峰值/非峰值美元单价和 6.7811 汇率版本，customer_charge_cny 与公开 charged_cny 永远为零",
     "钱包、费用预留、交易、充值和爱发电逻辑零写入",
     "VERSION 保持 1.3.6，桌面端、本地 API 和冻结发布清单零修改"
   ],
   "tests": [
     "在线后端与 Worker 全量测试",
-    "Provider Fake transport、重试、未知调用、证据校验、成本上限和逐尝试汇总回归",
-    "PostgreSQL 增量迁移首次执行、重复执行和 Phase 2A 快照升级",
+    "DeepSeek Fake transport 官方协议、JSON Object、缓存拆分、完整 usage、响应元数据、重试和未知调用回归",
+    "PostgreSQL 增量迁移首次执行、重复执行、部分新列修复和 Phase 2A 快照升级",
+    "DeepSeek 峰值/非峰值边界、USD 成本、CNY 汇率换算、发送前最坏成本门禁与逐尝试汇总",
     "在线前端 TypeScript、Vitest 与 production build",
     "Ruff、compileall、Compose config、Secret 边界与镜像定义静态审计",
     "scripts/check_project.py、scripts/change_registry.py check 与 git diff --check"
   ],
   "verification_evidence": [
-    "apps/online_api 全量测试：97 passed；覆盖成功、429、ConnectError、非法 JSON、非法证据 ID、ReadTimeout/unknown、5xx、崩溃恢复、两次尝试汇总、成本上限、白名单、请求策略字段拒绝、幂等冲突及 Phase 2A 零 Provider 调用",
-    "Phase 2A 数据快照增量升级、首次迁移与重复迁移测试：passed；online_model_usage_ledger 未删除、重建或清空",
+    "apps/online_api 全量测试：110 passed；覆盖 DeepSeek 成功、429、ConnectError、空 content、非法 JSON、非法证据 ID、usage/缓存拆分不完整、ReadTimeout/unknown、5xx、遗留 started、两次尝试汇总、成本上限、双重白名单、客户端 Provider 字段拒绝、幂等冲突及 Phase 2A 零 Provider 调用",
+    "Phase 2A 数据快照增量升级、首次迁移、重复迁移与已存在部分 DeepSeek 新列测试：passed；online_model_usage_ledger 未删除、重建或清空，原唯一边界保持有效",
     "Ruff check 与 format check：passed；Python compileall：passed",
     "Online Web TypeScript typecheck：passed；Vitest：7 passed；production build：passed",
-    "Docker Compose config --quiet：passed；静态合同验证 Provider Secret 只挂 online-worker，API/Web/Gateway/PocketBase/Init 不挂载，Worker 是唯一新增 egress 的服务",
+    "Docker Compose config --quiet：passed；静态合同验证 storylens_online_deepseek_api_key 只挂 online-worker，API/Web/Gateway/PocketBase/Init 不挂载，公网端口边界不变",
     "scripts/change_registry.py check：passed；scripts/check_project.py：passed；git diff --check：passed；VERSION=1.3.6",
     "钱包、费用预留、交易、充值和爱发电相关表在 Phase 2B1 Worker 回归中保持零写入，customer_charge_cny 与公开 charged_cny 均为 0",
-    "本机 Docker Desktop Linux engine 未运行，因此未声称镜像构建、容器 inspect/image history 或真实 Provider 烟测通过；这些项目保留为香港隔离私有验收门禁",
+    "运行时代码、配置、Compose、在线测试与部署文档中已清除 Bailian/Qwen 引用；CHG 历史记录仅保留 f089b532 被取代证据",
+    "本机 Docker Desktop Linux engine 未运行，因此未声称镜像构建、容器 inspect/image history 或真实 DeepSeek 烟测通过；这些项目保留为香港隔离私有验收门禁",
     "未操作香港服务器，未使用真实 API Key，未推送、发布或创建标签"
   ],
   "data_compatibility": {
     "database_changed": true,
     "migration_required": true,
     "user_data_compatible": true,
-    "notes": "只对 online_model_usage_ledger 执行版本化、幂等、仅增列迁移并增加确定性唯一边界；不删除、重建或清空既有表，不修改钱包表结构。"
+    "notes": "只对 online_model_usage_ledger 执行版本化、幂等、仅增列迁移，新增 DeepSeek 缓存未命中、响应模型/指纹、UTC 发送时间、USD 价格/成本与汇率快照；不删除、重建或清空既有表，不修改钱包表结构。"
   },
   "release_impact": {
     "requires_reanalysis": false,
     "requires_restart": true,
     "updater_impact": false,
     "breaking_change": false
+  },
+  "superseded_implementation": {
+    "commit": "f089b5323244d439c3a291fa25e15da30fe1788b",
+    "provider": "aliyun_bailian",
+    "state": "superseded_before_deployment",
+    "artifact": "D:/Storylens/Deploy/storylens-online-phase2b1-f089b532.tar.gz",
+    "artifact_policy": "obsolete; forbidden for Hong Kong acceptance or deployment"
   },
   "related_changes": [
     {
@@ -78,7 +94,7 @@
     }
   ],
   "blocker_level": "none",
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-30T00:00:00Z",
-  "updated_at": "2026-08-30T15:28:20Z"
+  "updated_at": "2026-08-30T16:49:48Z"
 }

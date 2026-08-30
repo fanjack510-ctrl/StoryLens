@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from decimal import Decimal
 from pathlib import Path
-from typing import Literal
+from typing import ClassVar, Literal
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
@@ -68,9 +68,9 @@ class OnlineSettings(BaseSettings):
     # file settings are supplied exclusively to the worker container.
     phase2b1_enabled: bool = False
     phase2b1_allowlisted_user_ids_csv: str = ""
-    phase2b1_provider: Literal["aliyun_bailian"] = "aliyun_bailian"
-    phase2b1_model: Literal["qwen3.7-plus-2026-05-26"] = "qwen3.7-plus-2026-05-26"
-    phase2b1_chat_completions_url: str | None = None
+    phase2b1_provider: ClassVar[Literal["deepseek"]] = "deepseek"
+    phase2b1_model: ClassVar[Literal["deepseek-v4-flash"]] = "deepseek-v4-flash"
+    phase2b1_base_url: str | None = None
     phase2b1_api_key_file: str | None = None
     phase2b1_text_max_characters: int = Field(default=20_000, ge=1, le=20_000)
     phase2b1_text_max_bytes: int = Field(default=60_000, ge=1, le=60_000)
@@ -78,19 +78,22 @@ class OnlineSettings(BaseSettings):
     phase2b1_max_completion_tokens: int = Field(default=2_048, ge=1, le=2_048)
     phase2b1_max_provider_calls: int = Field(default=2, ge=1, le=2)
     phase2b1_cost_cap_cny: Decimal = Field(
-        default=Decimal("0.35"),
+        default=Decimal("0.50"),
         gt=Decimal(0),
-        le=Decimal("0.35"),
+        le=Decimal("0.50"),
     )
     phase2b1_request_timeout_seconds: float = Field(default=120.0, ge=1.0, le=300.0)
     phase2b1_retry_initial_seconds: float = Field(default=1.0, ge=0.1, le=60.0)
     phase2b1_retry_max_seconds: float = Field(default=10.0, ge=0.1, le=120.0)
-    phase2b1_pricing_version: Literal["aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30"] = (
-        "aliyun-cn-beijing-qwen3.7-plus-2026-05-26@2026-08-30"
-    )
-    phase2b1_input_per_million_cny: Decimal = Field(default=Decimal(2), ge=Decimal(0))
-    phase2b1_cached_per_million_cny: Decimal = Field(default=Decimal("0.4"), ge=Decimal(0))
-    phase2b1_output_per_million_cny: Decimal = Field(default=Decimal(8), ge=Decimal(0))
+    phase2b1_pricing_version: ClassVar[str] = "deepseek-v4-flash@2026-08-30"
+    phase2b1_fx_rate_version: ClassVar[str] = "safe-usdcny-central-parity-2026-08-28"
+    phase2b1_fx_rate_to_cny: ClassVar[Decimal] = Decimal("6.7811")
+    phase2b1_off_peak_cache_hit_usd: ClassVar[Decimal] = Decimal("0.007")
+    phase2b1_off_peak_cache_miss_usd: ClassVar[Decimal] = Decimal("0.22")
+    phase2b1_off_peak_output_usd: ClassVar[Decimal] = Decimal("0.66")
+    phase2b1_peak_cache_hit_usd: ClassVar[Decimal] = Decimal("0.014")
+    phase2b1_peak_cache_miss_usd: ClassVar[Decimal] = Decimal("0.44")
+    phase2b1_peak_output_usd: ClassVar[Decimal] = Decimal("1.32")
 
     @field_validator("frontend_origin")
     @classmethod
@@ -115,16 +118,14 @@ class OnlineSettings(BaseSettings):
             raise ValueError("runtime path and names must not be empty")
         return value.strip()
 
-    @field_validator("phase2b1_chat_completions_url")
+    @field_validator("phase2b1_base_url")
     @classmethod
     def validate_phase2b1_url(cls, value: str | None) -> str | None:
         if value is None or not value.strip():
             return None
-        from storylens_online.providers.aliyun_bailian import (
-            validate_chat_completions_url,
-        )
+        from storylens_online.providers.deepseek import validate_base_url
 
-        return validate_chat_completions_url(value.strip())
+        return validate_base_url(value.strip())
 
     @field_validator("phase2b1_api_key_file")
     @classmethod
@@ -169,13 +170,6 @@ class OnlineSettings(BaseSettings):
                 raise ValueError(
                     "Phase 2B1 request and retry budget must remain below the worker lease"
                 )
-        frozen_prices = (
-            self.phase2b1_input_per_million_cny,
-            self.phase2b1_cached_per_million_cny,
-            self.phase2b1_output_per_million_cny,
-        )
-        if frozen_prices != (Decimal(2), Decimal("0.4"), Decimal(8)):
-            raise ValueError("Phase 2B1 pricing must match the approved immutable snapshot")
         return self
 
     @property

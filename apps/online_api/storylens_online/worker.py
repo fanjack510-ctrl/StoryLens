@@ -6,6 +6,7 @@ import logging
 import signal
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from functools import partial
 from threading import Event
 from types import FrameType
@@ -68,6 +69,7 @@ class Phase2AWorker:
         settings: OnlineSettings | None = None,
         provider: ModelProvider | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.database = database
         self.storage = storage
@@ -75,6 +77,7 @@ class Phase2AWorker:
         self.settings = settings
         self.provider = provider
         self.sleep = sleep
+        self.clock = clock or (lambda: datetime.now(UTC))
         self.repository = OnlineRepository()
 
     def process_job(self, job_id: str) -> bool:
@@ -157,14 +160,6 @@ class Phase2AWorker:
         if prompt_token_upper_bound > settings.phase2b1_prompt_max_tokens:
             raise ProcessingFailure("phase2b1_prompt_tokens_exceeded")
 
-        pricing = phase2b1_pricing_snapshot(
-            provider=settings.phase2b1_provider,
-            model=settings.phase2b1_model,
-            pricing_version=settings.phase2b1_pricing_version,
-            input_per_million_cny=settings.phase2b1_input_per_million_cny,
-            cached_input_per_million_cny=settings.phase2b1_cached_per_million_cny,
-            output_per_million_cny=settings.phase2b1_output_per_million_cny,
-        )
         valid_ids = frozenset(paragraph_id for paragraph_id, _ in paragraphs)
 
         with self.database.session() as session:
@@ -185,6 +180,7 @@ class Phase2AWorker:
             next_attempt = max((attempt.attempt_no for attempt in attempts), default=0) + 1
 
         while next_attempt <= settings.phase2b1_max_provider_calls:
+            pricing = self._pricing_snapshot(self.clock())
             if not self._provider_attempt_within_cost_cap(
                 job.id,
                 prompt_token_upper_bound,
@@ -264,8 +260,11 @@ class Phase2AWorker:
                     total_tokens=response.usage.total_tokens,
                     input_tokens=response.usage.input_tokens,
                     cached_tokens=response.usage.cached_tokens,
+                    prompt_cache_miss_tokens=response.usage.prompt_cache_miss_tokens,
                     output_tokens=response.usage.output_tokens,
                     provider_request_id=response.provider_request_id,
+                    provider_response_model=response.model,
+                    system_fingerprint=response.system_fingerprint,
                 )
                 aggregate = self.repository.aggregate_model_usage(session, job.id)
                 if aggregate.provider_cost_cny > settings.phase2b1_cost_cap_cny:
@@ -281,6 +280,24 @@ class Phase2AWorker:
         self._record_failure(job.id, "provider_attempt_limit_exceeded")
         return False
 
+    def _pricing_snapshot(self, request_sent_at: datetime) -> ModelPricingSnapshot:
+        assert self.settings is not None
+        settings = self.settings
+        return phase2b1_pricing_snapshot(
+            provider=settings.phase2b1_provider,
+            model=settings.phase2b1_model,
+            pricing_version=settings.phase2b1_pricing_version,
+            request_sent_at=request_sent_at,
+            fx_rate_to_cny=settings.phase2b1_fx_rate_to_cny,
+            fx_rate_version=settings.phase2b1_fx_rate_version,
+            off_peak_cache_hit_usd=settings.phase2b1_off_peak_cache_hit_usd,
+            off_peak_cache_miss_usd=settings.phase2b1_off_peak_cache_miss_usd,
+            off_peak_output_usd=settings.phase2b1_off_peak_output_usd,
+            peak_cache_hit_usd=settings.phase2b1_peak_cache_hit_usd,
+            peak_cache_miss_usd=settings.phase2b1_peak_cache_miss_usd,
+            peak_output_usd=settings.phase2b1_peak_output_usd,
+        )
+
     def _provider_attempt_within_cost_cap(
         self,
         job_id: str,
@@ -291,6 +308,7 @@ class Phase2AWorker:
         worst_case = calculate_internal_model_cost(
             input_tokens=prompt_token_upper_bound,
             cached_tokens=0,
+            prompt_cache_miss_tokens=prompt_token_upper_bound,
             output_tokens=self.settings.phase2b1_max_completion_tokens,
             pricing=pricing,
         ).provider_cost_cny
@@ -331,8 +349,11 @@ class Phase2AWorker:
                 total_tokens=response.usage.total_tokens,
                 input_tokens=response.usage.input_tokens,
                 cached_tokens=response.usage.cached_tokens,
+                prompt_cache_miss_tokens=response.usage.prompt_cache_miss_tokens,
                 output_tokens=response.usage.output_tokens,
                 provider_request_id=response.provider_request_id,
+                provider_response_model=response.model,
+                system_fingerprint=response.system_fingerprint,
                 error_code=error_code,
             )
 
@@ -381,8 +402,13 @@ class Phase2AWorker:
                 total_tokens=usage.total_tokens if usage is not None else 0,
                 input_tokens=usage.input_tokens if usage is not None else 0,
                 cached_tokens=usage.cached_tokens if usage is not None else 0,
+                prompt_cache_miss_tokens=(
+                    usage.prompt_cache_miss_tokens if usage is not None else None
+                ),
                 output_tokens=usage.output_tokens if usage is not None else 0,
                 provider_request_id=error.provider_request_id,
+                provider_response_model=error.response_model,
+                system_fingerprint=error.system_fingerprint,
                 error_code=error.error_code.lower(),
             )
         if not self._aggregate_within_cost_cap(job_id):
