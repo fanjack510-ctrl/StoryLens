@@ -17,6 +17,12 @@
       "message": "fix(online): switch Phase 2B1 provider to DeepSeek (CHG-20260830-005)",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "eaf16a3ead0b57c99e1048e6b16af8f32354f4ca",
+      "message": "fix(online): safely stage Worker provider secret (CHG-20260830-005)",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -118,7 +124,8 @@
   "replacement_artifact": {
     "name_pattern": "storylens-online-phase2b1-deepseek-secretfix-<final-head-short>.tar.gz",
     "source": "git archive from final local HEAD",
-    "state": "pending_generation_after_local_validation"
+    "state": "approved_for_generation_after_final_local_registration_commit",
+    "metadata_policy": "Exact final path, byte size and SHA256 are reported outside Git after generation; deployment verification records them after Hong Kong acceptance."
   },
   "related_changes": [
     {
@@ -137,5 +144,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-30T00:00:00Z",
-  "updated_at": "2026-08-31T00:00:00Z"
+  "updated_at": "2026-08-31T11:32:07Z"
 }
