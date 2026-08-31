@@ -286,6 +286,44 @@ def test_sent_failure_without_usage_is_accounting_incomplete(beta_harness: BetaH
         assert attempts[0].usage_reported is False
 
 
+def test_unavailable_secret_is_presend_zero_cost_and_never_billed(
+    beta_harness: BetaHarness,
+) -> None:
+    job = create_real_job(beta_harness)
+    provider = FakeProvider(
+        [
+            ProviderRequestError(
+                error_code="PROVIDER_SECRET_UNAVAILABLE",
+                http_request_sent=False,
+            )
+        ]
+    )
+    worker = make_worker(beta_harness, provider)
+
+    assert worker.process_job(job["id"]) is False
+    assert len(provider.requests) == 1
+    with beta_harness.database.session() as session:
+        stored = session.get(OnlineAnalysisJob, job["id"])
+        attempts = OnlineRepository.list_model_attempts(session, job["id"])
+        aggregate = OnlineRepository.aggregate_model_usage(session, job["id"])
+        assert stored is not None
+        assert stored.public_error_code == "provider_request_failed"
+        assert len(attempts) == 1
+        assert attempts[0].status == ModelAttemptStatus.FAILED.value
+        assert attempts[0].error_code == "provider_secret_unavailable"
+        assert attempts[0].http_request_sent is False
+        assert attempts[0].usage_reported is False
+        assert attempts[0].provider_request_id is None
+        assert attempts[0].total_tokens == 0
+        assert attempts[0].provider_cost_cny == 0
+        assert attempts[0].customer_charge_cny == 0
+        assert aggregate.total_tokens == 0
+        assert aggregate.provider_cost_cny == 0
+        assert aggregate.customer_charge_cny == 0
+        for model in (WalletAccount, RechargeOrder, WalletTransaction, BillingReservation):
+            assert session.scalar(select(func.count()).select_from(model)) == 0
+
+
 def test_server_error_with_usage_is_costed_but_not_retried(beta_harness: BetaHarness) -> None:
     job = create_real_job(beta_harness)
     provider = FakeProvider(

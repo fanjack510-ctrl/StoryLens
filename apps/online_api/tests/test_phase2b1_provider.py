@@ -326,6 +326,9 @@ async def test_secret_file_is_required_and_never_returned(tmp_path) -> None:
     with pytest.raises(ProviderRequestError) as raised:
         await provider.generate(_request())
     assert raised.value.error_code == "PROVIDER_SECRET_UNAVAILABLE"
+    assert raised.value.http_request_sent is False
+    assert raised.value.provider_request_id is None
+    assert raised.value.usage is None
     assert str(missing) not in str(raised.value.as_safe_dict())
 
 

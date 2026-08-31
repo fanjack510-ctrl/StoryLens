@@ -7,13 +7,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /srv/storylens-online
 
 COPY apps/online_api/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY apps/online_api/storylens_online ./storylens_online
+COPY --chown=root:root infra/online/worker-entrypoint.sh /usr/local/bin/storylens-online-worker-entrypoint
 
-RUN useradd --create-home --uid 10001 storylens \
+RUN groupadd --gid 10001 storylens \
+    && useradd --create-home --uid 10001 --gid 10001 storylens \
     && mkdir -p /srv/storylens-online/uploads \
-    && chown -R storylens:storylens /srv/storylens-online/uploads
+    && chown -R storylens:storylens /srv/storylens-online/uploads \
+    && chmod 0555 /usr/local/bin/storylens-online-worker-entrypoint
 USER storylens
 
 EXPOSE 8080

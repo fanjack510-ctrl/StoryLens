@@ -123,14 +123,53 @@ The provider credential is a Docker file-backed secret named
 API, web, gateway, PocketBase, init service, images, build arguments, rendered
 Compose configuration, and application environment never receive the key.
 
+On the Hong Kong Docker Compose runtime, a local file-backed Secret preserves
+the host file's `root:root 600` ownership; Compose `uid`/`gid`/`mode` metadata
+cannot remap that bind-mounted inode for the non-root Worker. The Worker
+therefore has a dedicated entrypoint that starts as root only long enough to
+validate the source and copy its exact bytes into the container-local
+`/run/storylens-online` tmpfs. The tmpfs is `noexec,nosuid,nodev`, limited to
+64 KiB, and disappears with the container. Its directory becomes
+`0700:10001:10001` and the copied `deepseek-api-key` becomes
+`0400:10001:10001`; the original remains `0600:0:0`. The entrypoint then uses
+`gosu` and `exec` to run database initialization and the Worker as the existing
+non-root `storylens` identity (`10001:10001`), including PID 1. The API never
+uses this root entrypoint and keeps the image's default non-root user.
+
+When `PHASE2B1_ENABLED=false`, the entrypoint does not stat, read, validate, or
+copy the Provider Secret; it only drops privileges and starts the unchanged
+Worker path. When enabled, a missing, non-regular, empty, multiline, whitespace-
+containing, NUL-containing, malformed, or unstaggable key fails before schema
+initialization and the task loop. The only permitted initialization error is
+`Worker secret initialization failed safely.`; it contains no path, key,
+length, prefix, digest, or underlying command output.
+
 Create the file directly on the server without placing the key in shell
-history. Keep the global gate disabled and the allowlist empty until isolated
-acceptance is approved:
+history. The fixed prompt below reads it without terminal echo and writes no
+trailing newline (the entrypoint deliberately rejects CR/LF and whitespace).
+Keep the global gate disabled and the allowlist empty until isolated acceptance
+is approved:
 
 ```bash
 sudo install -m 600 -o root -g root /dev/null \
   /opt/storylens/shared/secrets/deepseek-api-key
-sudoedit /opt/storylens/shared/secrets/deepseek-api-key
+sudo python3 - <<'PY'
+import getpass
+import os
+import re
+
+path = "/opt/storylens/shared/secrets/deepseek-api-key"
+value = getpass.getpass("DeepSeek API Key: ").encode("ascii")
+if re.fullmatch(rb"sk-[A-Za-z0-9_-]{16,256}", value) is None:
+    raise SystemExit("Invalid DeepSeek API Key format.")
+descriptor = os.open(path, os.O_WRONLY | os.O_TRUNC)
+with os.fdopen(descriptor, "wb") as secret_file:
+    secret_file.write(value)
+    secret_file.flush()
+    os.fsync(secret_file.fileno())
+PY
+sudo chown root:root /opt/storylens/shared/secrets/deepseek-api-key
+sudo chmod 600 /opt/storylens/shared/secrets/deepseek-api-key
 ```
 
 `online.env` contains only the host path and non-secret policy values:
@@ -158,7 +197,7 @@ intervals (left-closed, right-open): cache hit/miss/output cost
 `safe-usdcny-central-parity-2026-08-28`; the per-task Provider cap is `0.50 CNY`.
 These values are code-frozen and are not accepted from browser or API payloads.
 
-Before enabling the gate, confirm Secret placement without printing its value:
+Before enabling the gate, confirm the mount boundary without printing its value:
 
 ```bash
 docker compose --env-file online.env config | grep -q 'storylens_online_deepseek_api_key'
@@ -174,7 +213,79 @@ for service in gateway online-api online-web pocketbase pocketbase-init; do
 done
 ```
 
-Never print, hash, copy, or scan the secret value itself as part of routine
+After starting an isolated Worker with the gate enabled, verify source and
+tmpfs permissions, read boundaries, tmpfs restrictions, and the final PID 1
+identity without reading the key to stdout:
+
+```bash
+worker_id="$(docker compose --env-file online.env ps -q online-worker)"
+api_id="$(docker compose --env-file online.env ps -q online-api)"
+
+test "$(docker exec -u 0 "$worker_id" stat -c '%a:%u:%g' \
+  /run/secrets/storylens_online_deepseek_api_key)" = "600:0:0"
+test "$(docker exec -u 0 "$worker_id" stat -c '%a:%u:%g' \
+  /run/storylens-online/deepseek-api-key)" = "400:10001:10001"
+docker exec -u 10001:10001 "$worker_id" sh -c \
+  'test -r /run/storylens-online/deepseek-api-key && ! test -r /run/secrets/storylens_online_deepseek_api_key'
+docker exec -u 0 "$worker_id" awk \
+  '$1 == "Uid:" { exit !($2 == 10001 && $3 == 10001 && $4 == 10001 && $5 == 10001) }' \
+  /proc/1/status
+docker inspect "$worker_id" | python3 -c '
+import json, sys
+tmpfs = json.load(sys.stdin)[0]["HostConfig"]["Tmpfs"]
+options = set(tmpfs["/run/storylens-online"].split(","))
+required = {"rw", "noexec", "nosuid", "nodev"}
+size_ok = bool({"size=64k", "size=65536"} & options)
+mode_ok = bool({"mode=0700", "mode=700", "mode=448"} & options)
+raise SystemExit(0 if required <= options and size_ok and mode_ok else 1)
+'
+test "$(docker inspect "$worker_id" --format '{{json .Config.Entrypoint}}')" = \
+  '["/usr/local/bin/storylens-online-worker-entrypoint"]'
+test "$(docker inspect "$api_id" --format '{{json .Config.Entrypoint}}')" = 'null'
+```
+
+For the required real-value leak scan, keep the comparison entirely inside a
+root-only Python process: it reads the server Secret into memory, captures
+Compose rendering, container inspect, image history, and service logs, exits
+nonzero on a byte-for-byte match, and prints neither the key nor the captured
+material:
+
+```bash
+sudo PHASE2B1_SECRET_FILE=/opt/storylens/shared/secrets/deepseek-api-key \
+  python3 - <<'PY'
+import os
+import pathlib
+import subprocess
+
+secret = pathlib.Path(os.environ["PHASE2B1_SECRET_FILE"]).read_bytes()
+if not secret:
+    raise SystemExit(2)
+commands = [
+    ["docker", "compose", "--env-file", "online.env", "config"],
+    ["docker", "compose", "--env-file", "online.env", "logs", "--no-color"],
+]
+container_ids = subprocess.run(
+    ["docker", "compose", "--env-file", "online.env", "ps", "-aq"],
+    check=True,
+    stdout=subprocess.PIPE,
+).stdout.split()
+for container_id in container_ids:
+    commands.append(["docker", "inspect", container_id.decode("ascii")])
+image_ids = subprocess.run(
+    ["docker", "compose", "--env-file", "online.env", "images", "-q"],
+    check=True,
+    stdout=subprocess.PIPE,
+).stdout.split()
+for image_id in set(image_ids):
+    commands.append(["docker", "image", "history", "--no-trunc", image_id.decode("ascii")])
+for command in commands:
+    captured = subprocess.run(command, check=True, stdout=subprocess.PIPE).stdout
+    if secret in captured:
+        raise SystemExit(1)
+PY
+```
+
+Do not print, hash, persist, or pass the key through a shell variable during
 verification. Logs and public errors must not include API keys, uploaded TXT,
 prompts, raw provider bodies, or endpoint credentials.
 
@@ -268,7 +379,9 @@ use an isolated deployment and exactly one internal PocketBase user ID:
 1. Keep `phase2a_smoke` as the default and confirm it makes no outbound model
    request and creates no `online_model_usage_ledger` row.
 2. Mount the real key file only into `online-worker`, enable the Phase 2B1 gate,
-   and place only the internal user ID in the allowlist.
+   and place only the internal user ID in the allowlist. Verify the source stays
+   `600:0:0`, the tmpfs copy is `400:10001:10001`, the source is unreadable to
+   UID 10001, and `/proc/1/status` reports Worker PID 1 as UID 10001.
 3. Submit one non-sensitive TXT fixture and confirm every public overview/finding
    cites an input `P000001`-style paragraph ID.
 4. Reconcile every Provider attempt's prompt, completion, total, cache-hit and
@@ -286,8 +399,10 @@ use an isolated deployment and exactly one internal PocketBase user ID:
    change. Scan logs for Secret, fixture text, Prompt and raw Provider response
    patterns without printing those values.
 8. Inspect every container and image history. Only `online-worker` may reference
-   `/run/secrets/storylens_online_deepseek_api_key`; no image layer or
-   rendered environment may contain the key.
+   `/run/secrets/storylens_online_deepseek_api_key`; only that service may use
+   the staging entrypoint; no image layer, command argument, rendered
+   environment, inspect payload, or log may contain the key. Run the in-memory
+   real-value scan above and require exit code 0.
 
 Disable the gate and clear the allowlist after the isolated run. Phase 2B1 is not
 production-accepted until these real-Provider checks are recorded in its Change

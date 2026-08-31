@@ -69,6 +69,8 @@ services:
   online-worker:
     <<: *online-app
     restart: unless-stopped
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/storylens-online-worker-entrypoint"]
     command: ["sh", "-c", "python -m storylens_online.db.init_schema && exec python -m storylens_online.worker"]
     environment:
       STORYLENS_ONLINE_RUNTIME: hong_kong_beta
@@ -85,7 +87,7 @@ services:
       STORYLENS_ONLINE_PHASE2B1_ENABLED: ${PHASE2B1_ENABLED:-false}
       STORYLENS_ONLINE_PHASE2B1_ALLOWLISTED_USER_IDS_CSV: ${PHASE2B1_ALLOWLISTED_USER_IDS:-}
       STORYLENS_ONLINE_PHASE2B1_BASE_URL: https://api.deepseek.com
-      STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE: /run/secrets/storylens_online_deepseek_api_key
+      STORYLENS_ONLINE_PHASE2B1_API_KEY_FILE: /run/storylens-online/deepseek-api-key
       STORYLENS_ONLINE_PHASE2B1_TEXT_MAX_CHARACTERS: "20000"
       STORYLENS_ONLINE_PHASE2B1_TEXT_MAX_BYTES: "60000"
       STORYLENS_ONLINE_PHASE2B1_PROMPT_MAX_TOKENS: "64000"
@@ -107,6 +109,8 @@ services:
     secrets:
       - source: storylens_online_deepseek_api_key
         target: storylens_online_deepseek_api_key
+    tmpfs:
+      - /run/storylens-online:rw,noexec,nosuid,nodev,size=64k,mode=0700
     networks: [private, egress]
 
   online-web:
