@@ -40,7 +40,7 @@
     "release/changes/CHG-20260830-005.json"
   ],
   "user_summary": "为香港 Online Beta 增加仅对白名单开放的受控 TXT 真实模型分析，逐次记录 Token 与内部人民币成本，保持用户不扣费。",
-  "technical_summary": "f089b5323244d439c3a291fa25e15da30fe1788b 是未部署的阿里云百炼/Qwen Phase 2B1 初始实现，本追加变更将它完整替换为 DeepSeek 官方 HTTPS API 与固定 deepseek-v4-flash 模型，不保留双 Provider 运行时。Worker-only 文件型 Secret 提供 API Key；请求固定关闭 thinking/stream，使用 JSON Object，返回后再执行 JSON、Pydantic 和真实段落 ID 校验。账本精确记录 DeepSeek prompt/completion/total 以及 cache hit/miss Token、响应 ID/模型/指纹、UTC 发送时间、峰值或非峰值美元单价、美元成本、固定汇率版本与 Decimal 人民币成本。连接前失败、明确 429 以及 usage 完整的无效响应可在两次总调用内受控重试；post-send timeout、响应中断、5xx 和遗留 started 保守关闭＋usage 或缓存拆分不完整时写 accounting_incomplete 并禁止再调用。phase2a_smoke 保持默认且零 Provider 调用。香港隔离验收进一步证明本地 Compose 文件型 Secret 保留宿主 root:root 600，非 root Worker 无法直接读取；本追加修复以 Worker 专用 root entrypoint 将通过格式校验的原始字节暂存到受限 tmpfs，再用 gosu exec 为既有 10001:10001 身份运行数据库初始化和 Worker，API 与其他服务不使用该入口。",
+  "technical_summary": "f089b5323244d439c3a291fa25e15da30fe1788b 是未部署的阿里云百炼/Qwen Phase 2B1 初始实现，本追加变更将它完整替换为 DeepSeek 官方 HTTPS API 与固定 deepseek-v4-flash 模型，不保留双 Provider 运行时。Worker-only 文件型 Secret 提供 API Key；请求固定关闭 thinking/stream，使用 JSON Object，返回后再执行 JSON、Pydantic 和真实段落 ID 校验。账本精确记录 DeepSeek prompt/completion/total 以及 cache hit/miss Token、响应 ID/模型/指纹、UTC 发送时间、峰值或非峰值美元单价、美元成本、固定汇率版本与 Decimal 人民币成本。连接前失败、明确 429 以及 usage 完整的无效响应可在两次总调用内受控重试；post-send timeout、响应中断、5xx 和遗留 started 保守关闭＋usage 或缓存拆分不完整时写 accounting_incomplete 并禁止再调用。phase2a_smoke 保持默认且零 Provider 调用。香港隔离验收进一步证明本地 Compose 文件型 Secret 保留宿主 root:root 600，非 root Worker 无法直接读取；本追加修复以 Worker 专用 root entrypoint 将通过格式校验的原始字节暂存到受限 tmpfs，再用 gosu exec 为既有 10001:10001 身份运行数据库初始化和 Worker，API 与其他服务不使用该入口。正式首次部署随后暴露 API 与 Worker 同时检查并增列的 PostgreSQL 竞态；数据库初始化现改为在一个事务、一个 Connection 上先取得项目专用 pg_advisory_xact_lock，再依次执行 metadata.create_all 和 Phase 2B1 增量迁移，后到进程获得锁后重新检查实际 schema。",
   "acceptance_criteria": [
     "phase2a_smoke 保持默认、零 Provider 调用、零用量账本写入",
     "phase2b1_txt_evidence_summary 仅在全局开关开启且用户位于服务端白名单时可创建和执行",
@@ -49,6 +49,8 @@
     "Provider API Key 仅由 online-worker 的文件型 Secret 读取，不进入环境变量、镜像、日志、API、Web 或测试快照",
     "原始 Secret 保持 root:root 600 且只挂载给 online-worker；root 仅执行无泄露的一次性校验与 tmpfs 暂存，最终 PID 1、数据库初始化和 Worker 均为非 root 10001:10001",
     "Phase 2B1 关闭时不读取或复制 Provider Secret；开启时缺失、非普通文件、空值、空白、多行、NUL、格式或暂存失败均在任务循环前以固定安全文本失败关闭",
+    "API 与 Worker 可同时初始化数据库：PostgreSQL advisory transaction lock 在任何 schema 检查或 DDL 前取得并覆盖 create_all 与增量迁移，第二个进程等待后重新检查并幂等无操作",
+    "部分迁移可仅增量补齐；已存在但类型、nullable、默认值、唯一索引或检查约束定义不兼容时以固定无凭据错误失败关闭",
     "实际 Provider 成本使用 Decimal，按 request_sent_at UTC 冻结 DeepSeek 峰值/非峰值美元单价和 6.7811 汇率版本，customer_charge_cny 与公开 charged_cny 永远为零",
     "钱包、费用预留、交易、充值和爱发电逻辑零写入",
     "VERSION 保持 1.3.6，桌面端、本地 API 和冻结发布清单零修改"
@@ -57,6 +59,8 @@
     "在线后端与 Worker 全量测试",
     "DeepSeek Fake transport 官方协议、JSON Object、缓存拆分、完整 usage、响应元数据、重试和未知调用回归",
     "PostgreSQL 增量迁移首次执行、重复执行、部分新列修复和 Phase 2A 快照升级",
+    "PostgreSQL advisory lock 顺序、同事务同连接边界与双初始化一次实际增列并发契约回归",
+    "38 列定义、唯一索引及 PostgreSQL CHECK 约束定义不一致失败关闭回归",
     "DeepSeek 峰值/非峰值边界、USD 成本、CNY 汇率换算、发送前最坏成本门禁与逐尝试汇总",
     "在线前端 TypeScript、Vitest 与 production build",
     "Ruff、compileall、Compose config、Secret 边界与镜像定义静态审计",
@@ -64,7 +68,7 @@
     "scripts/check_project.py、scripts/change_registry.py check 与 git diff --check"
   ],
   "verification_evidence": [
-    "apps/online_api 全量测试：128 passed；在原 110 项继续通过的基础上，新增 Worker Secret entrypoint 及 provider_secret_unavailable 零成本回归；覆盖 DeepSeek 成功、429、ConnectError、空 content、非法 JSON、非法证据 ID、usage/缓存拆分不完整、ReadTimeout/unknown、5xx、遗留 started、两次尝试汇总、成本上限、双重白名单、客户端 Provider 字段拒绝、幂等冲突及 Phase 2A 零 Provider 调用",
+    "apps/online_api 全量测试：136 passed；在原 110 项继续通过的基础上，覆盖 Worker Secret entrypoint、provider_secret_unavailable 零成本、PostgreSQL 初始化锁与 schema 契约回归，以及 DeepSeek 成功、429、ConnectError、空 content、非法 JSON、非法证据 ID、usage/缓存拆分不完整、ReadTimeout/unknown、5xx、遗留 started、两次尝试汇总、成本上限、双重白名单、客户端 Provider 字段拒绝、幂等冲突及 Phase 2A 零 Provider 调用",
     "Worker Secret 定向测试：22 passed；覆盖 Compose 单服务挂载、root staging/non-root API 边界、受限 tmpfs、暂存路径、LF/100755、关闭时零 Secret 访问、成功原样复制＋10001:10001 gosu，缺失、空、格式非法、多行、CR、空格、NUL、目录输入，以及 install/chown/chmod/mv/gosu 故障的固定文本失败关闭",
     "DeepSeek/Secret/Worker 联合定向测试：62 passed；provider_secret_unavailable 明确为 http_request_sent=false、无 request ID、无 usage、Token/Provider 成本/customer charge 均为 0，钱包相关四类表零写入",
     "Phase 2A 数据快照增量升级、首次迁移、重复迁移与已存在部分 DeepSeek 新列测试：passed；online_model_usage_ledger 未删除、重建或清空，原唯一边界保持有效",
@@ -75,6 +79,9 @@
     "钱包、费用预留、交易、充值和爱发电相关表在 Phase 2B1 Worker 回归中保持零写入，customer_charge_cny 与公开 charged_cny 均为 0",
     "运行时代码、配置、Compose、在线测试与部署文档中已清除 Bailian/Qwen 引用；CHG 历史记录仅保留 f089b532 被取代证据",
     "本机 Docker Desktop Linux engine 未运行（named pipe 不存在），因此未声称镜像构建、运行时 uid/mode/tmpfs、PID 1、container inspect/image history 或真实 DeepSeek 烟测通过；这些项目保留为香港隔离私有验收门禁",
+    "数据库初始化与 Phase 2B1 迁移定向回归：12 passed；覆盖锁先于 create_all/schema 检查、同一 Connection 贯穿事务、两个并发初始化都成功且仅一次实际增列、Phase 2A 14 列快照升至 38 列、重复执行无变化、部分迁移恢复、旧上传/任务/账本行保留、唯一边界及错误列/索引/CHECK 定义失败关闭",
+    "本机 PostgreSQL 16 真实双连接验证：分别创建未迁移 Phase 2A 14 列临时数据库和已有 3 个 Phase 2B1 列的部分迁移临时数据库；每份均由两个独立 SQLAlchemy Engine 同时初始化并再重复执行一次，全部首次成功、最终 38 列、旧账本行保留且唯一 (analysis_run_id, attempt_no) 边界存在；两个明确命名的临时数据库随后已删除",
+    "香港仍须从未迁移 Phase 2A 快照和部分迁移快照恢复两个隔离副本完成容器级首次并发启动，且不能以 container restart 后成功替代首次成功",
     "未操作香港服务器，未使用真实 API Key，未推送、发布或创建标签"
   ],
   "hong_kong_isolation_failure": {
@@ -93,11 +100,27 @@
     "real_provider_cost_cny": "0",
     "customer_charge_cny": "0"
   },
+  "hong_kong_production_schema_race": {
+    "observed_against_commit": "6d03d9d7eeff6099fbc50d2df4f1025f4a5c8a73",
+    "environment": "Hong Kong formal Linux Docker first deployment",
+    "evidence": [
+      "online-api 与 online-worker 同时执行 python -m storylens_online.db.init_schema",
+      "两个进程并发检查 online_model_usage_ledger，均判断 attempt_no 不存在并执行 ALTER TABLE ADD COLUMN",
+      "一个进程成功，另一个以 psycopg.errors.DuplicateColumn 失败，Compose 因 online-api 首次启动失败报告 unhealthy",
+      "依赖 restart 策略后的偶然成功不属于可接受的迁移协议",
+      "香港已回滚应用到 ad896056，网站恢复 HTTP 200；正式 PostgreSQL 可能已保留完整 38 列增量 schema"
+    ],
+    "root_cause": "create_all 和 Phase 2B1 迁移未由同一个 PostgreSQL 事务锁串行化；迁移先经 Engine 检查 schema，随后在内部另取 Connection 执行 DDL，检查与增列之间存在 TOCTOU 竞态。",
+    "remediation": "初始化事务先取得固定项目专用 pg_advisory_xact_lock，并以同一 Connection 覆盖 metadata.create_all、实际 schema 复查和全部增量 DDL；增加防御性 IF NOT EXISTS 后仍严格验证列、唯一边界和 CHECK 定义。",
+    "rollback_state": "application_rolled_back_to_ad896056_site_http_200",
+    "database_policy": "不删除已完成的 38 列、不重建或清空账本；新初始化器对已完成 schema 重新验证后幂等无操作。",
+    "acceptance_state": "awaiting_hong_kong_two_snapshot_concurrency_retest"
+  },
   "data_compatibility": {
     "database_changed": true,
     "migration_required": true,
     "user_data_compatible": true,
-    "notes": "只对 online_model_usage_ledger 执行版本化、幂等、仅增列迁移，新增 DeepSeek 缓存未命中、响应模型/指纹、UTC 发送时间、USD 价格/成本与汇率快照；不删除、重建或清空既有表，不修改钱包表结构。"
+    "notes": "只对 online_model_usage_ledger 执行版本化、幂等、仅增列迁移，新增 DeepSeek 缓存未命中、响应模型/指纹、UTC 发送时间、USD 价格/成本与汇率快照；PostgreSQL 初始化由 transaction-level advisory lock 串行化并在同一 Connection 内检查和执行 DDL；不删除、重建或清空既有表，不修改钱包表结构。正式数据库可能已完成 38 列增量迁移，应用回滚不要求也不允许删除这些列。"
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -119,10 +142,17 @@
       "state": "superseded_after_hong_kong_secret_permission_failure",
       "reason": "Worker could not read the root:root 600 bind-backed Secret; no Provider request or cost occurred.",
       "artifact_policy": "obsolete; forbidden for Hong Kong acceptance or deployment"
+    },
+    {
+      "commit": "6d03d9d7eeff6099fbc50d2df4f1025f4a5c8a73",
+      "artifact": "D:/Storylens/Deploy/storylens-online-phase2b1-deepseek-secretfix-6d03d9d7.tar.gz",
+      "state": "superseded_after_hong_kong_postgresql_concurrent_migration_failure",
+      "reason": "API and Worker concurrently added attempt_no; one process failed with DuplicateColumn before its first application start.",
+      "artifact_policy": "obsolete; forbidden for Hong Kong acceptance or deployment"
     }
   ],
   "replacement_artifact": {
-    "name_pattern": "storylens-online-phase2b1-deepseek-secretfix-<final-head-short>.tar.gz",
+    "name_pattern": "storylens-online-phase2b1-deepseek-migrationfix-<final-head-short>.tar.gz",
     "source": "git archive from final local HEAD",
     "state": "approved_for_generation_after_final_local_registration_commit",
     "metadata_policy": "Exact final path, byte size and SHA256 are reported outside Git after generation; deployment verification records them after Hong Kong acceptance."
@@ -144,5 +174,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-30T00:00:00Z",
-  "updated_at": "2026-08-31T11:32:07Z"
+  "updated_at": "2026-09-01T00:00:00Z"
 }

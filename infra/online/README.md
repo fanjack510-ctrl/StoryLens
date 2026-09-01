@@ -348,8 +348,15 @@ fi
 After PostgreSQL is healthy, both application roles first run
 `python -m storylens_online.db.init_schema`. The initializer creates all seven
 currently registered `online_` tables with SQLAlchemy `metadata.create_all`, is
-safe to repeat, and never drops or truncates data. Uvicorn or the worker starts
-only after initialization succeeds.
+safe to repeat, and never drops or truncates data. On PostgreSQL, initialization
+opens one transaction, obtains the fixed StoryLens project
+`pg_advisory_xact_lock`, and then uses that same SQLAlchemy connection for both
+`metadata.create_all` and the additive Phase 2B1 ledger migration. A concurrent
+API or Worker initializer waits for the transaction lock and re-inspects the
+committed schema before doing any work. Commit, rollback, or connection loss
+automatically releases the lock. SQLite development tests skip the
+PostgreSQL-only lock statement. Uvicorn or the worker starts only after the
+transaction succeeds; container restart is not part of the migration protocol.
 
 The same check can be run explicitly:
 
@@ -357,6 +364,49 @@ The same check can be run explicitly:
 docker compose --env-file online.env run --rm online-api \
   python -m storylens_online.db.init_schema
 ```
+
+### PostgreSQL concurrent-initialization acceptance gate
+
+The Hong Kong isolated gate must use two independent database restores. Never
+test this by deleting columns from the formal database, and never roll back an
+already additive 38-column ledger merely because the application was rolled
+back. Preserve row counts and identifiers before and after each run.
+
+For snapshot A, restore an untouched Phase 2A database whose
+`online_model_usage_ledger` has 14 columns. Start the API and Worker at the same
+time, without relying on a restart policy:
+
+```bash
+docker compose --env-file online.env stop online-api online-worker
+docker compose --env-file online.env up --no-deps --no-recreate \
+  online-api online-worker
+docker compose --env-file online.env ps online-api online-worker
+if docker compose --env-file online.env logs --no-color online-api online-worker | \
+  grep -Eq 'DuplicateColumn|already exists|Traceback'; then
+  echo 'Concurrent initialization log gate failed.' >&2
+  exit 1
+fi
+```
+
+Both processes must complete their first initialization successfully. Neither
+container may restart, the ledger must have 38 columns, existing uploads, jobs,
+and ledger rows must be unchanged, and the only deterministic uniqueness
+boundary must remain `(analysis_run_id, attempt_no)`. Record restart counts with
+`docker inspect`, and query `information_schema.columns`, `pg_indexes`, and the
+preserved row identifiers without printing connection strings or secrets.
+
+For snapshot B, restore a separate Phase 2A database copy and apply only a
+strict subset of the Phase 2B1 additive columns using the exact definitions in
+the versioned migration. Then repeat the simultaneous API/Worker start. Both
+must succeed on their first process lifetime, complete the remaining columns
+and constraints once, preserve all rows, and become no-ops when the explicit
+initializer command is run again from both roles. A same-named column, index,
+or constraint with an incompatible definition must instead fail closed with
+the fixed schema-incompatible error; it must not be silently accepted.
+
+These two real-PostgreSQL runs are a deployment gate. SQLite and fake-connection
+concurrency tests prove ordering and idempotency contracts but do not replace
+the Hong Kong PostgreSQL lock-wait test.
 
 Before formal Phase 2A acceptance, run an isolated real-Redis worker smoke test:
 
