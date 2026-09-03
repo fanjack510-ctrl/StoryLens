@@ -3,7 +3,7 @@
   "title": "实现 StoryLens Online Phase 2B1 单一真实模型分析与内部成本账本",
   "type": "feature",
   "base_version": "1.3.6",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": false,
   "commits": [
     {
@@ -84,11 +84,17 @@
     "scripts/change_registry.py check：passed；scripts/check_project.py：passed；git diff --check：passed；VERSION=1.3.6",
     "钱包、费用预留、交易、充值和爱发电相关表在 Phase 2B1 Worker 回归中保持零写入，customer_charge_cny 与公开 charged_cny 均为 0",
     "运行时代码、配置、Compose、在线测试与部署文档中已清除 Bailian/Qwen 引用；CHG 历史记录仅保留 f089b532 被取代证据",
-    "本机 Docker Desktop Linux engine 未运行（named pipe 不存在），因此未声称镜像构建、运行时 uid/mode/tmpfs、PID 1、container inspect/image history 或真实 DeepSeek 烟测通过；这些项目保留为香港隔离私有验收门禁",
+    "修复提交时本机 Docker Desktop Linux engine 未运行（named pipe 不存在），本地测试未声称运行时容器或真实 DeepSeek 验收通过；当时保留的香港验收门禁现已由下述操作者提供的生产证据闭环，不追溯改写为本地验证结果",
     "数据库初始化与 Phase 2B1 迁移定向回归：12 passed；覆盖锁先于 create_all/schema 检查、同一 Connection 贯穿事务、两个并发初始化都成功且仅一次实际增列、Phase 2A 14 列快照升至 38 列、重复执行无变化、部分迁移恢复、旧上传/任务/账本行保留、唯一边界及错误列/索引/CHECK 定义失败关闭",
     "本机 PostgreSQL 16 真实双连接验证：分别创建未迁移 Phase 2A 14 列临时数据库和已有 3 个 Phase 2B1 列的部分迁移临时数据库；每份均由两个独立 SQLAlchemy Engine 同时初始化并再重复执行一次，全部首次成功、最终 38 列、旧账本行保留且唯一 (analysis_run_id, attempt_no) 边界存在；两个明确命名的临时数据库随后已删除",
-    "香港仍须从未迁移 Phase 2A 快照和部分迁移快照恢复两个隔离副本完成容器级首次并发启动，且不能以 container restart 后成功替代首次成功",
-    "未操作香港服务器，未使用真实 API Key，未推送、发布或创建标签"
+    "修复提交时要求的香港容器级双快照首次并发启动门禁已通过：14 列 Phase 2A 快照和合法 20 列部分迁移状态均升至 38 列，API/Worker restart=0，原有数据保留，唯一索引绑定正确；详见 deployment_status.concurrent_migration_acceptance",
+    "香港正式部署 4ae7f663999caad09f5f57c7cff3a2f82b81f924，current 指向 /opt/storylens/releases/4ae7f663；根地址 HTTP 200，health/live 为 status=ok、runtime=hong_kong_beta，五项依赖/服务 healthy，Worker running，pocketbase-init Exited (0)",
+    "香港 Worker Secret 运行时验收通过：原始 root:root 600 仅 Worker 挂载，tmpfs 副本 400:10001:10001，PID 1 UID/GID=10001，应用用户只能读取副本；64 KiB noexec/nosuid/nodev，关闭开关后无暂存 Secret，Compose/inspect/history/logs 扫描通过，公网仅 80/443",
+    "香港真实 DeepSeek 任务 9e183241-81bf-4ae9-ad03-e64bb04a83dd 成功：input=2891、cache hit=0、cache miss=2891、output=582、total=3473，usage 与缓存拆分均一致，Provider USD 成本 0.001020140、CNY 成本 0.006918，用户费用为 0，真实段落证据与公开结果隔离通过",
+    "香港零计费验收：wallet_accounts、billing_reservations、wallet_transactions、recharge_orders 均为 0，所有 usage ledger 的 customer_charge_cny 合计为 0",
+    "真实验证后 PHASE2B1_ENABLED=false、PHASE2B1_ALLOWLISTED_USER_IDS 为空，API healthy、Worker running、网站 HTTP 200、PRODUCTION_LOG_SAFETY=OK；回滚镜像、切换前数据库/PocketBase/uploads/Redis 备份与验收日志保留",
+    "2026-09-03 根据用户提供的香港部署操作者验收事实登记为 verified，仅指真实 AI 最小纵向链路通过生产白名单验收；未新增真实 429/超时/崩溃重试现场证据，既有 Fake/本地回归仍按原证据范围保留，不宣称公开 Beta、真实全书分析或正式收费已开放",
+    "本轮仅同步本地验收记录与路线图，未访问或操作香港服务器、未读取真实 API Key、未推送、发布或创建标签"
   ],
   "hong_kong_isolation_failure": {
     "observed_against_commit": "c32a8aea3ab68a16227c03c443024cca7a72e8b5",
@@ -104,7 +110,12 @@
     "acceptance_state": "failed_closed_before_provider_request",
     "real_provider_request_sent": false,
     "real_provider_cost_cny": "0",
-    "customer_charge_cny": "0"
+    "customer_charge_cny": "0",
+    "resolution": {
+      "state": "verified_in_hong_kong_production",
+      "deployed_commit": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
+      "evidence_reference": "deployment_status.worker_secret_acceptance"
+    }
   },
   "hong_kong_production_schema_race": {
     "observed_against_commit": "6d03d9d7eeff6099fbc50d2df4f1025f4a5c8a73",
@@ -120,7 +131,184 @@
     "remediation": "初始化事务先取得固定项目专用 pg_advisory_xact_lock，并以同一 Connection 覆盖 metadata.create_all、实际 schema 复查和全部增量 DDL；增加防御性 IF NOT EXISTS 后仍严格验证列、唯一边界和 CHECK 定义。",
     "rollback_state": "application_rolled_back_to_ad896056_site_http_200",
     "database_policy": "不删除已完成的 38 列、不重建或清空账本；新初始化器对已完成 schema 重新验证后幂等无操作。",
-    "acceptance_state": "awaiting_hong_kong_two_snapshot_concurrency_retest"
+    "previous_acceptance_state": "awaiting_hong_kong_two_snapshot_concurrency_retest",
+    "acceptance_state": "verified_by_hong_kong_two_snapshot_concurrency_retest",
+    "resolution_commit": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
+    "evidence_reference": "deployment_status.concurrent_migration_acceptance"
+  },
+  "deployment_status": {
+    "environment": "hong_kong_beta",
+    "state": "verified",
+    "evidence_source": "user_supplied_hong_kong_operator_acceptance",
+    "recorded_on": "2026-09-03",
+    "recording_scope": "本轮仅记录用户明确提供的服务器验收事实；未远程探测或操作服务器，未把记录日期当作部署执行时间。",
+    "deployed_commit": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
+    "release_directory": "/opt/storylens/releases/4ae7f663",
+    "current_symlink": "/opt/storylens/current",
+    "current_target": "/opt/storylens/releases/4ae7f663",
+    "public_root_url": "https://app.dstorylens.com/",
+    "public_root_http_status": 200,
+    "health_live": {
+      "status": "ok",
+      "runtime": "hong_kong_beta"
+    },
+    "services": {
+      "online_api": "healthy",
+      "online_web": "healthy",
+      "pocketbase": "healthy",
+      "postgresql": "healthy",
+      "redis": "healthy",
+      "online_worker": "running",
+      "pocketbase_init": "exited_0"
+    },
+    "concurrent_migration_acceptance": {
+      "environment": "isolated_hong_kong_compose_project_and_data_volumes",
+      "phase2a_snapshot": {
+        "initial_ledger_columns": 14,
+        "api_worker_simultaneous_first_start": true,
+        "final_ledger_columns": 38,
+        "api_restart_count": 0,
+        "worker_restart_count": 0,
+        "absent_log_patterns": [
+          "DuplicateColumn",
+          "ProgrammingError",
+          "Traceback",
+          "schema initialization failed"
+        ],
+        "preserved_rows": {
+          "analysis_jobs": 1,
+          "uploads": 1,
+          "usage_rows": 0
+        }
+      },
+      "partial_snapshot": {
+        "initial_ledger_columns": 20,
+        "initial_schema_valid": true,
+        "api_worker_simultaneous_first_start": true,
+        "final_ledger_columns": 38,
+        "api_restart_count": 0,
+        "worker_restart_count": 0,
+        "existing_data_preserved": true,
+        "unique_index": {
+          "name": "uq_online_usage_run_attempt",
+          "columns": [
+            "analysis_run_id",
+            "attempt_no"
+          ]
+        },
+        "log_scan": "PARTIAL_CONCURRENT_MIGRATION_LOG=OK"
+      },
+      "initialization_order": [
+        "engine.begin",
+        "pg_advisory_xact_lock",
+        "metadata.create_all",
+        "Phase 2B1 migration",
+        "commit"
+      ],
+      "lock_checks_ddl_share_connection": true,
+      "lock_checks_ddl_share_transaction": true
+    },
+    "worker_secret_acceptance": {
+      "original_owner_mode": "root:root 600",
+      "granted_service": "online-worker",
+      "only_worker_mounts_original_secret": true,
+      "excluded_services": [
+        "online-api",
+        "online-web",
+        "pocketbase",
+        "gateway"
+      ],
+      "enabled_tmpfs_copy_mode": "400",
+      "enabled_tmpfs_copy_uid": 10001,
+      "enabled_tmpfs_copy_gid": 10001,
+      "worker_pid1_uid": 10001,
+      "worker_pid1_gid": 10001,
+      "app_user_can_read_tmpfs_copy": true,
+      "app_user_can_read_original_secret": false,
+      "tmpfs_size_kib": 64,
+      "tmpfs_options": [
+        "noexec",
+        "nosuid",
+        "nodev"
+      ],
+      "disabled_gate_stages_secret": false,
+      "secret_scans": {
+        "compose": "passed",
+        "container_inspect": "passed",
+        "image_history": "passed",
+        "logs": "passed"
+      },
+      "published_ports": [
+        80,
+        443
+      ]
+    },
+    "real_provider_acceptance": {
+      "temporarily_allowlisted_user_id": "y8gau525t593nd9",
+      "job_id": "9e183241-81bf-4ae9-ad03-e64bb04a83dd",
+      "pipeline": "phase2b1_txt_evidence_summary",
+      "status": "succeeded",
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "input_tokens": 2891,
+      "cached_tokens": 0,
+      "prompt_cache_miss_tokens": 2891,
+      "output_tokens": 582,
+      "total_tokens": 3473,
+      "input_split_ok": true,
+      "total_tokens_ok": true,
+      "usage_reported": true,
+      "http_request_sent": true,
+      "provider_request_id_present": true,
+      "provider_cost_usd": "0.001020140",
+      "provider_cost_cny": "0.006918",
+      "customer_charge_cny": "0",
+      "public_result": {
+        "real_ai_analysis": true,
+        "billing_status": "not_billable",
+        "charged_cny": "0",
+        "references_real_paragraph_ids": true,
+        "paragraph_id_format": "P000xxx",
+        "provider_request_id_exposed": false,
+        "internal_cost_exposed": false
+      }
+    },
+    "zero_billing_acceptance": {
+      "online_billing_reservations": 0,
+      "online_wallet_transactions": 0,
+      "online_recharge_orders": 0,
+      "online_wallet_accounts": 0,
+      "all_usage_customer_charge_cny_sum": "0"
+    },
+    "final_safety_state": {
+      "PHASE2B1_ENABLED": false,
+      "PHASE2B1_ALLOWLISTED_USER_IDS": "",
+      "online_api": "healthy",
+      "online_worker": "running",
+      "public_root_http_status": 200,
+      "production_log_safety": "PRODUCTION_LOG_SAFETY=OK",
+      "retained": [
+        "rollback_images",
+        "pre_switch_database_backup",
+        "pre_switch_pocketbase_backup",
+        "pre_switch_uploads_backup",
+        "pre_switch_redis_backup",
+        "acceptance_logs"
+      ]
+    },
+    "acceptance_scope": "Phase 2B1 真实 AI 最小纵向链路的香港生产白名单验收，不是正式公开 Beta。",
+    "not_open": [
+      "real_whole_book_analysis",
+      "recharge",
+      "wallet",
+      "formal_billing",
+      "public_onboarding"
+    ],
+    "repository_actions": {
+      "pushed": false,
+      "published": false,
+      "tag_created": false
+    }
   },
   "data_compatibility": {
     "database_changed": true,
@@ -159,9 +347,12 @@
   ],
   "replacement_artifact": {
     "name_pattern": "storylens-online-phase2b1-deepseek-migrationfix-<final-head-short>.tar.gz",
-    "source": "git archive from final local HEAD",
-    "state": "approved_for_generation_after_final_local_registration_commit",
-    "metadata_policy": "Exact final path, byte size and SHA256 are reported outside Git after generation; deployment verification records them after Hong Kong acceptance."
+    "source": "git archive from 4ae7f663999caad09f5f57c7cff3a2f82b81f924",
+    "state": "generated_and_deployed_commit_verified_by_hong_kong_operator",
+    "artifact": "D:/Storylens/Deploy/storylens-online-phase2b1-deepseek-migrationfix-4ae7f663.tar.gz",
+    "size_bytes": 109676,
+    "sha256": "0e9462e58c979d36bc49f4f0ac87f43560b7c0eb5487392fce17bf99a5841d4c",
+    "metadata_policy": "大小和 SHA256 于本轮在本地只读复核；服务器部署提交由用户确认，不额外声称本轮执行了服务器包哈希校验。"
   },
   "related_changes": [
     {
@@ -177,8 +368,8 @@
       "relationship": "保持其 PocketBase Secret 与生产日志安全边界不变。"
     }
   ],
-  "blocker_level": "P1",
+  "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-30T00:00:00Z",
-  "updated_at": "2026-09-01T01:35:11Z"
+  "updated_at": "2026-09-03T15:44:59Z"
 }
