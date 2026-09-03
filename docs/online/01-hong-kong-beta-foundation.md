@@ -153,11 +153,14 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
 真实验证完成后开关已关闭、白名单已清空；API healthy、Worker 正常运行、网站 HTTP 200，
 `PRODUCTION_LOG_SAFETY=OK`。这构成生产白名单验收闭环，不等于向公网用户开放模型费用。
 
-## 下一阶段优先级（仅规划，未实施）
+## 下一阶段进度与优先级
 
-1. **轻量化 Web/API 部署机制**：先明确 Web/API 独立构建、更新、健康验收与回滚流程，
-   避免普通页面或 API 更新牵动数据库、Redis、PocketBase、Secret 和 Worker 的稳定边界；
-   保留提交、部署产物和实际切换记录的可追溯性。
+1. **轻量化 Web/API 部署机制**：`CHG-20260903-001` 已新增本地实现和离线回归，
+   仍待香港隔离验收，尚未部署。Web 只更新 Web，普通 App 更新仅作用于 API/Worker；
+   默认拒绝高风险/未知/混合变更，App 跳过数据库初始化。全局 `current` 保持完整基础设施
+   基线，以 `current-web` / `current-app` 和受限 Compose override 记录组件部署；健康或
+   指针失败回滚旧镜像。工具自身属于 full，首次安装需人工完整验收。
+   操作说明及剩余门禁见 `infra/online/README.md`，不得把离线 Fake 测试视为生产切换证据。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 

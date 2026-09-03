@@ -1,0 +1,79 @@
+{
+  "id": "CHG-20260903-001",
+  "title": "Online Beta 显式批准的 Web/App 轻量部署与失败回滚",
+  "type": "build",
+  "base_version": "1.3.6",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": ["online-deployment"],
+  "files": [
+    "scripts/deploy_online.ps1",
+    "infra/online/deploy-lightweight.sh",
+    "infra/online/deploy_policy.py",
+    "infra/online/deploy_package.py",
+    "infra/online/deploy_runtime.py",
+    "infra/online/tests/test_deploy_lightweight.py",
+    "infra/online/README.md",
+    "docs/online/01-hong-kong-beta-foundation.md",
+    "release/changes/CHG-20260903-001.json"
+  ],
+  "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
+  "technical_summary": "独立基础设施变更；登记工具 next_change_id 分配，因桌面发布池冻结而单独登记，不修改冻结池。纯 Python 默认拒绝分类器划分 web/app/full/documentation_only/invalid。Windows PowerShell 在干净 Git、祖先基线、模式及 VERSION 门禁后执行测试，从 git archive 生成最小来源包和非秘密 SHA256 manifest，经过独立哈希检查后 SCP 并调用已人工安装的服务器可信入口。Linux root 入口使用固定 project/env/current、独占 flock、受限 tar 成员检查、服务端源文件哈希基线复核和固定无秘密错误；仅重建目标服务，App 显式绕过 init_schema，保留 Worker Secret 包装器。全局 current 不动，以 current-web/current-app 和只含镜像/无迁移命令的共享 Compose override 记录组件状态。健康、重启、其他容器/持久卷身份或指针检查失败时恢复确定性旧镜像；回滚失败/中断保留 pending 门禁并要求人工恢复。",
+  "acceptance_criteria": [
+    "默认拒绝未知、数据库、认证/计费/Secret/存储边界、部署脚本和混合修改；仅记录修改不部署；非法路径不能绕过",
+    "PowerShell 支持显式 web/app、基线、域名、DryRun、KeepPackage 和带警告的 SkipTests；干净 Git 与 HEAD 一致性门禁不可跳过",
+    "归档源文件只来自 git archive，不包含 online.env、真实凭据、用户上传和数据库；服务器拒绝哈希、基线、归档成员或既有 release 异常",
+    "不切换全局 current，不改变固定 Compose 基础设施、端口和网络；只更新组件指针和非秘密 override",
+    "Web 只构建/重建 Web；App 只构建/重建 API/Worker且不执行数据库初始化或迁移",
+    "持久卷必须已存在且身份不变；不使用 compose down，不删除/重建 named volumes 或历史 release",
+    "目标健康/重启/根地址/其他容器与卷/指针检查失败时自动回滚目标；回滚不成功必须阻断后续部署并要求人工恢复",
+    "工具本身首次安装是 full，香港隔离验收完成前不得记为 verified；不自动生产发布"
+  ],
+  "tests": [
+    "infra/online/tests/test_deploy_lightweight.py：分类、路径、归档、Git 门禁、Fake Docker/curl部署与回滚、PowerShell Fake SCP/SSH离线回归",
+    "apps/online_api/tests：原有完整后端/Worker/Provider/迁移/Secret测试",
+    "在线前端 typecheck、Vitest 和 production build（前端文件未修改）",
+    "Ruff check/format、compileall、PowerShell AST语法/静态检查、POSIX sh -n",
+    "Compose config --quiet、scripts/check_project.py、scripts/change_registry.py check、JSON schema、git diff --check、Secret/VERSION/范围审计"
+  ],
+  "verification_evidence": [
+    "2026-09-03/04 本地执行：新增部署定向回归88项全部通过；覆盖 web/app 分类、高风险与未知/full、docs-only、路径大小写/反斜杠/穿越/绝对路径、dirty Git、模式与HEAD冲突、SHA/归档/既有release拒绝、源文件基线漂移及源等价基线、失败回滚、回滚失败阻断、指针切换前后异常、持久卷漂移和其他容器ID不变；包含不需要Engine的真实Compose CLI overlay合并合同检查",
+    "Windows PowerShell 5真实进程＋Fake SCP/SSH：成功、SCP失败、服务器已回滚和含假凭据错误输出均被正确处理；带空格和单引号的IdentityFile路径保持完整；不连接真实主机；SkipTests明确警告；临时包清理受限",
+    "在线后端136项全部通过；新增部署83项与后端联合运行曾为219 passed，后续五个部署边界/Compose合并用例纳入最终88项定向回归；唯一警告为既有Starlette/httpx弃用提示",
+    "在线前端typecheck、7项Vitest和生产构建通过；未修改任何前端源文件",
+    "Ruff check及format check通过（在线后端42个文件及新增4个Python文件），compileall通过，PowerShell AST无语法错误且无Invoke-Expression，sh -n通过",
+    "Compose config --quiet、scripts/check_project.py和版本检查通过，VERSION保持1.3.6；原有Dockerfile/Compose/Worker Secret入口/数据库与桌面文件不变",
+    "归档策略对当前已提交Web12个文件、App43个文件的离线git archive扫描通过；新增文件使用固定无凭据日志与假凭据测试，不读取真实Key；登记JSON schema、files清单与9个修改路径一致性、Secret模式扫描、LF、100755、git diff --check及受保护路径零差异审计通过",
+    "本机Docker Desktop Linux Engine named pipe不存在；未进行真实Docker镜像构建、容器更新/回滚或香港部署脚本验收，不以Fake结果替代真实运行时门禁"
+  ],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "轻量部署不执行数据库初始化；不删除卷。"},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": true, "updater_impact": false, "breaking_change": false},
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "related_changes": ["CHG-20260830-005"],
+  "created_at": "2026-09-03T16:00:02+00:00",
+  "safety_boundaries": {
+    "global_current_unchanged": true,
+    "component_pointers": ["/opt/storylens/current-web", "/opt/storylens/current-app"],
+    "runtime_override": "/opt/storylens/shared/lightweight-compose.json",
+    "original_env": "/opt/storylens/shared/online.env",
+    "schema_initialization_in_lightweight_app": false,
+    "read_or_upload_real_secrets": false,
+    "named_volume_mutations": false,
+    "server_operations_performed": false,
+    "push_release_tag_performed": false
+  },
+  "deployment_status": {
+    "state": "not_deployed_pending_hong_kong_isolated_acceptance",
+    "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
+    "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
+    "remaining_gates": [
+      "人工完整安装可信工具基线及root权限、SSH known_hosts/agent和sudo入口审计",
+      "香港隔离Web/App真实构建、容器重建、DNS/TLS/root健康和组件交替部署验收",
+      "真实健康失败、指针失败、回滚失败与断电/进程中断后的人工恢复",
+      "现有持久卷/数据和Worker Secret非root边界保留、实际值日志安全审计"
+    ]
+  },
+  "updated_at": "2026-09-03T16:14:47+00:00"
+}
