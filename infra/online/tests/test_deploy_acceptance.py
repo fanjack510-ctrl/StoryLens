@@ -36,8 +36,13 @@ def runtime_source(root):
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(value, encoding="utf-8")
-        if name.endswith(".sh"):
-            path.chmod(0o555)
+        path.chmod(0o555 if name.endswith(".sh") else 0o644)
+        # Public Docker source only: never change state/Secret ancestors or umask.
+        directory = path.parent
+        while directory != root:
+            directory.chmod(0o755)
+            directory = directory.parent
+    root.chmod(0o755)
     return files
 
 

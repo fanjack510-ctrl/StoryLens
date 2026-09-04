@@ -31,7 +31,10 @@
     "infra/online/tests/test_deploy_image_contract.py",
     "infra/online/tests/test_deploy_registry.py",
     "infra/online/tests/test_deploy_secret_boundary.py",
-    "infra/online/tests/test_deploy_database_stdin.py"
+    "infra/online/tests/test_deploy_database_stdin.py",
+    "infra/online/tests/r6_gate.py",
+    "infra/online/tests/test_r6_corrective.py",
+    "infra/online/R6-H-ONLY.md"
   ],
   "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
   "technical_summary": "Protocol 2：Windows固定调用稳定bin并传协议和工具内容指纹；root专属版本化lib完整安装全部模块，不从current加载工具。生产组件仍使用原业务基线和已校验Git候选包。acceptance使用生成的封闭Compose、独立project/path/internal网络/卷/状态/证据和本地Docker socket，无宿主端口，不读取生产env/Secret/data；只接受显式固定假Key，Worker暂存及非root边界保持。准备阶段只初始化隔离空库；Web/App更新/故障/成组回滚不运行迁移。检查隔离schema/行数hash、卷身份、生产容器/镜像/指针身份、假Key日志安全；回滚失败保留pending并阻断。安装与激活不运行Docker。",
@@ -110,11 +113,39 @@
     "acceptance_only_fixed_fake_secret": true
   },
   "deployment_status": {
-    "state": "not_deployed_pending_hong_kong_isolated_acceptance",
+    "state": "R5_D_G_passed_pending_R6_corrective_H_acceptance",
+    "r5_hong_kong_results": {
+      "source": "user_provided_hong_kong_evidence; not remotely executed in this task",
+      "commit": "18f8ee3ea28ce5717481972c29ea04e8e0613702",
+      "tool_version": "32799f5ea99f29821eb799dc03f439d09d5a58028f94e227e5b24190f0756dda",
+      "package_status": "superseded_do_not_install; retain original archive and all evidence",
+      "A_B": "PASSED",
+      "C": "PASSED; 42 passed; FULL_DEPLOYMENT_REQUIRED exit 1",
+      "D_G": "PASSED on real Hong Kong Docker: Web success/health rollback, App success/group rollback",
+      "H1_H2": "PASSED; locks, four evidence sets, IMAGE_RUNTIME_CONTRACT, Secret boundary, protocol and production project rejection",
+      "H3_umask077": "13 failed, 209 passed, 9 skipped; all failures prematurely BUILD_CONTEXT_CONTRACT_FAILED",
+      "H3_umask022_control": "222 passed, 9 skipped",
+      "real_linux": "1 passed, 20 deselected; not skipped",
+      "database_stdin": "18 passed",
+      "root_cause": "pytest runtime_source fixture used mkdir/write_text without explicit directory/file modes; root umask077 created0700/0600 and masked intended image failures. Production0755/readable context_contract is correct and unchanged.",
+      "retention": "Four R5 projects stopped and fully retained; stable entry unlinked; version directory, all R1–R5 sessions/containers/images/volumes/locks retained.",
+      "production": "current=/opt/storylens/releases/4ae7f663; HTTP200; Phase2B1=false; allowlist empty"
+    },
+    "r6_corrective": {
+      "scope": "Only public-source test fixture, acceptance-only gate/tests, docs and registration. No versioned tool or build input changes. VERSION1.3.6, protocol2 and R5 tool_version retained.",
+      "fixture": "Explicit0755 within public fixture root,0644 source files,0555 executable shell; does not modify parent/state/Secret permissions or caller umask. Production deploy_image_contract unchanged.",
+      "H_commands": "Outer root shell umask077/AUDIT0700. Each pytest runs in subshell umask022; outer redirection creates0600 logs. Original Linux root0700+UID/GID10001 test retained and must genuinely pass, not skip.",
+      "equivalence_gate": "tests/r6_gate.py is NOT installed or in TOOL_FILES. Externally pinned R5/R6 archive SHA, per-file manifest, modes, exact protected path sets, frozen11-tool fingerprint; unknown input change denies reuse. R5 baseline/candidate manifests, four ready sessions, no pending, all image/Secret/update/db-unchanged evidence, private retained locks and container ownership verified read-only. Production full container/image/restart identity and volume names compared to original R5 A audit/current4ae7f663; volume CreatedAt must predate original snapshot to reject same-name replacement.",
+      "evidence_limit": "No original root R5 audit, missing resources, untrusted/recreated snapshot timestamps, clock rollback, or any mismatch => FULL_ACCEPTANCE_REQUIRED; no fabricated historical volume identity or database queries. Local artifact equality is not Hong Kong evidence verification.",
+      "remaining": "Hong Kong A/B/C, executable equivalence and retained evidence/production identity gate, corrected full H, real_linux actual passed, DB/stdin, final identity comparison and operator signoff. CHG stays tested.",
+      "instructions": "infra/online/R6-H-ONLY.md; fallback full A–H with fresh webd/webe/appf/appg20260904r6 projects only",
+      "validation": "R6全量部署+在线后端414 passed,2 skipped（部署278、后端136；Windows跳过原Linux flock及root0700内核用例），1项既有Starlette弃用警告。父进程显式umask077部署回归278 passed,2 skipped；Windows不等于Linux权限证明。新增49项纠正回归通过，含既有镜像标签不被错误提前遮蔽、逐字节/模式/未知输入拒绝、四组证据/生产身份/同名新卷拒绝、DEVNULL、固定错误、局部umask及17个Bash块语法。Windows C离线42 passed,46 deselected。前端typecheck、7项Vitest、production build通过；Ruff check/format63文件、compileall、Compose config、check_project.py、change_registry.py check、JSON/Secret模式/范围/LF/执行位及git diff --check通过。7个文件属于测试/验收附件/文档/登记；生产工具和所有构建输入无变化。Docker Linux Engine named pipe仍不存在；未操作香港，真实H与证据门禁待操作者执行。",
+      "artifact_policy": "New final clean HEAD via unchanged deploy_bootstrap git archive; exact source bytes verified, report SHA/size/entries. Never reuse R5 filename for R6. Commit trailer links CHG."
+    },
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
-      "使用全新r5项目从A–H完整重验：重新安装稳定bin，复验镜像/Secret/数据库指纹和Web/App DryRun、更新、回滚；不复用R4容器/状态/卷/镜像；旧项目只保留审计，不自动清理",
+      "R6按R6-H-ONLY.md机器等价和R5留存证据门禁后执行纠正H；失败则新r6项目完整A–H。R5 D–G真实通过不抹除，所有历史资源保留。",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
@@ -261,5 +292,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-05T00:41:00+08:00"
+  "updated_at": "2026-09-05T01:43:00+08:00"
 }

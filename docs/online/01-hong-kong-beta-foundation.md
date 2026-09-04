@@ -180,6 +180,16 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    此包superseded；同时修复内部子进程继承SSH流式脚本stdin的问题，统一DEVNULL。
    现场已停止并保留全部R4隔离资源、unlink稳定入口，生产4ae7f663/HTTP200不变（用户证据）。
    下一轮须重新安装工具并从A–H完整执行R5，不复用R4容器、状态、卷、镜像；CHG仍tested。
+   **R5现场追加（用户提供）**：18f8ee3e的A/B/C、真实D–G更新/回滚、H1/H2均PASSED。
+   H3在root umask077下13 failed/209 passed/9 skipped；umask022对照222 passed/9 skipped。
+   测试公开源码夹具未显式设权限，0700/0600使错误提前被正确的BUILD_CONTEXT_CONTRACT_FAILED
+   门禁遮蔽。Linux真实权限定向1 passed/20 deselected（未跳过），DB/stdin18 passed。
+   R5包superseded但D–G成功证据保留；四项目停止且完整保留、bin已unlink；生产仍4ae7f663/200、
+   Phase2B1关闭和白名单为空。R6仅修测试夹具0755/0644/执行位及局部测试umask命令，
+   不改任何11个版本化工具或构建输入，协议2和工具指纹32799f5e…0756dda保持一致。
+   R6的验收附件提供逐文件/模式等价、R5四组证据/锁/容器、原始生产身份快照的机器门禁；
+   只有全部通过才关联R5 D–G并补H，不声称重新运行D–G。缺原始快照、时钟/卷身份不可信或
+   任一不一致必须全新r6项目完整A–H。操作见infra/online/R6-H-ONLY.md，CHG仍tested。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 

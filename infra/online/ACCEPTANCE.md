@@ -6,6 +6,21 @@
 
 ## 本次阻断及重验规则
 
+### R6 入口：仅测试夹具纠正，条件式 H-only
+
+R5 `18f8ee3ea28ce5717481972c29ea04e8e0613702` 包已 superseded，不再安装。
+用户提供的香港 A/B/C、D–G 实际更新/回滚、H1/H2 均 PASSED；不是 D–G 失败。
+H3 在 root umask077 下为13 failed/209 passed/9 skipped；umask022对照为222 passed/9 skipped。
+原因是 pytest 的公开源码夹具未显式设置权限，导致本应测试镜像错误的用例提前触发
+BUILD_CONTEXT_CONTRACT_FAILED。生产 context_contract 的0755/可读检查正确，R6不放宽它。
+Linux权限定向1 passed/20 deselected且未跳过，数据库/stdin18 passed（用户现场证据）。
+R5四个项目已停止但完整保留，bin已unlink；生产4ae7f663/HTTP200，模型开关关闭、白名单为空。
+R1–R5历史与资源全部保留。CHG仍tested，不能用本地测试代替香港最终H验收。
+
+优先执行 [R6 H-only纠正验收](R6-H-ONLY.md)。该说明含机器等价/留存证据/生产身份门禁，
+任一门禁失败不得关联R5 D–G，改用本文件完整A–H并使用全新后缀r6（不得复用下面历史r5项目）。
+以下R5 D–G命令保留为历史说明；完整R6重验必须将五处项目后缀明确替换为r6。
+
 `a0f8c1a941365a46c9cf93ab5cfb792e595dacee` bootstrap 已 superseded，禁止继续安装。
 用户提供的香港首轮 D 项目 `sl-accept-webd20260904`：prepare 返回
 `COMMAND_FAILED_SAFELY`，PG/Redis/PB 正常，schema-init Exited(1)，报
@@ -351,9 +366,16 @@ test $? -ne 0 || exit 1
 set -e
 python3 -m venv "$AUDIT/test-venv"
 "$AUDIT/test-venv/bin/python" -m pip install pytest
-"$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests" -q -p no:cacheprovider
-"$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_secret_boundary.py" -q -k real_linux -p no:cacheprovider
-"$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_database_stdin.py" -q -p no:cacheprovider
+(umask 022; "$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests" -q -p no:cacheprovider) > "$AUDIT/tests-full.log" 2>&1
+(umask 022; "$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_secret_boundary.py" -q -k real_linux -p no:cacheprovider) > "$AUDIT/tests-real-linux.log" 2>&1
+(umask 022; "$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_database_stdin.py" -q -p no:cacheprovider) > "$AUDIT/tests-database-stdin.log" 2>&1
+test "$(umask)" = 0077
+test "$(stat -c '%u:%g:%a' "$AUDIT")" = 0:0:700
+for name in full real-linux database-stdin; do
+  test "$(stat -c '%u:%g:%a' "$AUDIT/tests-$name.log")" = 0:0:600
+done
+grep -Eq '1 passed' "$AUDIT/tests-real-linux.log"
+if grep -Eq '[0-9]+ skipped' "$AUDIT/tests-real-linux.log"; then exit 1; fi
 check_public
 ```
 
