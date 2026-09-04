@@ -470,205 +470,59 @@ the no-charge smoke worker uses Afdian.
 
 ### Lightweight Web/App deployment (CHG-20260903-001)
 
-This is an **operator-initiated** deployment tool, not automatic production
-publishing. It has no GitHub Actions, remote Git operations, unattended trigger,
-model call, or secret upload. The current local implementation still requires
-Hong Kong **isolated** acceptance before production use.
+Protocol **2** supersedes the release-bound protocol-1 bootstrap. Status remains
+**tested, not verified**. The d6416111 bootstrap is superseded: it cannot perform
+same-host independent-project acceptance or install a working stable-bin chain.
 
-| Classification | Allowed operation |
-| --- | --- |
-| `web` | Online Web source/tests, `Dockerfile.web`, nginx Web configuration: build/recreate only `online-web` |
-| `app` | Explicitly audited ordinary Worker/queue/error files and corresponding tests, Online API `requirements.txt`: build one API image, recreate only API + Worker |
-| `full` | Database/model/schema/migration, Compose, API Dockerfile, Worker entrypoint, PocketBase, Caddy, auth/Secret/provider/billing/network/storage boundary, deployment tools, unknown code, or mixed Web + App changes: reject with `FULL_DEPLOYMENT_REQUIRED` |
-| `documentation_only` | Online README/roadmap or Change records alone: no deployment |
-| `invalid` | Traversal, absolute path, backslash, empty component or malformed path: reject |
+The Windows client calls only
+`/opt/storylens/bin/storylens-online-deploy-lightweight`. This root-owned symlink
+resolves to a complete immutable implementation under
+`/opt/storylens/lib/storylens-online-deploy/<full-commit>/`.
+The installer validates the committed bootstrap manifest; unknown existing
+versions/entries are refused. Activation saves a 0400 previous-version record.
+It does not call Docker. Shell is 0555, Python/metadata 0444, directories are
+root-only writable. No tool module is loaded from global `current`.
 
-The pure classifier lives in `deploy_policy.py`. Case changes cannot bypass the
-allowlist. `main.py` currently combines ordinary endpoints with authentication
-and upload ownership checks, so it is deliberately **full**, not broadly allowed
-as “API code”. The Web `src/api.ts` transport/auth contract also remains full.
-Unknown tests/code are not automatically approved. This path gate cannot prove
-semantic safety: an auth, cost, storage or schema change hidden inside an allowed
-file still requires human review and a full deployment. Adding an allowed path
-changes the policy itself and must first pass full acceptance.
+Every execution carries protocol 2 and the SHA256 of the installed tool modules.
+A mismatch fails before any container operation. Windows DryRun verifies local
+protocol/fingerprint, parameters, Git/version and change classification without
+SSH/SCP; it cannot attest the remote installation while offline. Server DryRun
+also checks its installed fingerprint and selected context, but performs no
+build, compose up, pointer change or state-file write.
 
-#### First installation / trusted baseline
+Production continues to use the existing complete infrastructure Compose and
+env, while candidate source is a validated Git archive with declared SHA256,
+commit, mode, and source-baseline fingerprints. `current` is used as the
+**business infrastructure/source baseline only**, not as executable tool code.
+Web updates only Web; App updates only API/Worker, bypassing init_schema on
+both update and rollback. Unknown/auth/billing/DB/Secret/mixed changes require
+full deployment. Global current never changes. Continue to include
+`/opt/storylens/shared/lightweight-compose.json` in subsequent manual production
+Compose commands; reconcile component images/pointers before a full upgrade.
 
-The new scripts are themselves `full`. They must be installed once by the
-existing, manually approved full deployment process, not by using this tool to
-deploy itself. Preserve all current data/Secret files and the verified 005
-baseline. An operator must review and install the same deployment-tool bytes
-locally and in `/opt/storylens/current/infra/online`; helpers received in a
-bundle are **never executed**. The trusted shell and Python helpers must be
-root-owned, not group/world writable, LF-encoded, with the shell executable.
-The host needs Python 3.10+ (stdlib only), Docker Compose v2, curl, and sudo.
-The SSH account needs operator-approved `sudo -n` access to this root-owned
-entrypoint; the script never asks for or passes a sudo password. Do not grant
-sudo access to an untrusted/writable script.
+Acceptance is a separate closed configuration, not a production Compose overlay:
+project `sl-accept-<8–24 lowercase letters/digits>`, paths under
+`/opt/storylens/acceptance/<project>/`, internal-only network, no published ports,
+no production env/Secret/data, and a pinned local Docker socket. Each A–H session
+allocates its own containers/volumes/images/state/evidence. Baseline setup alone
+initializes a new isolated database. Updates/rollbacks never invoke initialization.
+App Secret testing accepts only an explicitly passed fixed **fake** test key
+under `/opt/storylens/acceptance-input/<project>/deepseek-test-key`; Worker
+entrypoint stages it and drops to 10001:10001. Allowlist is empty and no container
+has internet egress. Web sessions have no Provider Secret at all.
 
-Before each command, set `BaselineCommit` to the **full commit currently deployed
-for that component**, initially the manually installed full baseline; thereafter
-read the non-secret `deployment.json` through `current-web` or `current-app`.
-A later commit is allowed only if **all source/build/helper hashes for the target
-component are identical to the deployed copy** (for example an already deployed
-App-only commit after the last Web commit). This allows alternating components
-without reclassifying already deployed changes as pending. Do not blindly use
-HEAD's parent or the newest local record commit. The local baseline must be an
-ancestor of HEAD. The server independently checks the pointer and every hash,
-rejecting source drift before building; any mixed changes still in the chosen
-baseline-to-HEAD diff require full deployment.
+Success/failure tests use deterministic generated candidates and injected unhealthy
+Web/API or exiting Worker, confined to acceptance mode. Rollback restores immutable
+old image IDs as a group. Failure returns `UPDATE_FAILED_ROLLBACK_OK` (exit 1);
+failed/interrupted rollback preserves pending state and blocks further updates.
+Read-only production identity snapshots, isolated schema/count hashes, volume
+identities, Worker ownership and fake-key log scans are checked.
 
-#### Windows one-command entry
-
-Run in a normal interactive Windows PowerShell terminal from the repository.
-Python 3.11/3.12, Git, Windows OpenSSH and (for Web tests) Node/npm must exist.
-The script prefers `.venv\Scripts\python.exe`. The host key must already be
-verified in `known_hosts`: `StrictHostKeyChecking=yes` is mandatory, not silently
-disabled. Replace the placeholders with the actual deployed component commits:
-
-```powershell
-$webBaseline = '<full-40-character-deployed-web-commit>'
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy_online.ps1 -Mode web -Server ubuntu@43.132.155.132 -IdentityFile "$env:USERPROFILE\.ssh\storylens_hk_ed25519_20260831" -BaselineCommit $webBaseline
-
-$appBaseline = '<full-40-character-deployed-app-commit>'
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy_online.ps1 -Mode app -Server ubuntu@43.132.155.132 -IdentityFile "$env:USERPROFILE\.ssh\storylens_hk_ed25519_20260831" -BaselineCommit $appBaseline
-```
-
-Append `-DryRun` to check Git cleanliness, version, baseline ancestry and scope
-**without tests, packaging, SSH, SCP or any server contact**. It does not prove
-remote permissions or health. `-KeepPackage` retains the local temporary source
-archive for review; otherwise only the exact task-created temporary directory
-is removed. `-SkipTests` is an explicit exceptional bypass with a fixed warning,
-never the default. It cannot bypass scope, dirty-tree, integrity or server gates.
-`-Domain` defaults to `app.dstorylens.com`.
-
-Default local gates are Web `npm ci`, typecheck, Vitest and production build, or
-App full online-backend pytest and compileall. Git is checked again after tests;
-the package must still use the same HEAD. No uncommitted/ignored runtime data is
-included. Source is read through `git archive` and combined only with a generated
-non-secret manifest (commit, baseline, changed paths, source SHA256 and protocol).
-The compressed package gets a second SHA256 check by PowerShell before SCP and
-again by the server. Files are uploaded under a unique
-`/tmp/storylens-deploy-<random-id>.tar.gz` name; all remote-shell tokens are
-strictly validated and quoted. Native output is captured, not echoed; errors
-and the final result are fixed codes, never raw stack traces or credentials.
-
-An encrypted SSH key may ask for its passphrase separately for SCP and SSH if
-it is not already loaded. Use the Windows `ssh-agent` service and `ssh-add` in
-your interactive terminal to unlock it once; **never remove the private-key
-passphrase**, store it in this script, pass it as an argument, or paste the key.
-The tool checks only the private-key **path**, not its contents. Host-key and
-agent setup remain explicit operator actions, not automated by this script.
-
-#### Build contexts and immutable component releases
-
-Both Dockerfiles use repository-relative `COPY` paths. Therefore each minimal
-archive keeps the original directory layout with a small root build context:
-
-- Web: `apps/online_web/**`, `Dockerfile.web`, `nginx-online.conf`;
-- App: `apps/online_api/**` (including its own requirements/tests),
-  `Dockerfile.api`, unchanged `worker-entrypoint.sh`;
-- both: `VERSION`, `deployment.json`, trusted shell, runtime, package and policy
-  helper sources for audit/hash checking. No whole repository copy.
-
-There is no `.env`, `online.env`, Secret, dump, uploaded TXT, PocketBase data,
-node_modules or local build output in either archive. Members are allowlisted,
-literal secret patterns scanned, bounded to 128 MiB expanded / 5,000 files,
-and links/special files/duplicate case-folded paths rejected. Extraction creates
-regular files exclusively in a new `/opt/storylens/releases/<full-commit>`.
-An existing directory is never overwritten; even a failed build's directory is
-retained. Reattempt with a newly reviewed commit, not by quietly deleting history.
-
-#### Pointer, Compose and data safety
-
-**`/opt/storylens/current` never changes during a lightweight deployment.** It
-continues to point to the complete, manually accepted infrastructure release.
-Moving it to a Web-only archive would lose the other Dockerfiles/Compose/config,
-so success instead atomically switches `current-web` or `current-app`.
-
-Production continues to use project `storylens-online`, the stable base Compose
-and `/opt/storylens/shared/online.env`. A generated root-only, non-secret
-`/opt/storylens/shared/lightweight-compose.json` contains only component image
-tags and, for App, explicit non-migration startup commands. It preserves the
-other component's settings. All later Compose operations **must include this
-override** until an operator reconciles it in the next full deployment:
-
-```bash
-sudo docker compose --project-name storylens-online \
-  --project-directory /opt/storylens/current/infra/online \
-  --env-file /opt/storylens/shared/online.env \
-  -f /opt/storylens/current/infra/online/docker-compose.yml \
-  -f /opt/storylens/shared/lightweight-compose.json ps
-```
-
-Do not use an old naked `compose up` or `compose build` after a component update:
-it can select the old Web image or reintroduce the full-start migration command.
-For a later full release, first reconcile both component commit pointers/images,
-take backups, inspect the override, and explicitly adopt the complete source and
-startup policy. Do not move global `current` to a partial archive or discard an
-active override as routine cleanup.
-
-The tool obtains a host-side exclusive `flock` for the entire operation. It
-builds a commit-tagged image, captures actual old image IDs, keeps deterministic
-`storylens-online-<mode>:rollback-<full-commit>` tags, maps the candidate to the
-live component tag, and runs only `up -d --no-build --no-deps` for its targets.
-Web never starts an init service or mounts/reads a Secret. App starts Uvicorn
-directly and the Worker module directly (retaining the unchanged gosu/Secret
-entrypoint), **without `init_schema` or migration**. Even App rollback uses
-these no-migration commands. API/Worker must share the same old image ID.
-
-It waits for Web/API health and Worker running with restart count zero, then
-checks HTTPS root 200 against the **local gateway** using curl `--resolve` and
-TLS verification. It compares every non-target container ID (including gateway
-and exited pocketbase-init) before/after. All six existing named volumes must
-exist beforehand and retain their creation identity; the tool never issues
-volume create/remove commands or Compose down. No ports, network, database,
-PocketBase migration, user file, credential or feature flag is modified.
-
-#### Failure and rollback
-
-Health, restart, unrelated-container/volume drift or pointer-switch failure
-restores the old live image tag and recreates only the same target service(s),
-rechecks health and keeps component/global pointers at their old values.
-`DEPLOY_FAILED_ROLLED_BACK` is still a nonzero result. Existing release folders,
-rollback tags and the uploaded source package remain available for audit.
-
-If rollback itself fails, or the host/process is killed before cleanup, a
-non-secret `lightweight-pending.json` blocks later deploys with
-`MANUAL_RECOVERY_REQUIRED`. Do not repeatedly rerun or delete this marker to
-force progress. An operator must inspect its mode/commit/rollback tag, restore
-that tag to the live image name, run the same targeted no-build/no-deps Compose
-operation with the override, check health/container/volume identities and
-component pointers, and only then clear that specific pending marker. The
-script does not claim atomicity across Docker containers and filesystem state
-during power loss. Full rollback images, backups and the global infrastructure
-baseline are never deleted by this tool.
-
-#### Remaining Hong Kong isolated acceptance (not yet executed)
-
-Use isolated data and non-production infrastructure in a disposable host/VM
-with the production-shaped paths/project; do **not** run fault injection against
-the formal `storylens-online` stack. The production entrypoint has intentionally
-fixed paths/project and no test-environment override arguments.
-
-1. Manually install the trusted tool baseline, verify root ownership/executable
-   LF shell, SSH host key, agent/passphrase flow and limited sudo access.
-2. Deploy one harmless Web-only commit; confirm only Web container ID changes,
-   root 200, no init/Secret access, current unchanged, current-web switched.
-3. Deploy one ordinary Worker/queue commit; confirm only API/Worker IDs change,
-   no database initialization/DDL, old uploads/jobs/ledger remain intact,
-   Secret wrapper still drops to UID/GID 10001 and disabled gate stages nothing.
-4. Reconcile manifests, images, source hashes, all six volume identities and
-   shared override across alternating Web/App deployments.
-5. Induce failing health and pointer write in isolation; verify automatic old
-   image recovery, rollback failure marker, and explicit manual recovery.
-6. Check wrong baseline, dirty Git, mixed/full paths, SHA mismatch, duplicate
-   release and malformed archive are rejected. Scan logs/Compose/inspect/image
-   history for actual secret values **locally on the host**, never print them.
-
-Local Fake Docker/curl and PowerShell Fake SSH/SCP tests are not evidence of
-these Linux Docker/SSH/network gates. No Hong Kong operation has been performed
-as part of implementing this mechanism.
+**Exact first-install, A–H commands, expected statuses, recovery/uninstall and
+remaining runtime gates:** [ACCEPTANCE.md](ACCEPTANCE.md).
+Bootstrap is built by `deploy_bootstrap.py` from clean final Git HEAD and includes
+all online build sources, tests, installer, protocol metadata and CHG record.
+Local Fake/Compose-render tests do not substitute for Hong Kong Docker acceptance.
 
 ### Manual full upgrade
 

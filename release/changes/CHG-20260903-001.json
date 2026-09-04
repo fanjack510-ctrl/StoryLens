@@ -6,7 +6,9 @@
   "status": "tested",
   "include_in_next_release": false,
   "commits": [],
-  "modules": ["online-deployment"],
+  "modules": [
+    "online-deployment"
+  ],
   "files": [
     "scripts/deploy_online.ps1",
     "infra/online/deploy-lightweight.sh",
@@ -16,10 +18,17 @@
     "infra/online/tests/test_deploy_lightweight.py",
     "infra/online/README.md",
     "docs/online/01-hong-kong-beta-foundation.md",
-    "release/changes/CHG-20260903-001.json"
+    "release/changes/CHG-20260903-001.json",
+    "infra/online/deploy_protocol.py",
+    "infra/online/deploy_install.py",
+    "infra/online/deploy_cli.py",
+    "infra/online/deploy_acceptance.py",
+    "infra/online/deploy_bootstrap.py",
+    "infra/online/tests/test_deploy_acceptance.py",
+    "infra/online/ACCEPTANCE.md"
   ],
   "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
-  "technical_summary": "独立基础设施变更；登记工具 next_change_id 分配，因桌面发布池冻结而单独登记，不修改冻结池。纯 Python 默认拒绝分类器划分 web/app/full/documentation_only/invalid。Windows PowerShell 在干净 Git、祖先基线、模式及 VERSION 门禁后执行测试，从 git archive 生成最小来源包和非秘密 SHA256 manifest，经过独立哈希检查后 SCP 并调用已人工安装的服务器可信入口。Linux root 入口使用固定 project/env/current、独占 flock、受限 tar 成员检查、服务端源文件哈希基线复核和固定无秘密错误；仅重建目标服务，App 显式绕过 init_schema，保留 Worker Secret 包装器。全局 current 不动，以 current-web/current-app 和只含镜像/无迁移命令的共享 Compose override 记录组件状态。健康、重启、其他容器/持久卷身份或指针检查失败时恢复确定性旧镜像；回滚失败/中断保留 pending 门禁并要求人工恢复。",
+  "technical_summary": "Protocol 2：Windows固定调用稳定bin并传协议和工具内容指纹；root专属版本化lib完整安装全部模块，不从current加载工具。生产组件仍使用原业务基线和已校验Git候选包。acceptance使用生成的封闭Compose、独立project/path/internal网络/卷/状态/证据和本地Docker socket，无宿主端口，不读取生产env/Secret/data；只接受显式固定假Key，Worker暂存及非root边界保持。准备阶段只初始化隔离空库；Web/App更新/故障/成组回滚不运行迁移。检查隔离schema/行数hash、卷身份、生产容器/镜像/指针身份、假Key日志安全；回滚失败保留pending并阻断。安装与激活不运行Docker。",
   "acceptance_criteria": [
     "默认拒绝未知、数据库、认证/计费/Secret/存储边界、部署脚本和混合修改；仅记录修改不部署；非法路径不能绕过",
     "PowerShell 支持显式 web/app、基线、域名、DryRun、KeepPackage 和带警告的 SkipTests；干净 Git 与 HEAD 一致性门禁不可跳过",
@@ -28,7 +37,9 @@
     "Web 只构建/重建 Web；App 只构建/重建 API/Worker且不执行数据库初始化或迁移",
     "持久卷必须已存在且身份不变；不使用 compose down，不删除/重建 named volumes 或历史 release",
     "目标健康/重启/根地址/其他容器与卷/指针检查失败时自动回滚目标；回滚不成功必须阻断后续部署并要求人工恢复",
-    "工具本身首次安装是 full，香港隔离验收完成前不得记为 verified；不自动生产发布"
+    "工具本身首次安装是 full，香港隔离验收完成前不得记为 verified；不自动生产发布",
+    "Protocol 2 stable bin、版本化lib、expected tool fingerprint；未知安装版本拒绝覆盖",
+    "独立acceptance项目无宿主端口，准备阶段只初始化隔离空库，D–G真业务镜像更新和故障回滚入口已实现；真实香港运行仍待验收"
   ],
   "tests": [
     "infra/online/tests/test_deploy_lightweight.py：分类、路径、归档、Git 门禁、Fake Docker/curl部署与回滚、PowerShell Fake SCP/SSH离线回归",
@@ -45,35 +56,65 @@
     "Ruff check及format check通过（在线后端42个文件及新增4个Python文件），compileall通过，PowerShell AST无语法错误且无Invoke-Expression，sh -n通过",
     "Compose config --quiet、scripts/check_project.py和版本检查通过，VERSION保持1.3.6；原有Dockerfile/Compose/Worker Secret入口/数据库与桌面文件不变",
     "归档策略对当前已提交Web12个文件、App43个文件的离线git archive扫描通过；新增文件使用固定无凭据日志与假凭据测试，不读取真实Key；登记JSON schema、files清单与9个修改路径一致性、Secret模式扫描、LF、100755、git diff --check及受保护路径零差异审计通过",
-    "本机Docker Desktop Linux Engine named pipe不存在；未进行真实Docker镜像构建、容器更新/回滚或香港部署脚本验收，不以Fake结果替代真实运行时门禁"
+    "本机Docker Desktop Linux Engine named pipe不存在；未进行真实Docker镜像构建、容器更新/回滚或香港部署脚本验收，不以Fake结果替代真实运行时门禁",
+    "2026-09-04 Protocol 2本地：部署测试127 passed（原有88＋新增39），覆盖版本化安装/未知版本拒绝、权限合同、协议失败顺序、稳定bin Fake SSH、隔离成功/健康故障/Worker故障/回滚失败、初始化仅隔离准备阶段、只读DryRun、project/path/mount/port/volume拒绝及真实Compose CLI离线配置渲染。仅OS边界Fake；不等于真实Engine验收。",
+    "2026-09-04 在线后端136 passed（既有Starlette弃用警告）；前端typecheck、7项Vitest、production build与生产Compose config通过。业务API/Worker/模型/迁移/前端/原Compose/Dockerfile/原Secret入口未修改。",
+    "2026-09-04 Docker Desktop Linux Engine named pipe仍不存在，未执行任何香港操作、真实镜像构建或真实容器D–G验收。",
+    "Protocol 2收尾：Ruff check/format、compileall、scripts/check_project.py、scripts/change_registry.py check、git diff --check均通过；15个本轮改动全部登记，暂存源码Secret模式扫描及Shell LF检查通过，VERSION/业务数据库/分析API/前端/原Compose/Dockerfile/Worker Secret入口/冻结发布清单零差异。"
   ],
-  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "轻量部署不执行数据库初始化；不删除卷。"},
-  "release_impact": {"requires_reanalysis": false, "requires_restart": true, "updater_impact": false, "breaking_change": false},
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "轻量部署不执行数据库初始化；不删除卷。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
-  "related_changes": ["CHG-20260830-005"],
+  "related_changes": [
+    "CHG-20260830-005"
+  ],
   "created_at": "2026-09-03T16:00:02+00:00",
   "safety_boundaries": {
     "global_current_unchanged": true,
-    "component_pointers": ["/opt/storylens/current-web", "/opt/storylens/current-app"],
+    "component_pointers": [
+      "/opt/storylens/current-web",
+      "/opt/storylens/current-app"
+    ],
     "runtime_override": "/opt/storylens/shared/lightweight-compose.json",
     "original_env": "/opt/storylens/shared/online.env",
     "schema_initialization_in_lightweight_app": false,
     "read_or_upload_real_secrets": false,
     "named_volume_mutations": false,
     "server_operations_performed": false,
-    "push_release_tag_performed": false
+    "push_release_tag_performed": false,
+    "stable_entry": "/opt/storylens/bin/storylens-online-deploy-lightweight",
+    "versioned_tool_root": "/opt/storylens/lib/storylens-online-deploy/<full-commit>",
+    "acceptance_root": "/opt/storylens/acceptance/sl-accept-<id>",
+    "acceptance_published_ports": false,
+    "acceptance_model_network_egress": false,
+    "acceptance_only_fixed_fake_secret": true
   },
   "deployment_status": {
     "state": "not_deployed_pending_hong_kong_isolated_acceptance",
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
-      "人工完整安装可信工具基线及root权限、SSH known_hosts/agent和sudo入口审计",
-      "香港隔离Web/App真实构建、容器重建、DNS/TLS/root健康和组件交替部署验收",
-      "真实健康失败、指针失败、回滚失败与断电/进程中断后的人工恢复",
-      "现有持久卷/数据和Worker Secret非root边界保留、实际值日志安全审计"
-    ]
+      "香港首次安装/版本切换和root权限实测，确认生产不变",
+      "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
+      "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
+      "回滚失败/进程中断后的人工恢复验收；通过前仍tested"
+    ],
+    "superseded_bootstrap": {
+      "commit": "d6416111a6fc5cc8de0c036caa4f0989cfb74f2c",
+      "filename": "storylens-online-lightweight-bootstrap-d6416111.tar.gz",
+      "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
+    }
   },
-  "updated_at": "2026-09-03T16:14:47+00:00"
+  "updated_at": "2026-09-04T23:00:00+08:00"
 }

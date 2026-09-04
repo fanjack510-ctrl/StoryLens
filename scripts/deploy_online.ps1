@@ -33,7 +33,7 @@ function Invoke-CheckedNative {
             'MODE_MISMATCH', 'INVALID_BASELINE', 'INVALID_PATH', 'HEAD_CHANGED',
             'DEPLOY_FAILED_ROLLED_BACK', 'ROLLBACK_FAILED_MANUAL_RECOVERY_REQUIRED',
             'MANUAL_RECOVERY_REQUIRED', 'SHA256_MISMATCH', 'BASELINE_MISMATCH',
-            'DEPLOYED_SOURCE_DRIFT', 'RELEASE_ALREADY_EXISTS')
+            'DEPLOYED_SOURCE_DRIFT', 'RELEASE_ALREADY_EXISTS', 'PROTOCOL_MISMATCH')
         $safeCode = 'COMMAND_FAILED_SAFELY'
         foreach ($line in @($captured)) {
             if ($fixedCodes -contains [string]$line) { $safeCode = [string]$line }
@@ -57,6 +57,9 @@ try {
     $baseArguments = @('--root', $root, '--mode', $Mode, '--baseline', $BaselineCommit)
     $preflight = Invoke-CheckedNative $pythonPath (@('-B', $helper, 'preflight') + $baseArguments)
     $metadata = $preflight | ConvertFrom-Json
+    if ($metadata.tool_protocol -ne 2 -or $metadata.tool_version -cnotmatch '^[0-9a-f]{64}$') {
+        throw 'PROTOCOL_MISMATCH'
+    }
     # Always fail scope/dirty checks before tests, packaging, or any remote call.
     if ($SkipTests) { Write-Warning 'SKIP_TESTS_EXPLICIT: local test gate skipped.' }
     if ($DryRun) {
@@ -105,7 +108,7 @@ try {
             # Force pinned known_hosts validation; never silently trust a new host.
             $sshOptions = @('-i', $keyPath, '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=15')
             $null = Invoke-CheckedNative $scp ($sshOptions + @($packagePath, "${Server}:/tmp/$filename"))
-            $remote = "sudo -n /opt/storylens/current/infra/online/deploy-lightweight.sh '$Mode' '$($bundle.commit)' '$filename' '$($bundle.sha256)' '$($metadata.baseline)' '$Domain'"
+            $remote = "sudo -n /opt/storylens/bin/storylens-online-deploy-lightweight production --protocol 2 --tool-version '$($metadata.tool_version)' '$Mode' '$($bundle.commit)' '$filename' '$($bundle.sha256)' '$($metadata.baseline)' '$Domain'"
             $response = Invoke-CheckedNative $ssh ($sshOptions + @($Server, $remote))
             if ($response.Trim() -cne 'DEPLOY_SUCCEEDED') { throw 'REMOTE_STATUS_INVALID' }
             $taskStatus = "DEPLOY_SUCCEEDED mode=$Mode commit=$($bundle.commit)"
@@ -119,7 +122,7 @@ try {
         'DEPLOY_FAILED_ROLLED_BACK', 'ROLLBACK_FAILED_MANUAL_RECOVERY_REQUIRED',
         'MANUAL_RECOVERY_REQUIRED', 'SHA256_MISMATCH', 'BASELINE_MISMATCH',
         'DEPLOYED_SOURCE_DRIFT', 'RELEASE_ALREADY_EXISTS', 'COMMAND_FAILED_SAFELY',
-        'INVALID_ARGUMENTS', 'IDENTITY_FILE_UNAVAILABLE', 'REMOTE_STATUS_INVALID')
+        'INVALID_ARGUMENTS', 'IDENTITY_FILE_UNAVAILABLE', 'REMOTE_STATUS_INVALID', 'PROTOCOL_MISMATCH')
     if ($safe -contains $_.Exception.Message) { $taskStatus = $_.Exception.Message }
 } finally {
     if ($null -ne $taskPackageDirectory -and (Test-Path -LiteralPath $taskPackageDirectory)) {

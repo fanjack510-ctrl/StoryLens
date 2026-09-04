@@ -4,13 +4,7 @@ import re
 from pathlib import PurePosixPath
 
 FULL = "FULL_DEPLOYMENT_REQUIRED"
-SUPPORT = (
-    "VERSION",
-    "infra/online/deploy-lightweight.sh",
-    "infra/online/deploy_runtime.py",
-    "infra/online/deploy_policy.py",
-    "infra/online/deploy_package.py",
-)
+SUPPORT = ("VERSION",)
 BUILD = {
     "web": ("infra/online/Dockerfile.web", "infra/online/nginx-online.conf"),
     "app": ("infra/online/Dockerfile.api", "infra/online/worker-entrypoint.sh"),

@@ -18,6 +18,7 @@ INFRA = ROOT / "infra/online"
 sys.path.insert(0, str(INFRA))
 from deploy_package import fingerprints, members, package, preflight
 from deploy_policy import BUILD, MODULE, SUPPORT, DeployError, classify, scan_secret
+from deploy_protocol import TOOL_FILES
 from deploy_runtime import (
     ALL_SERVICES,
     COMMANDS,
@@ -169,10 +170,6 @@ def server(tmp_path):
             for name in SUPPORT
             if name != "VERSION"
         }
-        content["infra/online/deploy-lightweight.sh"] = (
-            content["infra/online/deploy-lightweight.sh"][0],
-            0o755,
-        )
         content["VERSION"] = (b"1.3.6\n", 0o644)
         for name in BUILD[mode]:
             content[name] = ((ROOT / name).read_bytes(), 0o644)
@@ -375,7 +372,13 @@ def repository(tmp_path):
     git(repo, "config", "user.email", "offline@example.invalid")
     git(repo, "config", "user.name", "Offline Test")
     git(repo, "config", "core.autocrlf", "false")
-    for name in (*SUPPORT, *BUILD["web"], *BUILD["app"], "scripts/deploy_online.ps1"):
+    for name in (
+        *SUPPORT,
+        *BUILD["web"],
+        *BUILD["app"],
+        "scripts/deploy_online.ps1",
+        *("infra/online/" + n for n in TOOL_FILES),
+    ):
         path = repo / name
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / name, path)
@@ -499,8 +502,10 @@ if kind == 'scp':
     shutil.copyfile(args[-2], os.environ['TEST_REMOTE_ARCHIVE'])
 else:
     tokens = shlex.split(args[-1])
-    assert tokens[:3] == ['sudo', '-n', '/opt/storylens/current/infra/online/deploy-lightweight.sh']
-    mode, commit, filename, digest, baseline, domain = tokens[3:]
+    assert tokens[:3] == ['sudo', '-n', '/opt/storylens/bin/storylens-online-deploy-lightweight']
+    assert tokens[3:7] == ['production', '--protocol', '2', '--tool-version']
+    assert len(tokens[7]) == 64
+    mode, commit, filename, digest, baseline, domain = tokens[8:]
     assert mode == 'web' and len(commit) == 40 and len(baseline) == 40
     assert hashlib.sha256(pathlib.Path(os.environ['TEST_REMOTE_ARCHIVE']).read_bytes()).hexdigest() == digest
     assert domain == 'app.dstorylens.com'

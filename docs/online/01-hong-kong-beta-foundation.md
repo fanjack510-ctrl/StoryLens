@@ -160,7 +160,10 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    默认拒绝高风险/未知/混合变更，App 跳过数据库初始化。全局 `current` 保持完整基础设施
    基线，以 `current-web` / `current-app` 和受限 Compose override 记录组件部署；健康或
    指针失败回滚旧镜像。工具自身属于 full，首次安装需人工完整验收。
-   操作说明及剩余门禁见 `infra/online/README.md`，不得把离线 Fake 测试视为生产切换证据。
+   Protocol 2 已补稳定 bin、root 专属版本化工具安装和独立 project 的 D–G 验收入口；
+   d6416111 bootstrap 已 superseded。隔离模式独立内部网络、无宿主端口，仅使用显式假 Secret，
+   不从 current 加载工具代码。操作说明及剩余门禁见 `infra/online/README.md` 和
+   `infra/online/ACCEPTANCE.md`，不得把离线 Fake 测试视为生产切换证据。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 

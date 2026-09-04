@@ -21,6 +21,7 @@ from deploy_policy import (
     scan_secret,
     valid_path,
 )
+from deploy_protocol import PROTOCOL, tool_version
 
 MAX_BYTES = 128 * 1024 * 1024
 
@@ -48,7 +49,14 @@ def preflight(root: Path, mode: str, baseline: str) -> dict:
     version = git(root, "show", f"{commit}:VERSION").strip()
     if version != b"1.3.6" or git(root, "show", f"{baseline}:VERSION").strip() != version:
         raise DeployError("VERSION_MISMATCH")
-    return {"commit": commit, "baseline": baseline, "mode": mode, "changed": changed}
+    return {
+        "commit": commit,
+        "baseline": baseline,
+        "mode": mode,
+        "changed": changed,
+        "tool_protocol": PROTOCOL,
+        "tool_version": tool_version(Path(__file__).parent),
+    }
 
 
 def members(data: bytes, mode: str) -> dict[str, tuple[bytes, int]]:
