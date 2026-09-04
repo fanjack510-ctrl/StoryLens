@@ -29,7 +29,8 @@
     "infra/online/deploy_image_contract.py",
     "infra/online/deploy_image_probe.py",
     "infra/online/tests/test_deploy_image_contract.py",
-    "infra/online/tests/test_deploy_registry.py"
+    "infra/online/tests/test_deploy_registry.py",
+    "infra/online/tests/test_deploy_secret_boundary.py"
   ],
   "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
   "technical_summary": "Protocol 2：Windows固定调用稳定bin并传协议和工具内容指纹；root专属版本化lib完整安装全部模块，不从current加载工具。生产组件仍使用原业务基线和已校验Git候选包。acceptance使用生成的封闭Compose、独立project/path/internal网络/卷/状态/证据和本地Docker socket，无宿主端口，不读取生产env/Secret/data；只接受显式固定假Key，Worker暂存及非root边界保持。准备阶段只初始化隔离空库；Web/App更新/故障/成组回滚不运行迁移。检查隔离schema/行数hash、卷身份、生产容器/镜像/指针身份、假Key日志安全；回滚失败保留pending并阻断。安装与激活不运行Docker。",
@@ -112,7 +113,7 @@
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
-      "使用全新r3项目复验B安装/list/旧锁保留/新锁隔离与IMAGE_RUNTIME_CONTRACT_OK和全部运行时文件摘要；旧项目只保留审计，不复用或自动清理",
+      "使用全新r4项目复验B安装/list/旧锁保留/新锁隔离、IMAGE_RUNTIME_CONTRACT_OK及SECRET_BOUNDARY_OK证据；执行Linux原生root0700/UID10001权限测试；旧项目只保留审计，不复用或自动清理",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
@@ -143,6 +144,42 @@
       "observed": "install/version/installed.json成功，随后官方list输出TOOL_INSTALL_FAILED_SAFELY并exit1；版本仓库有两个合法commit目录及root:root0600普通sl-accept-webd20260904.lock；生产current仍4ae7f663、HTTP200。",
       "code_root_cause": "旧list使用is_dir过滤，普通legacy lock并不直接进入版本校验。确定性复现为installed按当前11文件TOOL_FILES验证旧版9文件目录，读取新增探针模块失败；install只验证新目标而list枚举所有目录，且切换缺少registry自检。锁路径混用和未知普通文件被静默忽略是并存缺陷，一并修复；未虚构远端异常正文。",
       "retention": "两个旧版本、legacy lock、失败session和所有容器/镜像/卷均保留，不读取锁内容、不删除或放宽权限。"
+    },
+    "hong_kong_third_secret_probe_failure": {
+      "source": "user_provided_hong_kong_R3_evidence; no server operations in this fix",
+      "commit": "f0fab627b8d4eab9950b03c4d9565b6979719763",
+      "project": "sl-accept-webd20260904r3",
+      "passed": "IMAGE_RUNTIME_CONTRACT_OK；schema-init和pocketbase-init均Exited(0)；API/Web/PB/PG/Redis健康、Worker正常；仅internal网络且无宿主端口；人工audit_containers及network boundary通过；Worker PID1为10001:10001。",
+      "tmpfs": "root:root0700; rw,noexec,nosuid,nodev,size=64k,mode=0700; Web没有staged Secret",
+      "failure": "Web模式UID10001执行Path.exists无法遍历root0700父目录，抛PermissionError(Errno13)，工具COMMAND_FAILED_SAFELY，session.ready=false。",
+      "root_cause": "验收工具将缺失路径检查错误地放在无目录搜索权限的用户探针中；不是镜像缺模块、Worker启动失败或需要放宽Secret目录权限。",
+      "production": "current=/opt/storylens/releases/4ae7f663; HTTP200 (operator supplied)",
+      "retention": "全部旧session/容器/镜像/卷/锁保留，不清理不复用。"
+    },
+    "f0fab627_bootstrap_superseded": {
+      "commit": "f0fab627b8d4eab9950b03c4d9565b6979719763",
+      "filename": "storylens-online-lightweight-bootstrap-f0fab627.tar.gz",
+      "state": "superseded_do_not_install",
+      "reason": "R3 D门禁Web关闭模式Secret不存在检查触发真实PermissionError，须使用R4修复包。"
+    },
+    "secret_probe_fix": {
+      "web": "UID10001探针只核验自身和PID1 UID/GID；root检查tmpfs目录root0700，用lstat仅将FileNotFoundError认定不存在，任何文件、symlink、目录或特殊条目拒绝。Worker无任何bind mount；不读取Secret内容。",
+      "app": "唯一只读bind必须是本session固定假Secret源和原始目标；原件root600、副本10001:10001/0400且为普通单链接文件；应用用户open副本成功且open原件PermissionError，root以NOFOLLOW/fstat及有界读取核验字节一致；无内容/长度/摘要输出。",
+      "unchanged": "业务Worker入口、tmpfs64KiB/noexec/nosuid/nodev、镜像权限/内容契约、多版本registry、legacy锁保留及专用/run/lock均保持；不修改业务/数据库/认证/计费/前端/VERSION。",
+      "evidence": "实际secret_boundary每次写固定SECRET_BOUNDARY_OK或SECRET_BOUNDARY_FAILED JSON，无原异常/环境/内容；证据存储失败固定SECRET_BOUNDARY_EVIDENCE_FAILED。prepare失败保留ready=false；DryRun只读不落盘，失败返回固定错误。",
+      "permission_documentation": "版本实现目录实际root:root0700（安装器umask077作用于mkdir0755），Shell0555、Python/metadata0444；不改代码或放宽目录以迎合旧说明。",
+      "targeted_tests": "新增20 passed, 1 skipped：探针分权/挂载/失败脱敏证据/prepare不误标ready/DryRun只读/lstat各种条目拒绝。Linux真实root0700与UID10001子进程权限回归已提供，Windows跳过，不虚报通过。",
+      "full_validation": "全部部署及在线后端347 passed, 2 skipped（部署211、后端136；跳过Linux原生flock及root0700权限测试），1项既有Starlette弃用警告。前端typecheck、7项Vitest、production build通过。Ruff check/format59文件、compileall、Compose config --quiet、check_project.py、change_registry.py check、git diff --check通过；14个Bash命令块sh -n、Shell LF/100755、JSON/登记/Secret模式/VERSION/7文件范围审计通过。",
+      "runtime_limit": "Docker Desktop Linux Engine named pipe不存在，未执行真实镜像/容器、Linux UID权限或香港R4验收。此前三轮现场证据来自用户；本轮不远程操作、不清理旧资源。",
+      "next_projects": [
+        "sl-accept-webd20260904r4",
+        "sl-accept-webe20260904r4",
+        "sl-accept-appf20260904r4",
+        "sl-accept-appg20260904r4",
+        "sl-accept-appw20260904r4"
+      ],
+      "status": "tested_pending_hong_kong_R4_A_H",
+      "artifact_policy": "新bootstrap仅来自最终干净Git HEAD，包含工具全部11模块、回归测试、CHG及完整R4 A–H说明；不复用前三轮失败包。"
     },
     "deb0a0d6_bootstrap_superseded": {
       "commit": "deb0a0d650ce5c40e2eac025646ce36edebb1a26",
@@ -197,5 +234,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-04T23:52:00+08:00"
+  "updated_at": "2026-09-05T00:20:00+08:00"
 }

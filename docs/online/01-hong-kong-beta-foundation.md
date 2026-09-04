@@ -171,6 +171,10 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    第二轮deb0a0d6安装后list失败，现场有合法旧锁；代码确认旧普通锁会被is_dir过滤，实际
    可复现问题是新版11文件校验旧9文件布局。新增共享registry、legacy锁安全分类、专用
    /run锁目录及入口自检恢复。两包均superseded；下一轮使用第三组r3项目，旧现场不清理。
+   第三轮f0fab627的R3 D已通过镜像/初始化/容器及网络门禁，但Web非root探针在root0700
+   tmpfs下用Path.exists检查缺失Secret触发PermissionError。该包superseded；改为非root
+   身份检查与root lstat不存在检查，App继续严格权限及字节一致性核验，新增固定边界证据。
+   版本实现目录实际root0700（不是0755）；新一轮只用R4项目，保留所有旧现场，CHG仍tested。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 

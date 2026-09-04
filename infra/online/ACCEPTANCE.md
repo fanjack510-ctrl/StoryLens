@@ -25,7 +25,7 @@ Docker 对 COPY 目录保留权限的规则见
 
 旧 session.json、compose.json、镜像、容器、卷均只保留审计，**不能复用旧项目**。
 旧失败发生在 ready=false 时；它留下部分初始化资源是失败关闭设计，不是成功基线。
-本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用第三组 r3 项目；若新项目已存在，
+本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用第四组 r4 项目；若新项目已存在，
 停止并另选合法唯一后缀，不能删旧资源后冒充首次验收。
 
 修复后目录权限只在复制的公开构建源码内部显式设为 0755；state/evidence/Secret
@@ -66,6 +66,30 @@ install/list/activate/unlink共用registry，切换前后自检；后检失败�
 新验收锁为 /run/lock/storylens-online-deploy/<project>.lock，目录root:root0700、文件0600，
 安装器操作使用同目录registry.lock串行化。生产旧部署互斥锁仍留在shared，不改变生产边界。
 DryRun不创建锁；新锁不写lib，不截断既有锁文件。/run锁随系统生命周期存在，旧lib锁永久保留审计。
+
+### 第三轮 R3 D：root-only tmpfs 的不存在检查失败
+
+用户提供现场：f0fab627b8d4eab9950b03c4d9565b6979719763，项目
+sl-accept-webd20260904r3 已通过 IMAGE_RUNTIME_CONTRACT_OK；schema-init、pocketbase-init
+均 Exited(0)，API/Web/PocketBase/PG/Redis健康、Worker正常。人工audit_containers/network
+复验通过，均为internal网络、无宿主端口；Worker PID1=10001:10001。
+Web无staged Secret，但tmpfs父目录root:root0700使UID10001调用Path.exists抛PermissionError；
+prepare输出COMMAND_FAILED_SAFELY、session.ready=false。生产current=4ae7f663、HTTP200。
+这是验收探针的权限错误，不是Worker启动或Secret暂存故障。f0fab627包已superseded，禁止继续安装。
+前三轮失败session、容器、镜像、卷、锁全部保留；不能删资源复用项目。
+
+新版Web非root探针只验证自身及PID1的UID/GID；root探针先验证tmpfs目录root:root0700，
+再用lstat确认staged路径完全不存在，文件/悬空symlink/目录/FIFO等任何条目都拒绝。
+同时Worker不得有任何bind mount，因此无原始Provider Secret挂载；不读取Secret内容。
+App保持原入口暂存行为：目录10001:10001/0700，原件root600，副本10001:10001/0400；
+非root实际open副本成功、open原件必须PermissionError，root用NOFOLLOW和fstat验证普通文件、
+权限与owner后做有界字节一致性比较，无内容或摘要输出。tmpfs始终64KiB/noexec/nosuid/nodev。
+Web关闭模式不chown、不chmod目录；安装器和业务Worker入口也不改。
+
+实际边界检查写入evidence/secret-boundary-*.json，状态SECRET_BOUNDARY_OK；任一失败写
+SECRET_BOUNDARY_FAILED并失败关闭，prepare不得标记ready。证据存储自身失败时固定报
+SECRET_BOUNDARY_EVIDENCE_FAILED。不记录异常正文、环境或Secret。DryRun保持只读，不落盘，
+失败只返回同一固定错误；实际prepare/update/rollback的证据不得只有IMAGE_RUNTIME_CONTRACT_OK。
 
 ## A. 安装前检查与生产身份留存
 
@@ -136,6 +160,9 @@ fi
 LIB=/opt/storylens/lib/storylens-online-deploy/$COMMIT
 test "$(readlink -f "$BIN")" = "$LIB/deploy-lightweight.sh"
 stat -c '%U:%G %a %n' "$LIB" "$LIB/deploy-lightweight.sh" "$LIB/deploy_cli.py"
+test "$(stat -c '%u:%g:%a' "$LIB")" = 0:0:700
+test "$(stat -c '%u:%g:%a' "$LIB/deploy-lightweight.sh")" = 0:0:555
+test "$(stat -c '%u:%g:%a' "$LIB/deploy_cli.py")" = 0:0:444
 "$BIN" version > "$AUDIT/tool-version.json"
 python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m["protocol"]==2 and m["tool_version"]==sys.argv[2] and m["commit"]==sys.argv[3]' "$AUDIT/tool-version.json" "$TV" "$COMMIT"
 python3 -I -B "$LIB/deploy_install.py" list > "$AUDIT/registry-after.json"
@@ -153,7 +180,8 @@ printf '%s\n' B_INSTALLED_NO_CONTAINERS_CHANGED
 
 安装器验证包内全部源码摘要和工具指纹；所有文件来自最终 Git archive，bootstrap.json
 是生成的非秘密元数据。外部 SHA 校验是信任起点，包内摘要不能代替它。
-lib 目录 root:root，仅 root 可写；shell=0555，Python 和 installed.json=0444。
+版本实现目录 root:root **0700**，不是0755（mkdir的0755请求受安装器umask077约束）；
+shell=0555，Python 和 installed.json=0444。不要为迎合旧说明放宽目录权限。
 包中保留的是公开占位 `.env.example`（仅供离线 Compose 测试）；没有真实 `.env`、online.env
 或 Secret 文件。隔离运行不加载这个例子，不使用其中的生产 Secret 路径。
 bin 是 root 创建、位于 root 专属目录的绝对软链接，shell 使用 readlink -f 定位版本化依赖。
@@ -226,7 +254,7 @@ Web prepare 没有 Provider Secret，即使 Worker 仍运行也不会读取它�
 ### D. Web 成功
 
 ```bash
-setup_session sl-accept-webd20260904r3 web
+setup_session sl-accept-webd20260904r4 web
 update_session --dry-run
 update_session --fault none
 check_public
@@ -239,7 +267,7 @@ check_public
 ### E. Web 失败与回滚（独立的新基线）
 
 ```bash
-setup_session sl-accept-webe20260904r3 web
+setup_session sl-accept-webe20260904r4 web
 expect_rollback health
 check_public
 ```
@@ -250,7 +278,7 @@ check_public
 ### F. App 成功
 
 ```bash
-setup_session sl-accept-appf20260904r3 app
+setup_session sl-accept-appf20260904r4 app
 update_session --dry-run
 update_session --fault none
 check_public
@@ -266,7 +294,7 @@ tmpfs副本400/10001:10001，64KiB/noexec/nosuid/nodev，应用用户不可读�
 ### G. App 失败与成组回滚
 
 ```bash
-setup_session sl-accept-appg20260904r3 app
+setup_session sl-accept-appg20260904r4 app
 expect_rollback health
 check_public
 ```
@@ -275,7 +303,7 @@ check_public
 如需覆盖 Worker 自身退出，另用新 session：
 
 ```bash
-setup_session sl-accept-appw20260904r3 app
+setup_session sl-accept-appw20260904r4 app
 expect_rollback worker
 check_public
 ```
@@ -303,6 +331,7 @@ set -e
 python3 -m venv "$AUDIT/test-venv"
 "$AUDIT/test-venv/bin/python" -m pip install pytest
 "$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests" -q -p no:cacheprovider
+"$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_secret_boundary.py" -q -k real_linux -p no:cacheprovider
 check_public
 ```
 
@@ -324,8 +353,16 @@ for r in records:
     assert all(n in r['files'] for n in ('db/init_schema.py','db/models.py','db/phase2b1_migration.py'))
     assert r['image'].startswith('sha256:') and len(r['entrypoint']) == 64
 print('IMAGE_CONTRACT_EVIDENCE_OK')
+boundaries = [json.loads(p.read_text()) for p in pathlib.Path(sys.argv[1]).glob('secret-boundary-*.json')]
+assert boundaries and all(r['status'] == 'SECRET_BOUNDARY_OK' for r in boundaries)
+print('SECRET_BOUNDARY_EVIDENCE_OK')
 PY
 ```
+
+Linux定向权限测试必须实际passed（不能skipped）：它在独立/tmp夹具中构造root0700目录，
+以UID/GID10001复现旧Path.exists的PermissionError，再执行新版Web及App探针；仅使用固定假值。
+该内核测试以/proc/self/status验证子进程身份；真实容器的PID1仍由D–G的/proc/1/status检查。
+失败session若出现SECRET_BOUNDARY_FAILED，保留证据并停止，不删除证据后继续标记成功。
 
 重新采集 A 的生产身份并 diff；任何变化都必须解释并停止验收，不能被“网站仍200”掩盖。
 

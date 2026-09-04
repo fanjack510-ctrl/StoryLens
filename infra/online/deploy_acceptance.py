@@ -27,6 +27,65 @@ SERVICES = (
 )
 TEST_KEY = b"sk-" + b"STORYLENS_ACCEPTANCE_ONLY_" + b"NOT_A_REAL_KEY"
 
+# These exact scripts are exercised by subprocess permission tests on Linux.
+# No secret bytes, digests or exception text are returned to the operator.
+WORKER_IDENTITY_PROBE = """
+import os, pathlib
+assert os.geteuid() == os.getegid() == 10001
+s = pathlib.Path('/proc/1/status').read_text()
+assert 'Uid:\\t10001\\t10001\\t10001\\t10001' in s
+assert 'Gid:\\t10001\\t10001\\t10001\\t10001' in s
+"""
+WEB_SECRET_ROOT_PROBE = """
+import os, stat
+assert os.geteuid() == os.getegid() == 0
+d = os.lstat('/run/storylens-online')
+assert stat.S_ISDIR(d.st_mode) and stat.S_IMODE(d.st_mode) == 0o700
+assert d.st_uid == d.st_gid == 0
+try:
+    os.lstat('/run/storylens-online/deepseek-api-key')
+except FileNotFoundError:
+    pass
+else:
+    raise AssertionError
+"""
+APP_SECRET_USER_PROBE = """
+import os
+p = '/run/storylens-online/deepseek-api-key'
+fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+os.close(fd)
+try:
+    fd = os.open('/run/secrets/storylens_online_deepseek_api_key', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+except PermissionError:
+    pass
+else:
+    os.close(fd)
+    raise AssertionError
+"""
+APP_SECRET_ROOT_PROBE = """
+import os, stat
+assert os.geteuid() == os.getegid() == 0
+d = os.lstat('/run/storylens-online')
+assert stat.S_ISDIR(d.st_mode) and stat.S_IMODE(d.st_mode) == 0o700
+assert d.st_uid == d.st_gid == 10001
+values = []
+for path, uid, mode in (
+    ('/run/secrets/storylens_online_deepseek_api_key', 0, 0o600),
+    ('/run/storylens-online/deepseek-api-key', 10001, 0o400),
+):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        s = os.fstat(fd)
+        assert stat.S_ISREG(s.st_mode) and s.st_nlink == 1
+        assert stat.S_IMODE(s.st_mode) == mode and s.st_uid == s.st_gid == uid
+        value = os.read(fd, 4097)
+        assert 0 < len(value) <= 4096 and not os.read(fd, 1)
+        values.append(value)
+    finally:
+        os.close(fd)
+assert values[0] == values[1]
+"""
+
 
 def local_docker(args, timeout=120):
     if not args or args[0] != "docker":
@@ -553,28 +612,68 @@ class Acceptance:
         )
         return hashlib.sha256((schema + counts).encode()).hexdigest()
 
-    def secret_boundary(self):
+    def secret_boundary(self, *, record_evidence=True):
+        try:
+            self._secret_boundary()
+            if record_evidence:
+                write_json(
+                    self.evidence / f"secret-boundary-{time.time_ns()}.json",
+                    {"status": "SECRET_BOUNDARY_OK", "mode": self.mode, "project": self.project},
+                )
+        except BaseException:  # noqa: BLE001 -- fixed evidence, never native output
+            if not record_evidence:  # a DryRun must remain read-only, even on failure
+                raise DeployError("SECRET_BOUNDARY_FAILED") from None
+            try:
+                write_json(
+                    self.evidence / f"secret-boundary-failed-{time.time_ns()}.json",
+                    {
+                        "status": "SECRET_BOUNDARY_FAILED",
+                        "mode": self.mode,
+                        "project": self.project,
+                    },
+                )
+            except BaseException:  # noqa: BLE001 -- evidence storage can itself fail
+                raise DeployError("SECRET_BOUNDARY_EVIDENCE_FAILED") from None
+            raise DeployError("SECRET_BOUNDARY_FAILED") from None
+
+    def _secret_boundary(self):
         info = self.inspect(self.ids()["online-worker"])
         flags = info["HostConfig"].get("Tmpfs", {}).get("/run/storylens-online", "")
-        if not all(flag in flags.split(",") for flag in ("noexec", "nosuid", "nodev", "size=64k")):
+        if not all(
+            flag in flags.split(",")
+            for flag in ("rw", "noexec", "nosuid", "nodev", "size=64k", "mode=0700")
+        ):
             raise DeployError("WORKER_TMPFS_INVALID")
-        code = "import os,pathlib,stat; s=pathlib.Path('/proc/1/status').read_text(); assert 'Uid:\\t10001\\t10001\\t10001\\t10001' in s; assert 'Gid:\\t10001\\t10001\\t10001\\t10001' in s;"
+        binds = [m for m in info["Mounts"] if m["Type"] == "bind"]
         if self.mode == "app":
-            code += "p=pathlib.Path('/run/storylens-online/deepseek-api-key'); t=p.stat(); assert stat.S_IMODE(t.st_mode)==0o400 and t.st_uid==10001 and t.st_gid==10001; assert os.access(p,os.R_OK); assert not os.access('/run/secrets/storylens_online_deepseek_api_key',os.R_OK);"
-        else:
-            code += "assert not pathlib.Path('/run/storylens-online/deepseek-api-key').exists();"
-        self.compose("exec", "-T", "--user", "10001:10001", "online-worker", "python", "-c", code)
-        if self.mode == "app":
-            self.compose(
-                "exec",
-                "-T",
-                "--user",
-                "0:0",
-                "online-worker",
-                "python",
-                "-c",
-                "import pathlib,stat; s=pathlib.Path('/run/secrets/storylens_online_deepseek_api_key').stat(); assert stat.S_IMODE(s.st_mode)==0o600 and s.st_uid==0 and s.st_gid==0",
-            )
+            if len(binds) != 1 or (
+                binds[0]["Source"] != str(self.state / "test_provider")
+                or binds[0]["Destination"] != "/run/secrets/storylens_online_deepseek_api_key"
+                or binds[0]["RW"]
+            ):
+                raise DeployError("WORKER_SECRET_MOUNT_INVALID")
+        elif binds:
+            raise DeployError("WORKER_SECRET_MOUNT_INVALID")
+        self.compose(
+            "exec",
+            "-T",
+            "--user",
+            "10001:10001",
+            "online-worker",
+            "python",
+            "-c",
+            WORKER_IDENTITY_PROBE + (APP_SECRET_USER_PROBE if self.mode == "app" else ""),
+        )
+        self.compose(
+            "exec",
+            "-T",
+            "--user",
+            "0:0",
+            "online-worker",
+            "python",
+            "-c",
+            APP_SECRET_ROOT_PROBE if self.mode == "app" else WEB_SECRET_ROOT_PROBE,
+        )
 
     def volume_identity(self):
         result = {}
@@ -692,7 +791,7 @@ class Acceptance:
         before = self.ids()
         images = {n: self.inspect(i)["Image"] for n, i in before.items()}
         db_before = self.database_fingerprint()
-        self.secret_boundary()
+        self.secret_boundary(record_evidence=not dry_run)
         if dry_run:
             return "DRY_RUN_OK"
         tag = f"{self.project}-{self.mode}:candidate-{time.time_ns()}"

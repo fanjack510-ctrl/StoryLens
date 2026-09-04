@@ -102,6 +102,7 @@ class Docker:
                     {
                         "Type": "bind",
                         "Source": str(self.session.state / "test_provider"),
+                        "Destination": "/run/secrets/storylens_online_deepseek_api_key",
                         "RW": False,
                     }
                 )

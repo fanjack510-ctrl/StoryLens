@@ -480,8 +480,9 @@ resolves to a complete immutable implementation under
 `/opt/storylens/lib/storylens-online-deploy/<full-commit>/`.
 The installer validates the committed bootstrap manifest; unknown existing
 versions/entries are refused. Activation saves a 0400 previous-version record.
-It does not call Docker. Shell is 0555, Python/metadata 0444, directories are
-root-only writable. No tool module is loaded from global `current`.
+It does not call Docker. Shell is 0555, Python/metadata 0444. The version implementation
+directory is root:root 0700 (mkdir 0755 is restricted by umask 077), not 0755.
+Do not relax it to match older instructions. No tool module is loaded from global `current`.
 
 Every execution carries protocol 2 and the SHA256 of the installed tool modules.
 A mismatch fails before any container operation. Windows DryRun verifies local
@@ -546,6 +547,18 @@ New acceptance locks live in /run/lock/storylens-online-deploy (root0700/files06
 never in lib. Old root600 single-link regular locks are validated without reading,
 following or modifying them. A–H now uses third-group r3 projects and checks list,
 legacy-lock retention and stable-entry restoration. CHG remains tested.
+
+Third Hong Kong R3 D supersedes f0fab627: image contract, init jobs, container/network
+audit and services passed, but the Web-mode UID10001 Path.exists probe could not
+traverse the correct root0700 tmpfs. The probe is now split: UID10001 only checks
+process identity in Web mode; root lstat proves the staged path has no entry at all,
+and Worker must have no bind mount. Nothing reads Secret contents in Web mode.
+App checks exact readonly test-source mount, root600/source and UID10001/0400 copy,
+actual application read permissions and root-only bounded byte equality. tmpfs stays
+64KiB/noexec/nosuid/nodev; Worker entrypoint is unchanged. Actual boundary runs write
+fixed SECRET_BOUNDARY_OK/FAILED evidence without native errors or bytes; DryRun stays
+read-only. All three failure records/resources remain retained. Use fresh r4 projects
+and the A–H commands (including Linux real-permission regression) in ACCEPTANCE.md.
 
 ### Manual full upgrade
 
