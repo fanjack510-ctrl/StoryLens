@@ -8,6 +8,7 @@ import re
 import time
 from pathlib import Path
 
+from deploy_image_contract import context_contract, copy_context, verify_image
 from deploy_install import verify_source
 from deploy_policy import DeployError, require_mode
 from deploy_protocol import trusted
@@ -281,20 +282,30 @@ class Acceptance:
         self.state.mkdir(parents=True, mode=0o700)
         self.evidence.mkdir(mode=0o700)
         baseline = self.root / "baseline"
-        baseline.mkdir()
-        for name in meta["files"]:
-            dest = baseline / name
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes((source / name).read_bytes())
-            dest.chmod(0o555 if name.endswith(".sh") else 0o444)
+        write_json(
+            self.state / "session.json",
+            {
+                "project": self.project,
+                "mode": self.mode,
+                "ready": False,
+                "phase": "source_preparation",
+            },
+        )
+        try:
+            copy_context(source, baseline, meta["files"])
+        except Exception:  # noqa: BLE001 -- preserve a fixed failure checkpoint
+            write_json(
+                self.evidence / "source-preparation-failed.json",
+                {
+                    "status": "BUILD_CONTEXT_CONTRACT_FAILED",
+                    "project": self.project,
+                },
+            )
+            raise DeployError("BUILD_CONTEXT_CONTRACT_FAILED") from None
         hashes = tree_hashes(baseline)
         for mode in TARGETS:
             candidate = self.root / "candidates" / mode
-            for name in hashes:
-                dest = candidate / name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes((baseline / name).read_bytes())
-                dest.chmod(0o555 if name.endswith(".sh") else 0o444)
+            copy_context(baseline, candidate, hashes)
             changed = candidate / (
                 "apps/online_web/index.html"
                 if mode == "web"
@@ -331,8 +342,19 @@ class Acceptance:
             "ready": False,
         }
         write_json(self.state / "session.json", record)
+        baseline_images = {}
         for mode in ("web", "app"):
-            self.build(baseline, mode, f"{self.project}-{mode}:baseline")
+            baseline_images[mode] = self.build(
+                baseline, mode, f"{self.project}-{mode}:baseline", hashes
+            )
+        print("IMAGE_RUNTIME_CONTRACT_OK")
+        for name in ("online-api", "online-worker", "schema-init"):
+            spec["services"][name]["image"] = baseline_images["app"]
+        spec["services"]["online-web"]["image"] = baseline_images["web"]
+        record["baseline_images"] = baseline_images
+        record["spec"] = spec
+        write_json(self.state / "session.json", record)
+        write_json(self.state / "compose.json", spec)
         self.run(
             [
                 "docker",
@@ -373,19 +395,52 @@ class Acceptance:
         write_json(self.state / "session.json", record)
         return "ACCEPTANCE_BASELINE_READY"
 
-    def build(self, source: Path, mode: str, tag: str):
-        self.run(
-            [
-                "docker",
-                "build",
-                "--tag",
-                tag,
-                "--file",
-                str(source / f"infra/online/Dockerfile.{'web' if mode == 'web' else 'api'}"),
-                str(source),
-            ],
-            timeout=1800,
-        )
+    def build(self, source: Path, mode: str, tag: str, manifest: dict):
+        try:
+            expected = context_contract(source, manifest)
+            if self.run(["docker", "image", "ls", "-q", "--filter", f"reference={tag}"]):
+                raise DeployError("ACCEPTANCE_IMAGE_ALREADY_EXISTS")
+            self.run(
+                [
+                    "docker",
+                    "build",
+                    "--no-cache",
+                    "--tag",
+                    tag,
+                    "--file",
+                    str(source / f"infra/online/Dockerfile.{'web' if mode == 'web' else 'api'}"),
+                    str(source),
+                ],
+                timeout=1800,
+            )
+            image = self.run(["docker", "image", "inspect", "--format", "{{.Id}}", tag])
+            if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+                raise DeployError("IMAGE_RUNTIME_CONTRACT_FAILED")
+            if mode == "app":
+                evidence = verify_image(self.run, image, expected)
+                write_json(self.evidence / f"image-contract-{time.time_ns()}.json", evidence)
+            return image
+        except DeployError as exc:
+            # Retain failed session/artifacts, never start services or erase evidence.
+            code = (
+                str(exc)
+                if str(exc)
+                in {
+                    "BUILD_CONTEXT_CONTRACT_FAILED",
+                    "IMAGE_RUNTIME_CONTRACT_FAILED",
+                    "ACCEPTANCE_IMAGE_ALREADY_EXISTS",
+                }
+                else "IMAGE_BUILD_FAILED_SAFELY"
+            )
+            write_json(
+                self.evidence / f"image-contract-failed-{time.time_ns()}.json",
+                {
+                    "status": code,
+                    "mode": mode,
+                    "project": self.project,
+                },
+            )
+            raise DeployError(code) from None
 
     def ids(self):
         result = {}
@@ -610,6 +665,9 @@ class Acceptance:
         if spec != record["spec"]:
             raise DeployError("ACCEPTANCE_CONFIG_DRIFT")
         expected = compose_spec(self.project, self.state, self.mode)
+        for name in ("online-api", "online-worker", "schema-init"):
+            expected["services"][name]["image"] = record["baseline_images"]["app"]
+        expected["services"]["online-web"]["image"] = record["baseline_images"]["web"]
         for name in TARGETS[self.mode]:
             expected["services"][name]["image"] = spec["services"][name]["image"]
         if spec != expected:
@@ -637,13 +695,13 @@ class Acceptance:
         self.secret_boundary()
         if dry_run:
             return "DRY_RUN_OK"
-        tag = f"{self.project}-{self.mode}:candidate"
-        self.build(candidate, self.mode, tag)
+        tag = f"{self.project}-{self.mode}:candidate-{time.time_ns()}"
+        image = self.build(candidate, self.mode, tag, record["candidates"][self.mode])
         old_spec = copy.deepcopy(spec)
         # Pin immutable IDs, not mutable baseline tags, for the group rollback.
         for name in TARGETS[self.mode]:
             old_spec["services"][name]["image"] = images[name]
-            spec["services"][name]["image"] = tag
+            spec["services"][name]["image"] = image
         write_json(self.state / "pending.json", {"rollback_spec": old_spec})
         try:
             if fault in ("health", "rollback"):

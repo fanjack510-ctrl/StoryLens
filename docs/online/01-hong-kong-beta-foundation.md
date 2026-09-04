@@ -164,6 +164,10 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    d6416111 bootstrap 已 superseded。隔离模式独立内部网络、无宿主端口，仅使用显式假 Secret，
    不从 current 加载工具代码。操作说明及剩余门禁见 `infra/online/README.md` 和
    `infra/online/ACCEPTANCE.md`，不得把离线 Fake 测试视为生产切换证据。
+   香港首轮 a0f8c1a9 Web 隔离验收在 schema-init 失败：复制源码的嵌套目录受 umask 077
+   影响为 root-only，非 root 镜像运行时无法导入 db 子模块。该包 superseded；新修复规范化
+   构建源码权限并增加服务启动前非 root 导入/完整文件摘要门禁。旧 session 和卷保留审计，
+   下一轮使用新的 r2 项目。CHG 仍 tested；生产 4ae7f663 和 HTTP 200 不变（用户提供事实）。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 

@@ -524,6 +524,18 @@ Bootstrap is built by `deploy_bootstrap.py` from clean final Git HEAD and includ
 all online build sources, tests, installer, protocol metadata and CHG record.
 Local Fake/Compose-render tests do not substitute for Hong Kong Docker acceptance.
 
+The a0f8c1a9 bootstrap is also **superseded; do not install it**. Its first Hong Kong
+Web acceptance failed at schema-init: root umask 077 created 0700 nested build-source
+directories, retained by COPY and unreadable to the image's non-root application.
+Manifest copying now normalizes only public source directories to 0755 and verifies
+the complete file tree. Before any isolated service starts, the baseline App image
+(including Web acceptance) must pass a no-network, no-secret UID 10001 import and
+full runtime SHA256 contract. App candidates pass the same gate before switching.
+Existing image tags are refused; acceptance builds bypass cache and pin image IDs.
+`IMAGE_RUNTIME_CONTRACT_OK` plus evidence JSON is required, not COPY history alone.
+Failed sessions and volumes are retained for audit, never reused or automatically
+removed. Updated r2 project names and exact A–H commands are in ACCEPTANCE.md.
+
 ### Manual full upgrade
 
 Do these steps only during an approved deployment window, reconciling any

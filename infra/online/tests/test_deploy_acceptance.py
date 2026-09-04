@@ -16,6 +16,31 @@ from deploy_protocol import PROTOCOL, TOOL_FILES, check_protocol, tool_version
 from deploy_runtime import COMMANDS, TARGETS
 
 
+def runtime_source(root):
+    names = [
+        "__init__.py",
+        "errors.py",
+        "main.py",
+        "worker.py",
+        "db/__init__.py",
+        "db/init_schema.py",
+        "db/models.py",
+        "db/phase2b1_migration.py",
+    ]
+    files = {"apps/online_api/storylens_online/" + n: "# runtime stub\n" for n in names}
+    files["apps/online_web/index.html"] = "<head></head>"
+    files["infra/online/worker-entrypoint.sh"] = (
+        "#!/bin/sh\nexec python -m storylens_online.worker\n"
+    )
+    for name, value in files.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(value, encoding="utf-8")
+        if name.endswith(".sh"):
+            path.chmod(0o555)
+    return files
+
+
 class Docker:
     """Execute the update orchestration, fake only Docker's OS boundary."""
 
@@ -39,7 +64,21 @@ class Docker:
             return "safe history"
         if args[:2] == ["docker", "build"]:
             assert str(self.session.root) in args[-1]
+            if "--tag" in args:
+                self.context = Path(args[-1])
             return ""
+        if args[:3] == ["docker", "image", "ls"]:
+            return ""
+        if args[:3] == ["docker", "image", "inspect"]:
+            return self.old if args[-1].endswith(":baseline") else self.new
+        if args[:2] == ["docker", "run"]:
+            from deploy_image_contract import context_contract
+            from deploy_image_probe import MODULES
+
+            expected = context_contract(self.context, tree_hashes(self.context))
+            return json.dumps(
+                {"status": "IMAGE_RUNTIME_CONTRACT_OK", **expected, "modules": list(MODULES)}
+            )
         if args[:3] == ["docker", "network", "inspect"]:
             return json.dumps(
                 [
@@ -123,6 +162,9 @@ def session(tmp_path, monkeypatch):
     # Filesystem ownership is separately covered; temporary Linux pytest parents
     # are intentionally not a privileged deployment installation.
     monkeypatch.setattr(acceptance, "trusted", lambda p: None)
+    import deploy_image_contract
+
+    monkeypatch.setattr(deploy_image_contract, "trusted", lambda p: None)
 
     def make(mode):
         root = tmp_path / ("sl-accept-" + mode + "12345678")
@@ -136,13 +178,17 @@ def session(tmp_path, monkeypatch):
             else "apps/online_api/storylens_online/errors.py"
         )
         for directory, value in ((baseline, "before"), (candidate, "after")):
-            (directory / name).parent.mkdir(parents=True)
+            runtime_source(directory)
+            (directory / name).parent.mkdir(parents=True, exist_ok=True)
             (directory / name).write_text(value)
         spec = compose_spec(root.name, state, mode)
+        for service in ("online-web", "online-api", "online-worker", "schema-init"):
+            spec["services"][service]["image"] = "sha256:" + "1" * 64
         record = {
             "mode": mode,
             "project": root.name,
             "ready": True,
+            "baseline_images": {m: "sha256:" + "1" * 64 for m in TARGETS},
             "spec": spec,
             "baseline": tree_hashes(baseline),
             "candidates": {mode: tree_hashes(candidate)},
@@ -385,12 +431,11 @@ def test_prepare_dry_run_and_first_bootstrap_only_migrates_isolated_db(tmp_path,
     monkeypatch.setattr(acceptance, "ACCEPTANCE_ROOT", tmp_path / "sessions")
     monkeypatch.setattr(acceptance, "trusted", lambda p: None)
     source = tmp_path / "source"
-    names = ["apps/online_web/index.html", "apps/online_api/storylens_online/errors.py"]
-    for name in names:
-        path = source / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("<head></head>" if name.endswith(".html") else "# baseline\n")
-    monkeypatch.setattr(acceptance, "verify_source", lambda p: {"files": names})
+    runtime_source(source)
+    monkeypatch.setattr(acceptance, "verify_source", lambda p: {"files": tree_hashes(source)})
+    import deploy_image_contract
+
+    monkeypatch.setattr(deploy_image_contract, "trusted", lambda p: None)
     project = "sl-accept-prepare1234"
     root = acceptance.ACCEPTANCE_ROOT / project
     deployment = Acceptance(project, root / "state", root / "evidence", "web", sleep=lambda _: None)

@@ -4,6 +4,45 @@
 不是已经通过的服务器证据。所有 Docker 命令只在人工批准的香港验收窗口执行。
 工具不会打开正式模型开关，不会推送、发布或创建标签。
 
+## 本次阻断及重验规则
+
+`a0f8c1a941365a46c9cf93ab5cfb792e595dacee` bootstrap 已 superseded，禁止继续安装。
+用户提供的香港首轮 D 项目 `sl-accept-webd20260904`：prepare 返回
+`COMMAND_FAILED_SAFELY`，PG/Redis/PB 正常，schema-init Exited(1)，报
+`No module named storylens_online.db.init_schema`。源码 init_schema.py 摘要为
+`4bffce5788725ed613c87a0483d40242f26b1b0db165efaa9eebae53cab8771f`；
+旧镜像 `sl-accept-webd20260904-app:baseline` ID 为
+`sha256:fe599454d7bad5266286e77bdbd7c7bcdd2d05558c99ee0d30d4b20879d1e818`。
+生产仍指向 `/opt/storylens/releases/4ae7f663` 且 HTTP 200。
+
+代码根因是 root CLI 的 umask 077 与源码复制 mkdir 未显式 chmod 的组合：嵌套目录
+成为 0700，COPY 保留目录权限，而镜像最终用户为 10001。非 root 的 Python 会看见 db
+目录却无法读取其 initializer/子模块，呈 namespace/模块不存在；不能据此断言镜像层
+物理丢失字节。本地清单包含全部 db 文件且上述摘要一致，没有 dockerignore 文件。
+Docker 对 COPY 目录保留权限的规则见
+[Dockerfile reference](https://docs.docker.com/reference/dockerfile/#copy)。
+旧工具没有检查目录模式、镜像内导入和字节摘要，COPY history 也不能证明用户可读。
+
+旧 session.json、compose.json、镜像、容器、卷均只保留审计，**不能复用旧项目**。
+旧失败发生在 ready=false 时；它留下部分初始化资源是失败关闭设计，不是成功基线。
+本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用新 r2 项目；若新项目已存在，
+停止并另选合法唯一后缀，不能删旧资源后冒充首次验收。
+
+修复后目录权限只在复制的公开构建源码内部显式设为 0755；state/evidence/Secret
+父目录仍 root-only。完整清单与文件树匹配，空目录/缺 initializer/漏文件/任何 dockerignore
+均拒绝。App 使用 --no-cache，并拒绝已存在构建标签，构建后按不可变 image ID 检查与运行。
+Web D/E 也先检查基线 App；App 候选在任何切换前检查。探针无网络/Secret/业务卷，
+以 10001:10001 运行，导入 main、worker、db.init_schema、db.models、db.phase2b1_migration，
+并比较整个 API 包及 Worker entrypoint 的 SHA256，entrypoint 必须可执行。
+探针的 --rm 仅移除该一次性无数据容器；不是清理失败验收 session。
+
+prepare 的 `IMAGE_RUNTIME_CONTRACT_OK` 必须出现在启动任何隔离服务之前；随后才可出现
+`ACCEPTANCE_BASELINE_READY`。失败标志为 `BUILD_CONTEXT_CONTRACT_FAILED` 或
+`IMAGE_RUNTIME_CONTRACT_FAILED`，不得出现 READY，也不执行 compose up。
+App update 的镜像检查结果写入 evidence/image-contract-*.json，控制台仍只输出更新或回滚结果。
+检查失败保留 root-only 固定错误证据和未就绪 session；不打印 import 错误正文或环境变量。
+本地没有 Docker Linux Engine，以下是真实香港待验收步骤，不能以 Fake 测试代替。
+
 ## A. 安装前检查与生产身份留存
 
 先人工安全查看生产开关：Phase2B1=false、白名单为空，只记录判断，不打印 env。
@@ -137,20 +176,20 @@ Web prepare 没有 Provider Secret，即使 Worker 仍运行也不会读取它�
 ### D. Web 成功
 
 ```bash
-setup_session sl-accept-webd20260904 web
+setup_session sl-accept-webd20260904r2 web
 update_session --dry-run
 update_session --fault none
 check_public
 ```
 
-预期依次 DRY_RUN_OK、ACCEPTANCE_BASELINE_READY、DRY_RUN_OK、UPDATE_OK。
+预期依次 DRY_RUN_OK、IMAGE_RUNTIME_CONTRACT_OK、ACCEPTANCE_BASELINE_READY、DRY_RUN_OK、UPDATE_OK。
 工具生成的候选 index.html 包含 storylens-acceptance/candidate-v2 标识；容器内 HTTP
 响应必须出现标识。仅 Web 被重建，非目标容器 ID、隔离数据库、生产身份不变。
 
 ### E. Web 失败与回滚（独立的新基线）
 
 ```bash
-setup_session sl-accept-webe20260904 web
+setup_session sl-accept-webe20260904r2 web
 expect_rollback health
 check_public
 ```
@@ -161,13 +200,13 @@ check_public
 ### F. App 成功
 
 ```bash
-setup_session sl-accept-appf20260904 app
+setup_session sl-accept-appf20260904r2 app
 update_session --dry-run
 update_session --fault none
 check_public
 ```
 
-预期 FAKE_TEST_SECRET_CREATED、DRY_RUN_OK、ACCEPTANCE_BASELINE_READY、DRY_RUN_OK、UPDATE_OK。
+预期 FAKE_TEST_SECRET_CREATED、DRY_RUN_OK、IMAGE_RUNTIME_CONTRACT_OK、ACCEPTANCE_BASELINE_READY、DRY_RUN_OK、UPDATE_OK。
 候选只在 errors.py 添加无行为注释，以真实业务镜像测试更新，不改业务模型或迁移。
 仅 API/Worker 重建；Worker 原入口执行、PID1=10001:10001；原假Key root600，
 tmpfs副本400/10001:10001，64KiB/noexec/nosuid/nodev，应用用户不可读原件。
@@ -177,7 +216,7 @@ tmpfs副本400/10001:10001，64KiB/noexec/nosuid/nodev，应用用户不可读�
 ### G. App 失败与成组回滚
 
 ```bash
-setup_session sl-accept-appg20260904 app
+setup_session sl-accept-appg20260904r2 app
 expect_rollback health
 check_public
 ```
@@ -186,7 +225,7 @@ check_public
 如需覆盖 Worker 自身退出，另用新 session：
 
 ```bash
-setup_session sl-accept-appw20260904 app
+setup_session sl-accept-appw20260904r2 app
 expect_rollback worker
 check_public
 ```
@@ -215,6 +254,20 @@ check_public
 不输出原始内容。状态 JSON 仅记录安全 ID、状态和数据库不变结论；不含 Secret 或用户文本。
 原始日志如需人工保留，仅放 root-only AUDIT；不得粘贴 env、完整 inspect 或 Secret到聊天。
 四组 evidence 目录中的 UPDATE_OK / UPDATE_FAILED_ROLLBACK_OK 才是本次实际运行证据。
+对每个 session 补查镜像契约证据（继续使用该 session 的 E 变量）：
+
+```bash
+python3 - "$E" <<'PY'
+import json, pathlib, sys
+records = [json.loads(p.read_text()) for p in pathlib.Path(sys.argv[1]).glob('image-contract-*.json')]
+assert records and all(r['status'] == 'IMAGE_RUNTIME_CONTRACT_OK' for r in records)
+for r in records:
+    assert all(n in r['files'] for n in ('db/init_schema.py','db/models.py','db/phase2b1_migration.py'))
+    assert r['image'].startswith('sha256:') and len(r['entrypoint']) == 64
+print('IMAGE_CONTRACT_EVIDENCE_OK')
+PY
+```
+
 重新采集 A 的生产身份并 diff；任何变化都必须解释并停止验收，不能被“网站仍200”掩盖。
 
 ### 回滚失败的停止门禁及恢复

@@ -15,6 +15,8 @@ TOOL_FILES = (
     "deploy_package.py",
     "deploy_acceptance.py",
     "deploy_bootstrap.py",
+    "deploy_image_contract.py",
+    "deploy_image_probe.py",
 )
 
 

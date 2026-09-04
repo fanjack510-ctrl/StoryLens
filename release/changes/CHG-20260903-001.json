@@ -25,7 +25,10 @@
     "infra/online/deploy_acceptance.py",
     "infra/online/deploy_bootstrap.py",
     "infra/online/tests/test_deploy_acceptance.py",
-    "infra/online/ACCEPTANCE.md"
+    "infra/online/ACCEPTANCE.md",
+    "infra/online/deploy_image_contract.py",
+    "infra/online/deploy_image_probe.py",
+    "infra/online/tests/test_deploy_image_contract.py"
   ],
   "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
   "technical_summary": "Protocol 2：Windows固定调用稳定bin并传协议和工具内容指纹；root专属版本化lib完整安装全部模块，不从current加载工具。生产组件仍使用原业务基线和已校验Git候选包。acceptance使用生成的封闭Compose、独立project/path/internal网络/卷/状态/证据和本地Docker socket，无宿主端口，不读取生产env/Secret/data；只接受显式固定假Key，Worker暂存及非root边界保持。准备阶段只初始化隔离空库；Web/App更新/故障/成组回滚不运行迁移。检查隔离schema/行数hash、卷身份、生产容器/镜像/指针身份、假Key日志安全；回滚失败保留pending并阻断。安装与激活不运行Docker。",
@@ -61,7 +64,8 @@
     "2026-09-04 在线后端136 passed（既有Starlette弃用警告）；前端typecheck、7项Vitest、production build与生产Compose config通过。业务API/Worker/模型/迁移/前端/原Compose/Dockerfile/原Secret入口未修改。",
     "2026-09-04 Docker Desktop Linux Engine named pipe仍不存在，未执行任何香港操作、真实镜像构建或真实容器D–G验收。",
     "Protocol 2收尾：Ruff check/format、compileall、scripts/check_project.py、scripts/change_registry.py check、git diff --check均通过；15个本轮改动全部登记，暂存源码Secret模式扫描及Shell LF检查通过，VERSION/业务数据库/分析API/前端/原Compose/Dockerfile/Worker Secret入口/冻结发布清单零差异。",
-    "追加信任边界回归：安装源必须为规范绝对路径；隔离网络出现非本项目已知容器时，在构建或更新前失败关闭。部署回归129 passed（原127项及2项新增回归）；未执行真实Docker或香港验收。"
+    "追加信任边界回归：安装源必须为规范绝对路径；隔离网络出现非本项目已知容器时，在构建或更新前失败关闭。部署回归129 passed（原127项及2项新增回归）；未执行真实Docker或香港验收。",
+    "镜像内容修复回归：全部部署测试150 passed（原129及21项新增）。新增覆盖完整嵌套清单复制、umask077下所有源码目录显式chmod0755、空目录/namespace/漏文件/dockerignore/摘要漂移拒绝、真实Python子进程导入探针、镜像缺失/摘要错/错误脱敏、Web基线在任何服务启动前探测App、App候选失败不切换、既有标签拒绝和未就绪失败证据保留。Docker边界为Fake，未虚报Linux镜像运行通过。"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -106,11 +110,36 @@
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
+      "使用全新r2项目复验IMAGE_RUNTIME_CONTRACT_OK和全部运行时文件摘要；旧sl-accept-webd20260904只保留审计，不复用或自动清理",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
       "回滚失败/进程中断后的人工恢复验收；通过前仍tested"
     ],
+    "hong_kong_first_acceptance_failure": {
+      "source": "user_provided_hong_kong_evidence",
+      "bootstrap_commit": "a0f8c1a941365a46c9cf93ab5cfb792e595dacee",
+      "protocol": 2,
+      "project": "sl-accept-webd20260904",
+      "prepare_result": "COMMAND_FAILED_SAFELY",
+      "schema_init_exit": 1,
+      "error": "No module named storylens_online.db.init_schema",
+      "postgres_redis_pocketbase": "normal",
+      "source_init_schema_sha256": "4bffce5788725ed613c87a0483d40242f26b1b0db165efaa9eebae53cab8771f",
+      "image": "sl-accept-webd20260904-app:baseline",
+      "image_id": "sha256:fe599454d7bad5266286e77bdbd7c7bcdd2d05558c99ee0d30d4b20879d1e818",
+      "observed": "非root镜像检查发现storylens_online及db namespace，但init_schema spec为None，三个db运行文件不可见；COPY history存在。",
+      "code_root_cause": "deploy_cli设置umask077；prepare复制源码时mkdir未显式chmod，嵌套目录为root0700；Docker COPY保留目录权限，USER10001无法遍历，Python表现为namespace和子模块不存在。清单包含全部26个运行时包文件，init_schema摘要与现场一致；没有dockerignore；没有证据表明BuildKit漏拷或镜像层物理丢失字节。",
+      "fix": "公开源码目录0755、完整清单/文件树/包initializer检查、拒绝dockerignore；基线和候选App构建后无网络无Secret的10001探针校验五模块导入及整个API包/Worker入口SHA256；服务启动或切换前失败关闭。no-cache、拒绝已存在标签、镜像ID固定。",
+      "failure_retention": "旧session/compose/镜像/容器/卷保留审计；ready=false不是成功。新失败保留固定错误证据，不自动down或删除卷。",
+      "production": "current=/opt/storylens/releases/4ae7f663; HTTP 200; not operated by this task"
+    },
+    "a0f8c1a9_bootstrap_superseded": {
+      "commit": "a0f8c1a941365a46c9cf93ab5cfb792e595dacee",
+      "filename": "storylens-online-lightweight-bootstrap-a0f8c1a9.tar.gz",
+      "state": "superseded_do_not_install",
+      "reason": "香港首次Web验收的App基线运行时导入阻断；必须使用本次追加修复后最终HEAD的bootstrap。"
+    },
     "intermediate_bootstrap_superseded": {
       "commit": "2b76f900e6644f1c5dc5524e5e039ee6b764b9ad",
       "filename": "storylens-online-lightweight-bootstrap-2b76f900.tar.gz",
