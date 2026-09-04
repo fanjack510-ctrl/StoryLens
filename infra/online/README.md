@@ -536,6 +536,17 @@ Existing image tags are refused; acceptance builds bypass cache and pin image ID
 Failed sessions and volumes are retained for audit, never reused or automatically
 removed. Updated r2 project names and exact A–H commands are in ACCEPTANCE.md.
 
+Second Hong Kong gate B also supersedes deb0a0d6: install/version succeeded but
+list failed. The reported legacy regular lock was filtered by old is_dir(); the
+reproducible defect is validating old nine-file versions against today's eleven
+files. Registry now strictly classifies known version layouts and safe legacy
+locks; unknown files are no longer silently ignored. All installer operations use
+the same registry validation and activation has pre/post checks with entry rollback.
+New acceptance locks live in /run/lock/storylens-online-deploy (root0700/files0600),
+never in lib. Old root600 single-link regular locks are validated without reading,
+following or modifying them. A–H now uses third-group r3 projects and checks list,
+legacy-lock retention and stable-entry restoration. CHG remains tested.
+
 ### Manual full upgrade
 
 Do these steps only during an approved deployment window, reconciling any

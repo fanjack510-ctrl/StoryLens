@@ -28,7 +28,8 @@
     "infra/online/ACCEPTANCE.md",
     "infra/online/deploy_image_contract.py",
     "infra/online/deploy_image_probe.py",
-    "infra/online/tests/test_deploy_image_contract.py"
+    "infra/online/tests/test_deploy_image_contract.py",
+    "infra/online/tests/test_deploy_registry.py"
   ],
   "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
   "technical_summary": "Protocol 2：Windows固定调用稳定bin并传协议和工具内容指纹；root专属版本化lib完整安装全部模块，不从current加载工具。生产组件仍使用原业务基线和已校验Git候选包。acceptance使用生成的封闭Compose、独立project/path/internal网络/卷/状态/证据和本地Docker socket，无宿主端口，不读取生产env/Secret/data；只接受显式固定假Key，Worker暂存及非root边界保持。准备阶段只初始化隔离空库；Web/App更新/故障/成组回滚不运行迁移。检查隔离schema/行数hash、卷身份、生产容器/镜像/指针身份、假Key日志安全；回滚失败保留pending并阻断。安装与激活不运行Docker。",
@@ -111,7 +112,7 @@
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
-      "使用全新r2项目复验IMAGE_RUNTIME_CONTRACT_OK和全部运行时文件摘要；旧sl-accept-webd20260904只保留审计，不复用或自动清理",
+      "使用全新r3项目复验B安装/list/旧锁保留/新锁隔离与IMAGE_RUNTIME_CONTRACT_OK和全部运行时文件摘要；旧项目只保留审计，不复用或自动清理",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
@@ -134,6 +135,38 @@
       "fix": "公开源码目录0755、完整清单/文件树/包initializer检查、拒绝dockerignore；基线和候选App构建后无网络无Secret的10001探针校验五模块导入及整个API包/Worker入口SHA256；服务启动或切换前失败关闭。no-cache、拒绝已存在标签、镜像ID固定。",
       "failure_retention": "旧session/compose/镜像/容器/卷保留审计；ready=false不是成功。新失败保留固定错误证据，不自动down或删除卷。",
       "production": "current=/opt/storylens/releases/4ae7f663; HTTP 200; not operated by this task"
+    },
+    "hong_kong_second_install_failure": {
+      "source": "user_provided_hong_kong_evidence; code attribution verified locally, no server access",
+      "commit": "deb0a0d650ce5c40e2eac025646ce36edebb1a26",
+      "tool_version": "978fa8b96acbd83ef2ed2ccdd3837a51f798a18321d664c5476a8c2854d877c7",
+      "observed": "install/version/installed.json成功，随后官方list输出TOOL_INSTALL_FAILED_SAFELY并exit1；版本仓库有两个合法commit目录及root:root0600普通sl-accept-webd20260904.lock；生产current仍4ae7f663、HTTP200。",
+      "code_root_cause": "旧list使用is_dir过滤，普通legacy lock并不直接进入版本校验。确定性复现为installed按当前11文件TOOL_FILES验证旧版9文件目录，读取新增探针模块失败；install只验证新目标而list枚举所有目录，且切换缺少registry自检。锁路径混用和未知普通文件被静默忽略是并存缺陷，一并修复；未虚构远端异常正文。",
+      "retention": "两个旧版本、legacy lock、失败session和所有容器/镜像/卷均保留，不读取锁内容、不删除或放宽权限。"
+    },
+    "deb0a0d6_bootstrap_superseded": {
+      "commit": "deb0a0d650ce5c40e2eac025646ce36edebb1a26",
+      "filename": "storylens-online-lightweight-bootstrap-deb0a0d6.tar.gz",
+      "state": "superseded_do_not_install",
+      "reason": "第二轮香港B门禁list失败；新版须兼容已知旧布局、严格分类legacy锁、分离新锁并执行入口切换自检。"
+    },
+    "registry_lock_fix": {
+      "mechanism": "install/list/activate/unlink共享registry；只接受40位小写hex真实目录，按冻结9文件或当前11文件布局核验原指纹，不执行旧代码。legacy锁仅允许严格sl-accept-[a-z0-9]{8,24}.lock、lstat普通文件/root:root/0600/nlink1，不跟随链接不读内容。未知文件、目录或异常属性失败关闭。",
+      "lock_root": "/run/lock/storylens-online-deploy",
+      "lock_permissions": "目录root:root0700；registry.lock与project.lock为root:root0600；O_NOFOLLOW、fstat复核、flock非阻塞互斥、不截断；DryRun不创建。生产shared锁不变。",
+      "entry_recovery": "切换前后运行等价registry/list自检；后检失败原子恢复原已验证入口，无原入口则撤销新入口。恢复系统调用失败固定报错并要求人工恢复，不声称断电原子性。",
+      "local_regression": "327 passed, 1 skipped：部署191及在线后端136通过；新增registry41通过、Linux root原生flock1项在Windows跳过。覆盖9/11版本共存、合法旧锁保留、异常名称/链接/FIFO/device/owner/mode/nlink、共享规则、安装后list、自检失败恢复、专用锁Fake互斥。前端typecheck、7项Vitest与production build通过。",
+      "checks": "Ruff check/format（58文件）、compileall、Compose config --quiet、check_project.py、change_registry.py check、git diff --check、JSON/登记文件一致性、Secret模式扫描、14个Bash命令块sh -n、Shell LF/Git100755通过。仅7个部署工具/测试/文档/登记文件变化；VERSION仍1.3.6；业务、模型、数据库迁移、认证计费、前端、原Compose/Dockerfile/Worker Secret入口和冻结文件未修改。",
+      "runtime_limit": "Docker Desktop Linux Engine named pipe不存在；本轮未执行真实镜像构建、Linux容器安装/锁/入口恢复或香港A–H，仍须香港操作者第三轮隔离验收，CHG不标记verified。",
+      "next_projects": [
+        "sl-accept-webd20260904r3",
+        "sl-accept-webe20260904r3",
+        "sl-accept-appf20260904r3",
+        "sl-accept-appg20260904r3",
+        "sl-accept-appw20260904r3"
+      ],
+      "artifact_policy": "从最终干净HEAD以git archive生成新短提交bootstrap；bootstrap.json包含完整提交、工具指纹、文件SHA256。不复用a0f8c1a9或deb0a0d6包。",
+      "status": "tested_pending_hong_kong_B_and_A_H_verification"
     },
     "a0f8c1a9_bootstrap_superseded": {
       "commit": "a0f8c1a941365a46c9cf93ab5cfb792e595dacee",
@@ -164,5 +197,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-04T23:28:00+08:00"
+  "updated_at": "2026-09-04T23:52:00+08:00"
 }

@@ -25,7 +25,7 @@ Docker 对 COPY 目录保留权限的规则见
 
 旧 session.json、compose.json、镜像、容器、卷均只保留审计，**不能复用旧项目**。
 旧失败发生在 ready=false 时；它留下部分初始化资源是失败关闭设计，不是成功基线。
-本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用新 r2 项目；若新项目已存在，
+本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用第三组 r3 项目；若新项目已存在，
 停止并另选合法唯一后缀，不能删旧资源后冒充首次验收。
 
 修复后目录权限只在复制的公开构建源码内部显式设为 0755；state/evidence/Secret
@@ -42,6 +42,30 @@ prepare 的 `IMAGE_RUNTIME_CONTRACT_OK` 必须出现在启动任何隔离服务�
 App update 的镜像检查结果写入 evidence/image-contract-*.json，控制台仍只输出更新或回滚结果。
 检查失败保留 root-only 固定错误证据和未就绪 session；不打印 import 错误正文或环境变量。
 本地没有 Docker Linux Engine，以下是真实香港待验收步骤，不能以 Fake 测试代替。
+
+### 第二轮 B 安装失败（保留现场，deb0a0d6 也已 superseded）
+
+用户报告 deb0a0d650ce5c40e2eac025646ce36edebb1a26 安装/稳定入口 version 成功，
+工具指纹 978fa8b96acbd83ef2ed2ccdd3837a51f798a18321d664c5476a8c2854d877c7，
+随后 list 返回 TOOL_INSTALL_FAILED_SAFELY/exit1。仓库有两个合法版本目录及
+root:root 0600 普通旧锁 sl-accept-webd20260904.lock；生产 current=4ae7f663、HTTP200。
+
+代码审计纠正归因：旧 list 用 is_dir() 过滤普通文件，故不能证明这个普通锁直接导致报错。
+可确定复现的缺陷是新版 installed() 用当前11文件布局验证旧版9文件目录，缺少新增镜像
+探针模块即报错；旧 list 又静默忽略未知普通文件，install/list 校验范围不同且无切换自检。
+本轮同时修复版本布局兼容、严格 registry 分类和锁目录混用，不伪造远端异常栈。
+两个失败包 a0f8c1a9、deb0a0d6 禁止继续安装，旧版本和旧锁只保留审计/已验证入口恢复。
+
+新版 registry 仅接受40位小写hex真实版本目录，分别按已知9或11文件布局和原指纹核验，
+不执行旧工具Python代码。legacy lock 必须严格匹配 sl-accept-[a-z0-9]{8,24}.lock，
+lstat证明普通文件/root:root/0600/nlink=1；不跟随链接、不打开内容、不修改旧锁。
+其他文件、未知目录、symlink/FIFO/device、错误权限或owner均失败关闭。
+install/list/activate/unlink共用registry，切换前后自检；后检失败原子恢复先前入口，
+之前无入口则撤销本次入口。恢复系统调用也失败时明确要求人工恢复，不谎报恢复成功。
+
+新验收锁为 /run/lock/storylens-online-deploy/<project>.lock，目录root:root0700、文件0600，
+安装器操作使用同目录registry.lock串行化。生产旧部署互斥锁仍留在shared，不改变生产边界。
+DryRun不创建锁；新锁不写lib，不截断既有锁文件。/run锁随系统生命周期存在，旧lib锁永久保留审计。
 
 ## A. 安装前检查与生产身份留存
 
@@ -90,14 +114,40 @@ tar --no-same-owner --no-same-permissions -xzf "$PACK" -C "$SOURCE"
 COMMIT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit"])' "$SOURCE/bootstrap.json")
 TV=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["tool_version"])' "$SOURCE/bootstrap.json")
 sh -n "$SOURCE/infra/online/deploy-lightweight.sh"
-python3 -I -B "$SOURCE/infra/online/deploy_install.py" install --source "$SOURCE"
 BIN=/opt/storylens/bin/storylens-online-deploy-lightweight
+LEGACY_LOCK=/opt/storylens/lib/storylens-online-deploy/sl-accept-webd20260904.lock
+python3 - "$LEGACY_LOCK" > "$AUDIT/legacy-lock-before.json" <<'PY'
+import json, os, stat, sys
+s=os.lstat(sys.argv[1])
+assert stat.S_ISREG(s.st_mode) and stat.S_IMODE(s.st_mode)==0o600
+assert s.st_uid==s.st_gid==0 and s.st_nlink==1
+print(json.dumps([s.st_dev,s.st_ino,s.st_mode,s.st_uid,s.st_gid,s.st_nlink,s.st_size,s.st_mtime_ns]))
+PY
+PREVIOUS_ENTRY=$(readlink "$BIN" || true)
+set +e
+python3 -I -B "$SOURCE/infra/online/deploy_install.py" install --source "$SOURCE"
+INSTALL_RC=$?
+set -e
+if [ "$INSTALL_RC" -ne 0 ]; then
+  test "$(readlink "$BIN" || true)" = "$PREVIOUS_ENTRY"
+  printf '%s\n' B_INSTALL_FAILED_ENTRY_RESTORED
+  exit 1
+fi
 LIB=/opt/storylens/lib/storylens-online-deploy/$COMMIT
 test "$(readlink -f "$BIN")" = "$LIB/deploy-lightweight.sh"
 stat -c '%U:%G %a %n' "$LIB" "$LIB/deploy-lightweight.sh" "$LIB/deploy_cli.py"
 "$BIN" version > "$AUDIT/tool-version.json"
 python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m["protocol"]==2 and m["tool_version"]==sys.argv[2] and m["commit"]==sys.argv[3]' "$AUDIT/tool-version.json" "$TV" "$COMMIT"
-python3 -I -B "$LIB/deploy_install.py" list
+python3 -I -B "$LIB/deploy_install.py" list > "$AUDIT/registry-after.json"
+python3 - "$LEGACY_LOCK" "$AUDIT/legacy-lock-before.json" "$AUDIT/registry-after.json" <<'PY'
+import json, os, sys
+s=os.lstat(sys.argv[1])
+assert [s.st_dev,s.st_ino,s.st_mode,s.st_uid,s.st_gid,s.st_nlink,s.st_size,s.st_mtime_ns]==json.load(open(sys.argv[2]))
+r=json.load(open(sys.argv[3]))
+assert 'sl-accept-webd20260904.lock' in r['legacy_locks'] and len(r['versions'])>=2
+print('REGISTRY_LIST_OK_LEGACY_LOCK_UNCHANGED')
+PY
+test "$(stat -c '%u:%g:%a' /run/lock/storylens-online-deploy)" = 0:0:700
 printf '%s\n' B_INSTALLED_NO_CONTAINERS_CHANGED
 ```
 
@@ -176,7 +226,7 @@ Web prepare 没有 Provider Secret，即使 Worker 仍运行也不会读取它�
 ### D. Web 成功
 
 ```bash
-setup_session sl-accept-webd20260904r2 web
+setup_session sl-accept-webd20260904r3 web
 update_session --dry-run
 update_session --fault none
 check_public
@@ -189,7 +239,7 @@ check_public
 ### E. Web 失败与回滚（独立的新基线）
 
 ```bash
-setup_session sl-accept-webe20260904r2 web
+setup_session sl-accept-webe20260904r3 web
 expect_rollback health
 check_public
 ```
@@ -200,7 +250,7 @@ check_public
 ### F. App 成功
 
 ```bash
-setup_session sl-accept-appf20260904r2 app
+setup_session sl-accept-appf20260904r3 app
 update_session --dry-run
 update_session --fault none
 check_public
@@ -216,7 +266,7 @@ tmpfs副本400/10001:10001，64KiB/noexec/nosuid/nodev，应用用户不可读�
 ### G. App 失败与成组回滚
 
 ```bash
-setup_session sl-accept-appg20260904r2 app
+setup_session sl-accept-appg20260904r3 app
 expect_rollback health
 check_public
 ```
@@ -225,12 +275,21 @@ check_public
 如需覆盖 Worker 自身退出，另用新 session：
 
 ```bash
-setup_session sl-accept-appw20260904r2 app
+setup_session sl-accept-appw20260904r3 app
 expect_rollback worker
 check_public
 ```
 
 ## H. 拒绝边界、安全扫描与记录
+
+每个新session完成后确认锁不在版本仓库（不删除或重置任何旧锁）：
+
+```bash
+test ! -e "/opt/storylens/lib/storylens-online-deploy/$P.lock"
+test "$(stat -c '%u:%g:%a:%h' "/run/lock/storylens-online-deploy/$P.lock")" = 0:0:600:1
+python3 -I -B "$LIB/deploy_install.py" list > "$AUDIT/registry-after-acceptance.json"
+printf '%s\n' LOCK_STORAGE_SEPARATED_OK
+```
 
 以下只做拒绝验证，不运行更新：
 

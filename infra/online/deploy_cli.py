@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from deploy_acceptance import Acceptance, create_test_key, paths
-from deploy_install import installed
+from deploy_install import installed, operation_lock
 from deploy_policy import DeployError
 from deploy_protocol import check_protocol
 from deploy_runtime import Deployment, validate_args
@@ -122,10 +122,6 @@ def main() -> int:
             operation = lambda: deployment.deploy(*args.production_args)
         else:
             acceptance = Acceptance(args.project, args.state_dir, args.evidence_dir, args.target)
-            # Lock in existing root-owned parent, not project state (prepare creates it).
-            lock_path = Path("/opt/storylens/lib/storylens-online-deploy") / (
-                args.project + ".lock"
-            )
             operation = (
                 (lambda: acceptance.prepare(args.source, args.test_secret, args.dry_run))
                 if args.action == "acceptance-prepare"
@@ -133,6 +129,10 @@ def main() -> int:
             )
         if args.dry_run:
             print(operation())  # no lock file writes in dry-run
+            return 0
+        if args.action != "production":
+            with operation_lock(args.project + ".lock"):
+                print(operation())
             return 0
         import fcntl
 
