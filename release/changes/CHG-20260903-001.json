@@ -65,7 +65,8 @@
     "2026-09-04 Docker Desktop Linux Engine named pipe仍不存在，未执行任何香港操作、真实镜像构建或真实容器D–G验收。",
     "Protocol 2收尾：Ruff check/format、compileall、scripts/check_project.py、scripts/change_registry.py check、git diff --check均通过；15个本轮改动全部登记，暂存源码Secret模式扫描及Shell LF检查通过，VERSION/业务数据库/分析API/前端/原Compose/Dockerfile/Worker Secret入口/冻结发布清单零差异。",
     "追加信任边界回归：安装源必须为规范绝对路径；隔离网络出现非本项目已知容器时，在构建或更新前失败关闭。部署回归129 passed（原127项及2项新增回归）；未执行真实Docker或香港验收。",
-    "镜像内容修复回归：全部部署测试150 passed（原129及21项新增）。新增覆盖完整嵌套清单复制、umask077下所有源码目录显式chmod0755、空目录/namespace/漏文件/dockerignore/摘要漂移拒绝、真实Python子进程导入探针、镜像缺失/摘要错/错误脱敏、Web基线在任何服务启动前探测App、App候选失败不切换、既有标签拒绝和未就绪失败证据保留。Docker边界为Fake，未虚报Linux镜像运行通过。"
+    "镜像内容修复回归：全部部署测试150 passed（原129及21项新增）。新增覆盖完整嵌套清单复制、umask077下所有源码目录显式chmod0755、空目录/namespace/漏文件/dockerignore/摘要漂移拒绝、真实Python子进程导入探针、镜像缺失/摘要错/错误脱敏、Web基线在任何服务启动前探测App、App候选失败不切换、既有标签拒绝和未就绪失败证据保留。Docker边界为Fake，未虚报Linux镜像运行通过。",
+    "镜像修复收尾：在线后端136 passed（1项既有Starlette弃用警告）；前端typecheck、7项Vitest、production build通过；Ruff check/format共55文件、compileall、生产Compose config --quiet及隔离Compose合同、check_project.py、change_registry.py check、git diff --check、JSON/登记文件清单/Secret模式/LF/范围检查通过。10个修改文件均属于部署工具、测试、文档和登记；VERSION保持1.3.6，业务/数据库/认证计费/前端/原Compose/Dockerfile/Worker Secret入口/冻结文件无修改。Docker Linux Engine named pipe不存在，真实镜像构建和香港A–H仍待操作者复验。"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -140,6 +141,18 @@
       "state": "superseded_do_not_install",
       "reason": "香港首次Web验收的App基线运行时导入阻断；必须使用本次追加修复后最终HEAD的bootstrap。"
     },
+    "image_contract_fix": {
+      "implementation_commit": "6314fd91e818bb51a486899d5cce05a67e7969ea",
+      "final_artifact_policy": "最终登记提交后的干净HEAD通过deploy_bootstrap.py从git archive生成bootstrap；bootstrap.json记录完整HEAD、协议、工具指纹与逐文件摘要，文件名使用最终短提交。",
+      "next_projects": [
+        "sl-accept-webd20260904r2",
+        "sl-accept-webe20260904r2",
+        "sl-accept-appf20260904r2",
+        "sl-accept-appg20260904r2",
+        "sl-accept-appw20260904r2"
+      ],
+      "status": "tested_pending_hong_kong_runtime_verification"
+    },
     "intermediate_bootstrap_superseded": {
       "commit": "2b76f900e6644f1c5dc5524e5e039ee6b764b9ad",
       "filename": "storylens-online-lightweight-bootstrap-2b76f900.tar.gz",
@@ -151,5 +164,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-04T23:00:00+08:00"
+  "updated_at": "2026-09-04T23:28:00+08:00"
 }
