@@ -60,7 +60,8 @@
     "2026-09-04 Protocol 2本地：部署测试127 passed（原有88＋新增39），覆盖版本化安装/未知版本拒绝、权限合同、协议失败顺序、稳定bin Fake SSH、隔离成功/健康故障/Worker故障/回滚失败、初始化仅隔离准备阶段、只读DryRun、project/path/mount/port/volume拒绝及真实Compose CLI离线配置渲染。仅OS边界Fake；不等于真实Engine验收。",
     "2026-09-04 在线后端136 passed（既有Starlette弃用警告）；前端typecheck、7项Vitest、production build与生产Compose config通过。业务API/Worker/模型/迁移/前端/原Compose/Dockerfile/原Secret入口未修改。",
     "2026-09-04 Docker Desktop Linux Engine named pipe仍不存在，未执行任何香港操作、真实镜像构建或真实容器D–G验收。",
-    "Protocol 2收尾：Ruff check/format、compileall、scripts/check_project.py、scripts/change_registry.py check、git diff --check均通过；15个本轮改动全部登记，暂存源码Secret模式扫描及Shell LF检查通过，VERSION/业务数据库/分析API/前端/原Compose/Dockerfile/Worker Secret入口/冻结发布清单零差异。"
+    "Protocol 2收尾：Ruff check/format、compileall、scripts/check_project.py、scripts/change_registry.py check、git diff --check均通过；15个本轮改动全部登记，暂存源码Secret模式扫描及Shell LF检查通过，VERSION/业务数据库/分析API/前端/原Compose/Dockerfile/Worker Secret入口/冻结发布清单零差异。",
+    "追加信任边界回归：安装源必须为规范绝对路径；隔离网络出现非本项目已知容器时，在构建或更新前失败关闭。部署回归129 passed（原127项及2项新增回归）；未执行真实Docker或香港验收。"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -110,6 +111,11 @@
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
       "回滚失败/进程中断后的人工恢复验收；通过前仍tested"
     ],
+    "intermediate_bootstrap_superseded": {
+      "commit": "2b76f900e6644f1c5dc5524e5e039ee6b764b9ad",
+      "filename": "storylens-online-lightweight-bootstrap-2b76f900.tar.gz",
+      "reason": "首次Protocol 2实现后的最终安全复核增加规范安装源路径及隔离网络未知容器拒绝；交付包须基于追加修复后的干净HEAD重新生成。"
+    },
     "superseded_bootstrap": {
       "commit": "d6416111a6fc5cc8de0c036caa4f0989cfb74f2c",
       "filename": "storylens-online-lightweight-bootstrap-d6416111.tar.gz",

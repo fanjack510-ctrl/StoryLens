@@ -18,6 +18,8 @@ BIN = Path("/opt/storylens/bin/storylens-online-deploy-lightweight")
 
 
 def verify_source(source: Path) -> dict:
+    if not source.is_absolute() or source != source.resolve(strict=True):
+        raise DeployError("INVALID_BOOTSTRAP_PATH")
     trusted(source)
     trusted(source / "bootstrap.json")
     meta = json.loads((source / "bootstrap.json").read_text())

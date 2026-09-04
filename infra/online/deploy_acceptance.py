@@ -439,6 +439,8 @@ class Acceptance:
         net = json.loads(self.run(["docker", "network", "inspect", self.project + "_isolated"]))[0]
         if not net["Internal"] or net["Labels"].get("com.docker.compose.project") != self.project:
             raise DeployError("ISOLATION_FAILED")
+        if not set(net["Containers"]) <= set(self.ids().values()):
+            raise DeployError("FOREIGN_NETWORK_MEMBER")
 
     def wait(self, services):
         consecutive = 0

@@ -42,7 +42,13 @@ class Docker:
             return ""
         if args[:3] == ["docker", "network", "inspect"]:
             return json.dumps(
-                [{"Internal": True, "Labels": {"com.docker.compose.project": project}}]
+                [
+                    {
+                        "Internal": True,
+                        "Labels": {"com.docker.compose.project": project},
+                        "Containers": {value: {} for value in self.ids.values()},
+                    }
+                ]
             )
         if args[:3] == ["docker", "volume", "inspect"]:
             return json.dumps(
@@ -456,3 +462,25 @@ def test_protocol_rejection_precedes_docker_or_state(monkeypatch):
         deploy_cli, "Deployment", lambda: pytest.fail("must not access deployment state")
     )
     assert deploy_cli.main() == 1
+
+
+def test_relative_bootstrap_source_rejected_before_read():
+    with pytest.raises(DeployError, match="INVALID_BOOTSTRAP_PATH"):
+        installer.verify_source(Path("relative-source"))
+
+
+def test_foreign_network_member_rejected_before_build(session):
+    deployment, fake, candidate = session("web")
+
+    def run(args, timeout=120):
+        result = fake(args, timeout)
+        if args[:3] == ["docker", "network", "inspect"]:
+            value = json.loads(result)
+            value[0]["Containers"]["e" * 64] = {}
+            return json.dumps(value)
+        return result
+
+    deployment.run = run
+    with pytest.raises(DeployError, match="FOREIGN_NETWORK_MEMBER"):
+        deployment.update(candidate, "none", False)
+    assert not any("build" in c or "up" in c for c in fake.calls)
