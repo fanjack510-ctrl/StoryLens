@@ -23,6 +23,50 @@ from test_deploy_image_contract import (
 )
 
 
+@pytest.fixture
+def public_context_trust(monkeypatch):
+    import deploy_acceptance as acceptance
+    import deploy_image_contract as contract
+
+    # Direct calls to imported test functions do not run their module fixtures.
+    # Patch each lookup site; /tmp ancestor ownership is outside these tests.
+    acceptance_calls, contract_calls = [], []
+    monkeypatch.setattr(acceptance, "trusted", acceptance_calls.append)
+    monkeypatch.setattr(contract, "trusted", contract_calls.append)
+    return acceptance_calls, contract_calls
+
+
+def test_tree_hashes_uses_patched_defining_module(tmp_path, monkeypatch, public_context_trust):
+    import deploy_acceptance as acceptance
+    import deploy_image_contract as contract
+    import deploy_protocol as protocol
+    from deploy_acceptance import tree_hashes
+
+    original = protocol.trusted
+    source = tmp_path / "public-source"
+    runtime_source(source)
+    acceptance_calls, contract_calls = public_context_trust
+    assert tree_hashes.__globals__["trusted"] is acceptance.trusted
+    assert contract.context_contract.__globals__["trusted"] is contract.trusted
+    assert acceptance.trusted != contract.trusted
+
+    # A same-named patch in contract alone cannot intercept tree_hashes.
+    def reject(_):
+        raise ValueError("UNTRUSTED_PATH")
+
+    with monkeypatch.context() as control:
+        control.setattr(acceptance, "trusted", reject)
+        with pytest.raises(ValueError, match="^UNTRUSTED_PATH$"):
+            tree_hashes(source)
+    assert not acceptance_calls and not contract_calls
+    manifest = tree_hashes(source)
+    assert set(acceptance_calls) == set(source.rglob("*"))
+    assert not contract_calls
+    contract.context_contract(source, manifest)
+    assert set(contract_calls) == set(source.rglob("*"))
+    assert protocol.trusted is original  # production guard itself stays intact
+
+
 def test_occupied_tag_not_masked_under077(tmp_path, monkeypatch):
     make = acceptance_tests.session.__wrapped__(tmp_path, monkeypatch)
     old = os.umask(0o077)
@@ -40,6 +84,24 @@ def test_acceptance_bash_blocks_parse_without_execution(name):
         r"```bash\n(.*?)\n```", (INFRA / name).read_text(encoding="utf-8"), re.DOTALL
     )
     assert blocks
+    if name == "R6-H-ONLY.md":
+        # bash -n on a heredoc caller does not parse the script sent on stdin.
+        assert len(blocks) == 1
+        body = blocks[0].split("<<'R7_ACCEPTANCE'\n", 1)[1].rsplit("\nR7_ACCEPTANCE", 1)[0]
+        paths = [
+            '"$SOURCE/infra/online/tests/test_r6_corrective.py"',
+            '"$SOURCE/infra/online/tests"',
+            '"$SOURCE/infra/online/tests/test_deploy_secret_boundary.py"',
+            '"$SOURCE/infra/online/tests/test_deploy_database_stdin.py"',
+        ]
+        positions = [body.index(path) for path in paths]
+        assert positions == sorted(positions)
+        commands = [line for line in body.splitlines() if " -m pytest " in line]
+        assert len(commands) == 4
+        assert all(line.startswith("(umask 022; ") and ') > "$AUDIT/' in line for line in commands)
+        assert 'test "$(umask)" = 0077' in body
+        assert "50 passed" in body and "18 passed" in body and "1 passed" in body
+        blocks.append(body)
     for block in blocks:
         result = subprocess.run(
             [shell, "-n", "-c", block], stdin=subprocess.DEVNULL, capture_output=True, check=False
@@ -47,11 +109,12 @@ def test_acceptance_bash_blocks_parse_without_execution(name):
         assert result.returncode == 0
 
 
-def test_fixture_under_parent077_preserves_umask_and_private_ancestors(tmp_path, monkeypatch):
+def test_fixture_under_parent077_preserves_umask_and_private_ancestors(
+    tmp_path, public_context_trust
+):
     import deploy_image_contract as contract
     from deploy_acceptance import tree_hashes
 
-    monkeypatch.setattr(contract, "trusted", lambda _: None)
     before = stat.S_IMODE(tmp_path.stat().st_mode)
     old = os.umask(0o077)
     try:
@@ -70,10 +133,7 @@ def test_fixture_under_parent077_preserves_umask_and_private_ancestors(tmp_path,
 
 
 @pytest.mark.parametrize("defect", ["missing", "hash", "namespace", "error"])
-def test_image_error_not_masked_under077(tmp_path, monkeypatch, defect):
-    import deploy_image_contract as contract
-
-    monkeypatch.setattr(contract, "trusted", lambda _: None)
+def test_image_error_not_masked_under077(tmp_path, public_context_trust, defect):
     old = os.umask(0o077)
     try:
         image_defect(tmp_path, defect)
@@ -84,10 +144,7 @@ def test_image_error_not_masked_under077(tmp_path, monkeypatch, defect):
 
 
 @pytest.mark.parametrize("defect", ["missing", "hash", "namespace", "empty_dir", "ignore"])
-def test_context_errors_still_rejected_under077(tmp_path, monkeypatch, defect):
-    import deploy_image_contract as contract
-
-    monkeypatch.setattr(contract, "trusted", lambda _: None)
+def test_context_errors_still_rejected_under077(tmp_path, public_context_trust, defect):
     old = os.umask(0o077)
     try:
         context_defect(tmp_path, defect)

@@ -113,7 +113,28 @@
     "acceptance_only_fixed_fake_secret": true
   },
   "deployment_status": {
-    "state": "R5_D_G_passed_pending_R6_corrective_H_acceptance",
+    "state": "R5_D_G_passed_pending_R7_corrective_H_acceptance",
+    "r6_hong_kong_results": {
+      "source": "user_provided_hong_kong_evidence; no server operations in this task",
+      "commit": "2b2e6b1edb6f2f7d710c22284ee11b60910fe139",
+      "filename": "storylens-online-lightweight-bootstrap-2b2e6b1e.tar.gz",
+      "package_status": "superseded_do_not_install; retain package and evidence",
+      "A_B_C": "PASSED",
+      "equivalence": "R5/R6 79 protected runtime/build files content and modes equal; R5 D–G evidence linkable",
+      "H": "10 failed, 261 passed, 9 skipped; all failures in test_r6_corrective.py",
+      "root_cause": "Imported test functions were called directly without the original module's autouse fixture. Only deploy_image_contract.trusted was patched; tree_hashes resolves deploy_acceptance.trusted in its own globals and rejected pytest /tmp ancestors with UNTRUSTED_PATH. Ten cases: one fixture test, four image error cases and five context error cases. Windows trusted skips POSIX ownership/mode checks, masking this test isolation defect locally.",
+      "production": "current=/opt/storylens/releases/4ae7f663; HTTP200; R6 stable entry unlinked",
+      "retention": "R1–R6 packages, sessions, containers, images, volumes and locks retained; R5 actual D–G PASSED remains valid historical evidence"
+    },
+    "r7_corrective": {
+      "scope": "Only test_r6_corrective.py, existing R6-H-ONLY.md upgraded to R7 guide, CHG and Hong Kong roadmap. No runtime/build inputs or gate implementation modified; VERSION1.3.6 and protocol2 retained.",
+      "fix": "Explicit public_context_trust fixture patches both deploy_acceptance.trusted and deploy_image_contract.trusted at their actual lookup sites; three affected test groups request the fixture. Different spies verify tree_hashes.__globals__ and context_contract.__globals__, real path calls, plus a reject-control proving contract-only patch cannot intercept tree_hashes. deploy_protocol.trusted itself unchanged.",
+      "permissions": "Existing fixture0755 directories/0644 source/executable shell and original Linux root0700+UID10001 scenario unchanged; parent umask restored. Missing/hash/namespace/error and occupied tag failures retain expected fixed codes.",
+      "instructions": "infra/online/R6-H-ONLY.md retains filename to preserve frozen gate exclusions. One complete sudo bash command performs gate/install, first corrective tests, then full deployment suite, then real_linux exactly1 passed/no skipped and database/stdin18 passed/no skipped, and final production identity comparison. Gate CLI keeps --r6-package/--r6-sha256 names but receives R7 artifact.",
+      "validation": "纠正测试50 passed，父进程显式umask077同样50 passed；新增模块lookup/拒绝对照/spy回归在Windows也能确定性检出旧问题。全量部署+在线后端415 passed,2 skipped（部署279、后端136；跳过原Linux flock/root0700内核测试，1项既有Starlette弃用警告）。Windows C42 passed,46 deselected；数据库/stdin18 passed。前端typecheck、7项Vitest、production build通过；Ruff check/format63文件、compileall、Compose config、check_project.py、change_registry.py check、Bash外层与heredoc正文语法、JSON/Secret模式/4文件范围审计及git diff --check通过。Docker Linux Engine named pipe不存在，未执行香港或真实Linux验收；原real_linux场景未改，香港R7必须1 passed且无skipped。",
+      "remaining": "Hong Kong R7 corrective/full/real_linux/database-stdin and final identity gates; CHG remains tested until user supplies actual pass evidence. No D–G container rerun.",
+      "artifact_policy": "Final clean HEAD via unchanged git-archive bootstrap builder; 79 protected files and frozen tool_version compared with pinned R5 artifact. No push/release/tag/server operations."
+    },
     "r5_hong_kong_results": {
       "source": "user_provided_hong_kong_evidence; not remotely executed in this task",
       "commit": "18f8ee3ea28ce5717481972c29ea04e8e0613702",
@@ -145,7 +166,7 @@
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
-      "R6按R6-H-ONLY.md机器等价和R5留存证据门禁后执行纠正H；失败则新r6项目完整A–H。R5 D–G真实通过不抹除，所有历史资源保留。",
+      "R7按R6-H-ONLY.md更新后的单条命令执行机器等价/历史证据/先纠正测试后full/real_linux/database-stdin和生产身份门禁；R5 D–G关联，不重跑容器。任一证据门禁失败停止，所有历史资源保留。",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
@@ -292,5 +313,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-05T01:43:00+08:00"
+  "updated_at": "2026-09-05T07:32:00+08:00"
 }

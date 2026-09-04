@@ -190,6 +190,15 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    R6的验收附件提供逐文件/模式等价、R5四组证据/锁/容器、原始生产身份快照的机器门禁；
    只有全部通过才关联R5 D–G并补H，不声称重新运行D–G。缺原始快照、时钟/卷身份不可信或
    任一不一致必须全新r6项目完整A–H。操作见infra/online/R6-H-ONLY.md，CHG仍tested。
+   **R6现场追加（用户提供）**：2b2e6b1e的A/B/C及79个保护文件等价门禁通过，R5 D–G可关联；
+   H为10 failed/261 passed/9 skipped。纠正测试直接调用其他模块的测试函数，不会运行其autouse
+   fixture；仅patch镜像模块trusted，tree_hashes实际引用的deploy_acceptance.trusted仍检查/tmp
+   祖先，触发UNTRUSTED_PATH。此包superseded，入口已unlink，生产4ae7f663/200保持。
+   R7仅修正测试两个模块的实际符号隔离并加调用追踪/拒绝对照回归；生产trusted及全部79个保护
+   文件、协议2、32799f5e…0756dda指纹不变。先跑50项纠正测试，再full，再真实Linux权限
+   1 passed无skipped和DB/stdin18 passed。现有infra/online/R6-H-ONLY.md升级为R7单条命令指南，
+   保留文件名以兼容冻结等价门禁；继续关联R5 D–G，不重跑容器。R1–R6历史和资源全部保留，
+   CHG仍tested，等待香港R7实际通过后闭环。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 
