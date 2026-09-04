@@ -56,7 +56,11 @@ VOLUMES = (
 def run_command(args: list[str], timeout: int = 120) -> str:
     # Never stream Compose/build/curl/inspect output: it may contain credentials.
     try:
-        result = subprocess.run(args, capture_output=True, check=False, timeout=timeout)
+        # A Docker CLI may read stdin even with Compose exec -T. Never let it
+        # consume the remaining program of an enclosing `ssh ... bash -s`.
+        result = subprocess.run(
+            args, stdin=subprocess.DEVNULL, capture_output=True, check=False, timeout=timeout
+        )
         if result.returncode:
             raise DeployError("COMMAND_FAILED_SAFELY")
         return result.stdout.decode("utf-8").strip()

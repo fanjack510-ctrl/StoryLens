@@ -25,7 +25,7 @@ Docker 对 COPY 目录保留权限的规则见
 
 旧 session.json、compose.json、镜像、容器、卷均只保留审计，**不能复用旧项目**。
 旧失败发生在 ready=false 时；它留下部分初始化资源是失败关闭设计，不是成功基线。
-本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用第四组 r4 项目；若新项目已存在，
+本轮不自动 down、不删卷、不清理旧证据。以下所有 D–G 使用第五组 r5 项目；若新项目已存在，
 停止并另选合法唯一后缀，不能删旧资源后冒充首次验收。
 
 修复后目录权限只在复制的公开构建源码内部显式设为 0755；state/evidence/Secret
@@ -91,6 +91,26 @@ SECRET_BOUNDARY_FAILED并失败关闭，prepare不得标记ready。证据存储�
 SECRET_BOUNDARY_EVIDENCE_FAILED。不记录异常正文、环境或Secret。DryRun保持只读，不落盘，
 失败只返回同一固定错误；实际prepare/update/rollback的证据不得只有IMAGE_RUNTIME_CONTRACT_OK。
 
+### 第四轮 R4 D：指纹表名错误与流式 shell stdin
+
+用户提供：45af8559d128eb277e848353feab4eeb4b61caf6，sl-accept-webd20260904r4，
+IMAGE_RUNTIME_CONTRACT_OK、ACCEPTANCE_BASELINE_READY及SECRET_BOUNDARY_OK已通过；
+Update DryRun返回COMMAND_FAILED_SAFELY。源码SQL误用了online_uploads，实际表为
+online_book_uploads。原Fake仅返回固定计数而未执行SQL，未捕获这个表名错误。
+全仓核查其余原有online_uploads均是正确Docker卷名/卷说明，不得改生产Compose或抹改历史。
+R4容器已由现场操作者停止但全部保留，稳定入口已unlink；生产仍4ae7f663、HTTP200。
+45af8559包已superseded，R1–R4的任何资源均不删除、不复用。
+
+另一个现场复现缺陷是Docker/Compose子进程继承SSH脚本stdin，吞掉后续bash -s命令。
+工具统一命令执行器及Git打包入口现均显式stdin=DEVNULL，数据库检查和构建也经过该入口。
+无需操作者拆分脚本或为工具调用逐条追加重定向；stdout/stderr仍捕获、超时与固定错误保持。
+本地真实流式bash测试有旧行为对照：旧子进程读走尾部命令，新子进程只读到EOF且尾部标记执行。
+本地数据库测试使用模型声明表名建立内存夹具并执行真实计数SQL，验证Web/App DryRun和
+schema/各业务表行数漂移拒绝；这不是香港真实PostgreSQL或Docker验收。
+
+R5必须从A开始：重新安装稳定bin，创建全新基线镜像和session，不能借用R4的ready记录。
+完整操作命令如下，仍只由香港操作者人工执行。
+
 ## A. 安装前检查与生产身份留存
 
 先人工安全查看生产开关：Phase2B1=false、白名单为空，只记录判断，不打印 env。
@@ -120,12 +140,13 @@ pocketbase-init Exited(0)，否则停止。工具也会在实际验收操作前�
 
 ## B. 校验包、完整安装到版本化 lib、切换稳定 bin
 
-把最终报告中的包路径、SHA256、字节数分别输入下列提示（不是 Key）：
+先把最终报告中的服务器包绝对路径、SHA256、字节数设置为 PACK、EXPECTED_SHA、EXPECTED_SIZE
+三个变量（不是Key）。通过ssh bash -s传输时将它们设置在脚本开头；不使用read消费脚本stdin。
 
 ```bash
-printf '已上传的 tar.gz 绝对路径: '; read -r PACK
-printf '可信交付报告的 SHA256: '; read -r EXPECTED_SHA
-printf '可信交付报告的字节数: '; read -r EXPECTED_SIZE
+: "${PACK:?请先设置已上传包的绝对路径}"
+: "${EXPECTED_SHA:?请先设置可信报告中的SHA256}"
+: "${EXPECTED_SIZE:?请先设置可信报告中的字节数}"
 test -f "$PACK" && test ! -L "$PACK"
 test "$(stat -c %s "$PACK")" = "$EXPECTED_SIZE"
 test "$(sha256sum "$PACK" | cut -d ' ' -f1)" = "$EXPECTED_SHA"
@@ -254,7 +275,7 @@ Web prepare 没有 Provider Secret，即使 Worker 仍运行也不会读取它�
 ### D. Web 成功
 
 ```bash
-setup_session sl-accept-webd20260904r4 web
+setup_session sl-accept-webd20260904r5 web
 update_session --dry-run
 update_session --fault none
 check_public
@@ -267,7 +288,7 @@ check_public
 ### E. Web 失败与回滚（独立的新基线）
 
 ```bash
-setup_session sl-accept-webe20260904r4 web
+setup_session sl-accept-webe20260904r5 web
 expect_rollback health
 check_public
 ```
@@ -278,7 +299,7 @@ check_public
 ### F. App 成功
 
 ```bash
-setup_session sl-accept-appf20260904r4 app
+setup_session sl-accept-appf20260904r5 app
 update_session --dry-run
 update_session --fault none
 check_public
@@ -294,7 +315,7 @@ tmpfs副本400/10001:10001，64KiB/noexec/nosuid/nodev，应用用户不可读�
 ### G. App 失败与成组回滚
 
 ```bash
-setup_session sl-accept-appg20260904r4 app
+setup_session sl-accept-appg20260904r5 app
 expect_rollback health
 check_public
 ```
@@ -303,7 +324,7 @@ check_public
 如需覆盖 Worker 自身退出，另用新 session：
 
 ```bash
-setup_session sl-accept-appw20260904r4 app
+setup_session sl-accept-appw20260904r5 app
 expect_rollback worker
 check_public
 ```
@@ -332,6 +353,7 @@ python3 -m venv "$AUDIT/test-venv"
 "$AUDIT/test-venv/bin/python" -m pip install pytest
 "$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests" -q -p no:cacheprovider
 "$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_secret_boundary.py" -q -k real_linux -p no:cacheprovider
+"$AUDIT/test-venv/bin/python" -m pytest "$SOURCE/infra/online/tests/test_deploy_database_stdin.py" -q -p no:cacheprovider
 check_public
 ```
 
@@ -391,7 +413,7 @@ fi
 ```bash
 python3 -I -B "$LIB/deploy_install.py" list
 # 从 bin/previous-tool-*.json 取得已经安装、核验过的完整 commit：
-printf '要恢复的完整工具 commit: '; read -r PREVIOUS
+: "${PREVIOUS:?请先设置已核验的上一工具完整commit}"
 python3 -I -B "$LIB/deploy_install.py" activate --commit "$PREVIOUS"
 "$BIN" version
 ```

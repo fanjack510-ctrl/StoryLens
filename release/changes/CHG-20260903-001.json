@@ -30,7 +30,8 @@
     "infra/online/deploy_image_probe.py",
     "infra/online/tests/test_deploy_image_contract.py",
     "infra/online/tests/test_deploy_registry.py",
-    "infra/online/tests/test_deploy_secret_boundary.py"
+    "infra/online/tests/test_deploy_secret_boundary.py",
+    "infra/online/tests/test_deploy_database_stdin.py"
   ],
   "user_summary": "提供 Windows 一条命令的受限 Web 或 API/Worker 部署，高风险修改必须完整人工验收。",
   "technical_summary": "Protocol 2：Windows固定调用稳定bin并传协议和工具内容指纹；root专属版本化lib完整安装全部模块，不从current加载工具。生产组件仍使用原业务基线和已校验Git候选包。acceptance使用生成的封闭Compose、独立project/path/internal网络/卷/状态/证据和本地Docker socket，无宿主端口，不读取生产env/Secret/data；只接受显式固定假Key，Worker暂存及非root边界保持。准备阶段只初始化隔离空库；Web/App更新/故障/成组回滚不运行迁移。检查隔离schema/行数hash、卷身份、生产容器/镜像/指针身份、假Key日志安全；回滚失败保留pending并阻断。安装与激活不运行Docker。",
@@ -113,7 +114,7 @@
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
     "remaining_gates": [
-      "使用全新r4项目复验B安装/list/旧锁保留/新锁隔离、IMAGE_RUNTIME_CONTRACT_OK及SECRET_BOUNDARY_OK证据；执行Linux原生root0700/UID10001权限测试；旧项目只保留审计，不复用或自动清理",
+      "使用全新r5项目从A–H完整重验：重新安装稳定bin，复验镜像/Secret/数据库指纹和Web/App DryRun、更新、回滚；不复用R4容器/状态/卷/镜像；旧项目只保留审计，不自动清理",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
       "实际证据JSON、生产身份对比、无端口/internal网络/卷隔离和日志审计",
@@ -155,6 +156,32 @@
       "root_cause": "验收工具将缺失路径检查错误地放在无目录搜索权限的用户探针中；不是镜像缺模块、Worker启动失败或需要放宽Secret目录权限。",
       "production": "current=/opt/storylens/releases/4ae7f663; HTTP200 (operator supplied)",
       "retention": "全部旧session/容器/镜像/卷/锁保留，不清理不复用。"
+    },
+    "hong_kong_fourth_database_stdin_failure": {
+      "source": "user_provided_hong_kong_R4_evidence; no server operations in this fix",
+      "commit": "45af8559d128eb277e848353feab4eeb4b61caf6",
+      "project": "sl-accept-webd20260904r4",
+      "passed": ["IMAGE_RUNTIME_CONTRACT_OK", "ACCEPTANCE_BASELINE_READY", "SECRET_BOUNDARY_OK"],
+      "failure": "Update DryRun返回COMMAND_FAILED_SAFELY；database_fingerprint查询不存在的online_uploads，实际模型和PostgreSQL表名为online_book_uploads。",
+      "second_defect": "工具Docker/Compose非交互子进程继承SSH stdin，多次现场复现吞掉ssh bash -s后续命令；统一命令执行器未显式DEVNULL。",
+      "closed_state": "操作者已停止隔离容器但全部保留、稳定入口已unlink；生产current仍4ae7f663，HTTP200。",
+      "retention": "R1–R4所有失败历史/session/容器/镜像/卷/锁保留；本轮不操作现场。"
+    },
+    "45af8559_bootstrap_superseded": {
+      "commit": "45af8559d128eb277e848353feab4eeb4b61caf6",
+      "filename": "storylens-online-lightweight-bootstrap-45af8559.tar.gz",
+      "state": "superseded_do_not_install",
+      "reason": "R4 Update DryRun数据库指纹表名错误，以及非交互子进程继承流式脚本stdin。"
+    },
+    "database_stdin_fix": {
+      "mechanism": "仅SQL表名改为online_book_uploads；run_command和Git打包子进程均显式stdin=DEVNULL，覆盖Docker/Compose/SQL检查/构建，保留stdout/stderr捕获、timeout与固定错误。",
+      "repository_search": "修复前git grep全仓7处online_uploads：1处错误SQL、6处正确Docker卷定义/挂载/卷身份校验/卷说明。只改错误SQL；正确卷名及既有历史证据不批量替换。新增测试中的错误表名仅用于明确禁止/旧行为负例，新增记录用于保留故障证据。",
+      "targeted_tests": "18 passed：模型AST声明表名与内存SQLite实际查询，Web/App Update DryRun通过且只读；schema及jobs/uploads/usage行数变化触发DATABASE_CHANGED；部署全部subprocess入口DEVNULL合同；捕获/超时/脱敏保持；真实本地bash -s控制组复现旧stdin偷读、修复组验证外层尾部命令执行。无SSH连接、真实Docker或PostgreSQL调用。",
+      "full_validation": "全部部署及在线后端365 passed, 2 skipped（部署229、后端136；跳过Linux原生flock及root0700权限测试），1项既有Starlette弃用警告。前端typecheck、7项Vitest、production build通过。Ruff check/format60文件、compileall、Compose config --quiet、check_project.py、change_registry.py check、git diff --check通过。14个Bash块sh -n、Shell LF/100755、JSON/登记清单/Secret模式/8文件范围审计通过；VERSION仍1.3.6。",
+      "runtime_limit": "Docker Desktop Linux Engine named pipe不存在，未构建或验收真实Docker容器，未连接香港。SQL回归是本地内存SQLite表名/计数合同，不代替真实PostgreSQL；流式shell对照为真实本地Git Bash子进程，不声称SSH传输或香港A–H已通过。",
+      "next_projects": ["sl-accept-webd20260904r5", "sl-accept-webe20260904r5", "sl-accept-appf20260904r5", "sl-accept-appg20260904r5", "sl-accept-appw20260904r5"],
+      "status": "tested_pending_hong_kong_R5_A_H",
+      "artifact_policy": "最终干净HEAD经git archive生成新bootstrap；逐文件核验源码字节及SHA256，包含R5完整命令、测试及CHG，不复用45af8559包。"
     },
     "f0fab627_bootstrap_superseded": {
       "commit": "f0fab627b8d4eab9950b03c4d9565b6979719763",
@@ -234,5 +261,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-05T00:20:00+08:00"
+  "updated_at": "2026-09-05T00:41:00+08:00"
 }

@@ -175,6 +175,11 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    tmpfs下用Path.exists检查缺失Secret触发PermissionError。该包superseded；改为非root
    身份检查与root lstat不存在检查，App继续严格权限及字节一致性核验，新增固定边界证据。
    版本实现目录实际root0700（不是0755）；新一轮只用R4项目，保留所有旧现场，CHG仍tested。
+   R4的45af8559已通过baseline/image/Secret门禁，但Update DryRun查询不存在的online_uploads
+   SQL表而失败；实际表为online_book_uploads，Docker同名卷online_uploads保持不变。
+   此包superseded；同时修复内部子进程继承SSH流式脚本stdin的问题，统一DEVNULL。
+   现场已停止并保留全部R4隔离资源、unlink稳定入口，生产4ae7f663/HTTP200不变（用户证据）。
+   下一轮须重新安装工具并从A–H完整执行R5，不复用R4容器、状态、卷、镜像；CHG仍tested。
 2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
    结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
 

@@ -266,6 +266,7 @@ commands = [
 ]
 container_ids = subprocess.run(
     ["docker", "compose", "--env-file", "online.env", "ps", "-aq"],
+    stdin=subprocess.DEVNULL,
     check=True,
     stdout=subprocess.PIPE,
 ).stdout.split()
@@ -273,13 +274,14 @@ for container_id in container_ids:
     commands.append(["docker", "inspect", container_id.decode("ascii")])
 image_ids = subprocess.run(
     ["docker", "compose", "--env-file", "online.env", "images", "-q"],
+    stdin=subprocess.DEVNULL,
     check=True,
     stdout=subprocess.PIPE,
 ).stdout.split()
 for image_id in set(image_ids):
     commands.append(["docker", "image", "history", "--no-trunc", image_id.decode("ascii")])
 for command in commands:
-    captured = subprocess.run(command, check=True, stdout=subprocess.PIPE).stdout
+    captured = subprocess.run(command, stdin=subprocess.DEVNULL, check=True, stdout=subprocess.PIPE).stdout
     if secret in captured:
         raise SystemExit(1)
 PY
@@ -559,6 +561,19 @@ actual application read permissions and root-only bounded byte equality. tmpfs s
 fixed SECRET_BOUNDARY_OK/FAILED evidence without native errors or bytes; DryRun stays
 read-only. All three failure records/resources remain retained. Use fresh r4 projects
 and the A–H commands (including Linux real-permission regression) in ACCEPTANCE.md.
+
+R4 (45af8559) is now superseded too: baseline, image and Secret gates passed, but
+Update DryRun queried the nonexistent SQL table `online_uploads`. The correct
+model table is `online_book_uploads`; `online_uploads` remains the correct Docker
+named volume and is intentionally unchanged. Fingerprint tests execute the actual
+count query against model-derived table names, not an unconditional Fake response.
+All deployment Docker/Compose/build/database-check subprocesses and local Git
+packaging now explicitly use stdin=DEVNULL, preserving capture/timeout/redaction
+and preventing consumption of the remaining `ssh ... bash -s` program. A real local
+streamed-shell regression reproduces the old input theft and verifies the fix.
+R4 was stopped with resources retained and stable bin unlinked by the operator;
+production stayed 4ae7f663/HTTP200. Reinstall the new tool and rerun every A–H gate
+using fresh R5 projects, without reusing R4 containers/state/volumes/images.
 
 ### Manual full upgrade
 

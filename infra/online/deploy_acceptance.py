@@ -608,7 +608,7 @@ class Acceptance:
             "storylens_online",
             "-At",
             "-c",
-            "SELECT (SELECT count(*) FROM online_analysis_jobs),(SELECT count(*) FROM online_uploads),(SELECT count(*) FROM online_model_usage_ledger)",
+            "SELECT (SELECT count(*) FROM online_analysis_jobs),(SELECT count(*) FROM online_book_uploads),(SELECT count(*) FROM online_model_usage_ledger)",
         )
         return hashlib.sha256((schema + counts).encode()).hexdigest()
 

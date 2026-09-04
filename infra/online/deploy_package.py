@@ -28,7 +28,11 @@ MAX_BYTES = 128 * 1024 * 1024
 
 def git(root: Path, *args: str) -> bytes:
     result = subprocess.run(
-        ["git", "-C", str(root), *args], capture_output=True, check=False, timeout=120
+        ["git", "-C", str(root), *args],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=False,
+        timeout=120,
     )
     if result.returncode:
         raise DeployError("GIT_CHECK_FAILED")
