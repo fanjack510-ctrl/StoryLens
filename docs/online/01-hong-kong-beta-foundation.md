@@ -6,6 +6,11 @@ Phase 2A 在其冻结范围内已 **100%** 完成。Phase 2B1 的“真实 AI �
 现已通过香港生产白名单验收，`CHG-20260830-005` 已 `verified`。本次状态记录依据
 用户于 2026-09-03 提供的香港部署操作者验收事实；记录更新不代表重新远程执行验收。
 
+**Online Beta 轻量化部署机制已完成香港隔离验收**，`CHG-20260903-001` 已 `verified`，
+可投入后续 Web 和允许范围内的 API/Worker 更新。该结论依据用户于 2026-09-05 提供的
+最终香港验收与签收：R5 实际执行 D–G，R7 通过 79 文件内容/模式等价门禁关联这些已通过
+证据，并实际补齐 H；**R7 没有重跑 D–G 容器**。本轮仅更新本地记录，不连接服务器。
+
 这仍**不是正式公开 Beta**。真实全书分析、充值、钱包、正式计费和公开 onboarding
 均未开放。真实模型验证结束后，生产 `PHASE2B1_ENABLED=false`，白名单为空。
 
@@ -32,6 +37,9 @@ Phase 2A 在其冻结范围内已 **100%** 完成。Phase 2B1 的“真实 AI �
 [`CHG-20260830-005`](../../release/changes/CHG-20260830-005.json)。
 此前 Phase 2A 在 `ad896056` 上的验收、隔离资源清理及部署历史保留在
 [`CHG-20260830-004`](../../release/changes/CHG-20260830-004.json)，不以本轮状态覆盖。
+部署工具的独立验收记录位于
+[`CHG-20260903-001`](../../release/changes/CHG-20260903-001.json)；工具验收不改变上述
+`4ae7f663` 生产业务版本，也不代表公开 Beta 发布。
 
 ## Phase 2A 已完成范围
 
@@ -153,7 +161,49 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
 真实验证完成后开关已关闭、白名单已清空；API healthy、Worker 正常运行、网站 HTTP 200，
 `PRODUCTION_LOG_SAFETY=OK`。这构成生产白名单验收闭环，不等于向公网用户开放模型费用。
 
-## 下一阶段进度与优先级
+## 轻量化部署最终香港验收（已 verified）
+
+验收工具提交为 `c793a0b9cd5d1ac3f959dc0f10ed25a7577755c2`；原始 R7 包
+`storylens-online-lightweight-bootstrap-c793a0b9.tar.gz` 大小为 198561 字节，SHA256 为
+`4a37158b891eeb3f769a27c8919489f9a6d58096ceab64573d9928a343030eae`。
+协议为 `2`，工具指纹保持
+`32799f5ea99f29821eb799dc03f439d09d5a58028f94e227e5b24190f0756dda`。
+此次纯记录提交不重新生成或替换已验收安装包。
+
+| 阶段 | 真实证据归属与结果 |
+|------|--------------------|
+| D Web 成功更新 | R5 实际容器验收，`UPDATE_OK` |
+| E Web 健康失败自动回滚 | R5 实际容器验收，`UPDATE_FAILED_ROLLBACK_OK` |
+| F API/Worker 成功更新 | R5 实际容器验收，`UPDATE_OK` |
+| G API/Worker 成组回滚 | R5 实际容器验收，`UPDATE_FAILED_ROLLBACK_OK` |
+| 跨轮次证据关联 | R6/R7 机器门禁确认 R7 与 R5 的 79 个保护文件内容、模式完全一致，成功关联已通过的 R5 D–G 实际证据；未重跑容器 |
+| H 纠正验收 | R7 在香港实际完成纠正命令并通过，远端退出码为 0；不是本轮本地任务远程重验 |
+
+R5 实测中数据库、非目标容器和生产身份保持不变；Secret 边界、镜像运行契约、锁目录
+隔离均通过。用户提供的 R7 最终成功标志原样保留：
+
+```text
+R7_CORRECTIVE_CHECKS_OK_PENDING_OPERATOR_SIGNOFF
+R7_FINAL_PRODUCTION_UNCHANGED=OK
+R7_HONG_KONG_ACCEPTANCE_COMMAND_COMPLETED=OK
+R7_REMOTE_EXIT_CODE=0
+R7_REMOTE_ACCEPTANCE=PASSED
+```
+
+其中 `PENDING_OPERATOR_SIGNOFF` 是当时命令原始输出；用户本次明确确认最终验收并要求
+闭环，故登记状态现为 `verified`，不改写原标志。未收到的原始远端日志、额外故障注入或
+测试统计不补写为实测。R1–R6 的失败根因与成功证据继续保留，不以最终通过覆盖历史。
+
+最终生产 API、Web、PocketBase、PostgreSQL、Redis 均 healthy，Worker running，
+`pocketbase-init` 为 `Exited (0)`；`/opt/storylens/current` 仍指向
+`/opt/storylens/releases/4ae7f663`，网站 HTTP 200。Phase2B1 关闭、白名单为空，生产数据库、
+Secret、数据卷和业务容器未修改。此次仅部署工具验收，不是业务上线或公开 Beta 发布。
+
+## 轻量化部署历史快照（保留 R1–R6）
+
+以下文字保留各轮当时的状态、失败根因和下一步门禁；其中“tested”“待验收”和“下一轮”
+属于历史快照，不代表当前结论。当前状态以本页上方最终验收和 CHG 的 `final_acceptance`
+为准。原有本地/Fake 结果不追溯改写为香港实测，未提供的额外现场场景不声称通过。
 
 1. **轻量化 Web/API 部署机制**：`CHG-20260903-001` 已新增本地实现和离线回归，
    仍待香港隔离验收，尚未部署。Web 只更新 Web，普通 App 更新仅作用于 API/Worker；
@@ -199,8 +249,14 @@ Phase 2B1 migration → commit`，锁、检查和 DDL 始终共享同一 Connect
    1 passed无skipped和DB/stdin18 passed。现有infra/online/R6-H-ONLY.md升级为R7单条命令指南，
    保留文件名以兼容冻结等价门禁；继续关联R5 D–G，不重跑容器。R1–R6历史和资源全部保留，
    CHG仍tested，等待香港R7实际通过后闭环。
-2. **UI 与产品流程优化**：在轻量部署机制可验收后，优化现有注册/登录、上传 TXT、任务进度、
-   结果和失败反馈流程；不借此开放模型选择、公共白名单或收费业务。
+
+## 下一阶段进度与优先级
+
+1. **按已验收的轻量机制交付后续变更**：Web 仅更新 Web，允许范围内 App 更新仅作用于
+   API/Worker；继续执行范围分类、版本/指纹、健康及回滚门禁。数据库、迁移、认证、计费、
+   Secret、基础设施及未知/混合变更仍须走完整部署与专项验收，不因工具 verified 而放行。
+2. **UI 与产品流程优化**：轻量部署验收前置条件已完成；下一阶段另行批准后优化现有
+   注册/登录、上传 TXT、任务进度、结果和失败反馈流程，不开放模型选择、公共白名单或收费。
 
 真实全书分析、充值、钱包、正式计费、公开 onboarding、多模型、桌面端改造与正式版本发布
 仍不在本轮范围。后续需另行批准范围和验收门禁；当前生产开关继续关闭，白名单继续为空。

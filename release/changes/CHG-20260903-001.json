@@ -3,9 +3,22 @@
   "title": "Online Beta 显式批准的 Web/App 轻量部署与失败回滚",
   "type": "build",
   "base_version": "1.3.6",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": false,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "18f8ee3ea28ce5717481972c29ea04e8e0613702",
+      "message": "fix(online): correct fingerprint table and detach subprocess stdin (CHG-20260903-001)",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c793a0b9cd5d1ac3f959dc0f10ed25a7577755c2",
+      "message": "test(online): isolate R7 corrective trust lookups (CHG-20260903-001)",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "online-deployment"
   ],
@@ -48,7 +61,7 @@
     "目标健康/重启/根地址/其他容器与卷/指针检查失败时自动回滚目标；回滚不成功必须阻断后续部署并要求人工恢复",
     "工具本身首次安装是 full，香港隔离验收完成前不得记为 verified；不自动生产发布",
     "Protocol 2 stable bin、版本化lib、expected tool fingerprint；未知安装版本拒绝覆盖",
-    "独立acceptance项目无宿主端口，准备阶段只初始化隔离空库，D–G真业务镜像更新和故障回滚入口已实现；真实香港运行仍待验收"
+    "独立acceptance项目无宿主端口，准备阶段只初始化隔离空库；D–G真实更新/回滚及纠正测试必须通过香港验收，跨测试修订关联旧容器证据时必须通过运行文件与构建输入内容/模式的严格机器等价门禁"
   ],
   "tests": [
     "infra/online/tests/test_deploy_lightweight.py：分类、路径、归档、Git 门禁、Fake Docker/curl部署与回滚、PowerShell Fake SCP/SSH离线回归",
@@ -72,7 +85,12 @@
     "Protocol 2收尾：Ruff check/format、compileall、scripts/check_project.py、scripts/change_registry.py check、git diff --check均通过；15个本轮改动全部登记，暂存源码Secret模式扫描及Shell LF检查通过，VERSION/业务数据库/分析API/前端/原Compose/Dockerfile/Worker Secret入口/冻结发布清单零差异。",
     "追加信任边界回归：安装源必须为规范绝对路径；隔离网络出现非本项目已知容器时，在构建或更新前失败关闭。部署回归129 passed（原127项及2项新增回归）；未执行真实Docker或香港验收。",
     "镜像内容修复回归：全部部署测试150 passed（原129及21项新增）。新增覆盖完整嵌套清单复制、umask077下所有源码目录显式chmod0755、空目录/namespace/漏文件/dockerignore/摘要漂移拒绝、真实Python子进程导入探针、镜像缺失/摘要错/错误脱敏、Web基线在任何服务启动前探测App、App候选失败不切换、既有标签拒绝和未就绪失败证据保留。Docker边界为Fake，未虚报Linux镜像运行通过。",
-    "镜像修复收尾：在线后端136 passed（1项既有Starlette弃用警告）；前端typecheck、7项Vitest、production build通过；Ruff check/format共55文件、compileall、生产Compose config --quiet及隔离Compose合同、check_project.py、change_registry.py check、git diff --check、JSON/登记文件清单/Secret模式/LF/范围检查通过。10个修改文件均属于部署工具、测试、文档和登记；VERSION保持1.3.6，业务/数据库/认证计费/前端/原Compose/Dockerfile/Worker Secret入口/冻结文件无修改。Docker Linux Engine named pipe不存在，真实镜像构建和香港A–H仍待操作者复验。"
+    "镜像修复收尾：在线后端136 passed（1项既有Starlette弃用警告）；前端typecheck、7项Vitest、production build通过；Ruff check/format共55文件、compileall、生产Compose config --quiet及隔离Compose合同、check_project.py、change_registry.py check、git diff --check、JSON/登记文件清单/Secret模式/LF/范围检查通过。10个修改文件均属于部署工具、测试、文档和登记；VERSION保持1.3.6，业务/数据库/认证计费/前端/原Compose/Dockerfile/Worker Secret入口/冻结文件无修改。Docker Linux Engine named pipe不存在，真实镜像构建和香港A–H仍待操作者复验。",
+    "2026-09-05 最终闭环依据用户提供的香港操作者实际验收与签收：R5真实执行D Web更新UPDATE_OK、E Web健康失败回滚UPDATE_FAILED_ROLLBACK_OK、F API/Worker更新UPDATE_OK、G API/Worker成组回滚UPDATE_FAILED_ROLLBACK_OK，数据库、非目标容器和生产身份不变，Secret/镜像运行契约/锁隔离通过。",
+    "R6/R7机器门禁确认R7与R5的79个保护运行文件和构建输入内容、模式完全一致，协议2与工具指纹32799f5ea99f29821eb799dc03f439d09d5a58028f94e227e5b24190f0756dda不变；R7关联已通过的R5 D–G实际证据，没有重跑D–G容器。",
+    "香港R7实际补齐H：R7_CORRECTIVE_CHECKS_OK_PENDING_OPERATOR_SIGNOFF、R7_FINAL_PRODUCTION_UNCHANGED=OK、R7_HONG_KONG_ACCEPTANCE_COMMAND_COMPLETED=OK、R7_REMOTE_EXIT_CODE=0、R7_REMOTE_ACCEPTANCE=PASSED；本次用户要求将tested闭环为verified。未提供的逐项原始日志、额外故障注入或统计数字不补写为实测。",
+    "最终生产API/Web/PocketBase/PostgreSQL/Redis healthy，Worker running，pocketbase-init Exited(0)，current仍/opt/storylens/releases/4ae7f663、网站HTTP200；Phase2B1关闭且白名单为空。部署工具验收未修改生产数据库、Secret、数据卷或业务容器；不是公开Beta发布。",
+    "本轮仅更新本地CHG和香港路线图，保留R1–R6失败原因与当时的待验收记录，不追溯改写成本地或远程成功；不再连接服务器、不读取真实密钥、不推送、不发布、不创建标签。"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -113,7 +131,77 @@
     "acceptance_only_fixed_fake_secret": true
   },
   "deployment_status": {
-    "state": "R5_D_G_passed_pending_R7_corrective_H_acceptance",
+    "state": "verified_R5_actual_D_G_linked_R7_corrective_H_passed",
+    "final_acceptance": {
+      "recorded_at": "2026-09-05T07:50:00+08:00",
+      "source": "user_provided_hong_kong_operator_results_and_explicit_final_signoff; no server connection or operations in this record-only task",
+      "status": "verified",
+      "scope": "Online Beta轻量化部署机制已完成香港隔离验收，可投入后续Web和允许范围内API/Worker更新；具体更新仍须通过既有分类、批准、健康和回滚门禁。不是生产业务版本升级或公开Beta发布。",
+      "artifact": {
+        "commit": "c793a0b9cd5d1ac3f959dc0f10ed25a7577755c2",
+        "filename": "storylens-online-lightweight-bootstrap-c793a0b9.tar.gz",
+        "local_path": "D:\\Storylens\\Deploy\\storylens-online-lightweight-bootstrap-c793a0b9.tar.gz",
+        "size_bytes": 198561,
+        "sha256": "4a37158b891eeb3f769a27c8919489f9a6d58096ceab64573d9928a343030eae",
+        "protocol": 2,
+        "tool_version": "32799f5ea99f29821eb799dc03f439d09d5a58028f94e227e5b24190f0756dda",
+        "policy": "验收对象仍为原始R7提交和安装包；本次纯记录提交不替换、不重建该已验收产物。"
+      },
+      "r5_actual_container_acceptance": {
+        "commit": "18f8ee3ea28ce5717481972c29ea04e8e0613702",
+        "D_web_update": "UPDATE_OK",
+        "E_web_health_failure_rollback": "UPDATE_FAILED_ROLLBACK_OK",
+        "F_api_worker_update": "UPDATE_OK",
+        "G_api_worker_group_rollback": "UPDATE_FAILED_ROLLBACK_OK",
+        "boundaries": "数据库、非目标容器、生产身份保持不变；Secret边界、镜像运行契约、锁目录隔离均通过。"
+      },
+      "r7_evidence_linkage": {
+        "method": "R6/R7机器等价门禁及R5留存实际证据检查",
+        "protected_file_count": 79,
+        "content_equal": true,
+        "modes_equal": true,
+        "r5_D_G_evidence_linked": true,
+        "r7_D_G_rerun": false,
+        "description": "关联已通过的R5 D–G实际证据；R7实际补齐H，不能表述为R7重跑D–G。"
+      },
+      "r7_hong_kong_H": {
+        "markers": [
+          "R7_CORRECTIVE_CHECKS_OK_PENDING_OPERATOR_SIGNOFF",
+          "R7_FINAL_PRODUCTION_UNCHANGED=OK",
+          "R7_HONG_KONG_ACCEPTANCE_COMMAND_COMPLETED=OK",
+          "R7_REMOTE_EXIT_CODE=0",
+          "R7_REMOTE_ACCEPTANCE=PASSED"
+        ],
+        "operator_signoff": "用户已明确确认最终验收并要求更新为verified；PENDING_OPERATOR_SIGNOFF为当时命令原样输出，不能改写该历史标志。",
+        "evidence_limit": "记录用户提供的命令完成和通过结果，不声称本次本地任务重新运行香港命令或获取原始远端日志。"
+      },
+      "final_production": {
+        "business_commit": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
+        "current": "/opt/storylens/releases/4ae7f663",
+        "url": "https://app.dstorylens.com",
+        "http_status": 200,
+        "services": {
+          "online-api": "healthy",
+          "online-web": "healthy",
+          "PocketBase": "healthy",
+          "PostgreSQL": "healthy",
+          "Redis": "healthy",
+          "online-worker": "running",
+          "pocketbase-init": "Exited (0)"
+        },
+        "phase2b1_enabled": false,
+        "allowlist_empty": true,
+        "database_changed": false,
+        "secrets_changed": false,
+        "data_volumes_changed": false,
+        "business_containers_changed": false
+      },
+      "history_policy": "保留R1–R6全部历史对象、失败根因、superseded标记及当时剩余门禁；历史tested/pending文字不代表当前状态。后续范围未包括的故障场景仍按既有本地/Fake证据表述，不新增远端实测断言。",
+      "unclaimed_remote_scenarios": [
+        "回滚本身失败、进程中断后的人工恢复：本次未提供新增香港实测，仅保留既有本地/Fake证据；不将D–G健康失败回滚通过扩大解释为这些额外场景通过。"
+      ],
+      "publication": "仅部署工具验收闭环，VERSION=1.3.6；不发布公开Beta、不开放模型、充值、钱包、正式计费或公开onboarding。"
+    },
     "r6_hong_kong_results": {
       "source": "user_provided_hong_kong_evidence; no server operations in this task",
       "commit": "2b2e6b1edb6f2f7d710c22284ee11b60910fe139",
@@ -165,7 +253,8 @@
     },
     "production_baseline_unchanged": "4ae7f663999caad09f5f57c7cff3a2f82b81f924",
     "relation_to_005": "使用005已verified的应用/Secret/迁移边界；不复用或改写005证据，不打开真实模型开关。",
-    "remaining_gates": [
+    "remaining_gates": [],
+    "pre_R7_closure_remaining_gates_history": [
       "R7按R6-H-ONLY.md更新后的单条命令执行机器等价/历史证据/先纠正测试后full/real_linux/database-stdin和生产身份门禁；R5 D–G关联，不重跑容器。任一证据门禁失败停止，所有历史资源保留。",
       "香港首次安装/版本切换和root权限实测，确认生产不变",
       "ACCEPTANCE.md A–H真实Docker准备/更新/回滚/Worker退出及Secret暂存验收",
@@ -313,5 +402,5 @@
       "reason": "旧客户端依赖current入口，工具模块依赖业务release，服务端无法进行同宿主独立project验收。"
     }
   },
-  "updated_at": "2026-09-05T07:32:00+08:00"
+  "updated_at": "2026-09-05T07:50:00+08:00"
 }
