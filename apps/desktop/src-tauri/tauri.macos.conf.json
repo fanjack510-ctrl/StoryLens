@@ -4,7 +4,7 @@
     "macOS": {
       "hardenedRuntime": false,
       "files": {
-        "MacOS/storylens-api-runtime": "../../api/dist-sidecar/storylens-api"
+        "Resources/storylens-api-runtime": "../../api/dist-sidecar/storylens-api"
       }
     }
   }

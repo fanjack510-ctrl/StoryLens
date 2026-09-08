@@ -112,7 +112,14 @@ fn sidecar_candidates(app: &AppHandle) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            paths.push(dir.join("storylens-api-runtime").join("storylens-api"));
+            if let Some(contents_dir) = dir.parent() {
+                paths.push(
+                    contents_dir
+                        .join("Resources")
+                        .join("storylens-api-runtime")
+                        .join("storylens-api"),
+                );
+            }
             paths.push(dir.join("storylens-api.exe"));
             paths.push(dir.join("storylens-api"));
             paths.push(dir.join("binaries").join("storylens-api.exe"));

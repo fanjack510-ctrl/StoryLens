@@ -140,7 +140,7 @@ else
   fi
 fi
 "$PYTHON" scripts/check_macos_sidecar_signature.py \
-  "$PACKAGED_APP/Contents/MacOS/storylens-api-runtime" --signing-mode "$SIGNING_MODE"
+  "$PACKAGED_APP/Contents/Resources/storylens-api-runtime" --signing-mode "$SIGNING_MODE"
 codesign --verify --deep --strict --verbose=2 "$PACKAGED_APP"
 cleanup_verify_mount
 trap - EXIT

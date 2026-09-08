@@ -22,8 +22,11 @@ def test_macos_bundle_contains_complete_sidecar_runtime() -> None:
     assert bundle["externalBin"] == []
     assert bundle["macOS"]["hardenedRuntime"] is False
     assert bundle["macOS"]["files"] == {
-        "MacOS/storylens-api-runtime": "../../api/dist-sidecar/storylens-api"
+        "Resources/storylens-api-runtime": "../../api/dist-sidecar/storylens-api"
     }
+    backend = (REPO / "apps/desktop/src-tauri/src/backend.rs").read_text(encoding="utf-8")
+    assert '.join("Resources")' in backend
+    assert '.join("storylens-api-runtime")' in backend
 
 
 def test_release_checks_packaged_onedir_instead_of_onefile_archive() -> None:
@@ -34,7 +37,7 @@ def test_release_checks_packaged_onedir_instead_of_onefile_archive() -> None:
     assert 'find "$BUILT_SIDECAR_DIR" -type f -print0' in build
     assert 'codesign --force --sign - "$MACHO_PATH"' in build
     assert "codesign --force --options runtime --timestamp" in build
-    assert '"$PACKAGED_APP/Contents/MacOS/storylens-api-runtime"' in build
+    assert '"$PACKAGED_APP/Contents/Resources/storylens-api-runtime"' in build
     assert '"sidecar_layout": "onedir"' in build
     assert '"hardened_runtime": os.environ["HARDENED_RUNTIME"] == "true"' in build
     assert '"hardenedRuntime":true' in build
@@ -42,7 +45,7 @@ def test_release_checks_packaged_onedir_instead_of_onefile_archive() -> None:
     assert "onedir-candidate" in (REPO / ".github/workflows/macos-release.yml").read_text(
         encoding="utf-8"
     )
-    assert '"$APP/Contents/MacOS/storylens-api-runtime"' in smoke
+    assert '"$APP/Contents/Resources/storylens-api-runtime"' in smoke
     assert "CArchiveReader" not in checker
     assert "_runtime_macho_paths" in checker
     assert "for signature in signatures.values()" in checker

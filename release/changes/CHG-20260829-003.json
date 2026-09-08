@@ -106,7 +106,8 @@
     "ARM64 candidate SHA256 db81f33d702d4b4508bb3d805f01d4039d76d5b9d3bc3ea62f59d031fb4e15e4",
     "User confirmed StoryLens_1.3.6_arm64-signfix-candidate.dmg still exits 255 on a real Apple Silicon machine with different Team IDs while loading _MEI/Python.framework; candidate is superseded",
     "Replacement uses a visible PyInstaller onedir runtime and remains pending macOS build plus real-device verification",
-    "First onedir CI attempt failed closed before upload because the copied Python.org Framework binary retained a bundle signature whose covered resources were absent; the build now re-signs every collected Mach-O as an independent code object before strict verification"
+    "First onedir CI attempt failed closed before upload because the copied Python.org Framework binary retained a bundle signature whose covered resources were absent; the build now re-signs every collected Mach-O as an independent code object before strict verification",
+    "Second onedir CI attempt passed the Mach-O signature gate, then failed closed because placing the runtime under Contents/MacOS made codesign treat Python dist-info metadata as a code subcomponent; the runtime is now bundled under Contents/Resources and copied out before execution"
   ],
   "data_compatibility": {
     "database_changed": false,

@@ -94,13 +94,13 @@ DESKTOP_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$A
   echo "Desktop executable missing: $DESKTOP_EXECUTABLE" >&2
   exit 5
 }
-[[ -x "$APP/Contents/MacOS/storylens-api-runtime/storylens-api" ]] || {
+[[ -x "$APP/Contents/Resources/storylens-api-runtime/storylens-api" ]] || {
   echo "Bundled sidecar runtime missing from StoryLens.app" >&2
   find "$APP/Contents" -maxdepth 4 -type f -print >&2
   exit 5
 }
 "$ROOT/.venv/bin/python" scripts/check_macos_sidecar_signature.py \
-  "$APP/Contents/MacOS/storylens-api-runtime" --signing-mode "$SIGNING_MODE"
+  "$APP/Contents/Resources/storylens-api-runtime" --signing-mode "$SIGNING_MODE"
 codesign --verify --deep --strict --verbose=2 "$APP" || {
   echo "StoryLens.app signature verification failed" >&2
   exit 6
@@ -125,7 +125,7 @@ hdiutil detach "$MOUNT_POINT" -quiet
 # the complete nested sidecar runtime still carries quarantine. The desktop
 # must copy the whole onedir tree without those extended attributes.
 QUARANTINE_VALUE="0081;$(printf '%x' "$(date +%s)");StoryLens;"
-find "$INSTALLED_APP/Contents/MacOS/storylens-api-runtime" -type f \
+find "$INSTALLED_APP/Contents/Resources/storylens-api-runtime" -type f \
   -exec xattr -w com.apple.quarantine "$QUARANTINE_VALUE" {} +
 
 APP_DATA="$TMP_ROOT/app-data"
