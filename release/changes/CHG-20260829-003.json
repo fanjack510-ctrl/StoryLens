@@ -59,6 +59,12 @@
       "message": "test(macos): locate copied runtime in app data",
       "primary": false,
       "multi_change_reason": "同一 onedir 修复的 macOS 冒烟定位纠正：Tauri 运行副本位于 Application Support，而非 API 数据目录"
+    },
+    {
+      "sha": "256290167703271c92e4942a429bbecf3b3c794a",
+      "message": "fix(macos): clear copied runtime quarantine",
+      "primary": false,
+      "multi_change_reason": "同一 onedir 修复的真实 macOS quarantine 行为纠正：运行树原子启用前显式清除扩展属性"
     }
   ],
   "modules": [
@@ -138,5 +144,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-09-08T07:24:00Z"
+  "updated_at": "2026-09-08T07:36:09Z"
 }
