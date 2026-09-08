@@ -65,6 +65,12 @@
       "message": "fix(macos): clear copied runtime quarantine",
       "primary": false,
       "multi_change_reason": "同一 onedir 修复的真实 macOS quarantine 行为纠正：运行树原子启用前显式清除扩展属性"
+    },
+    {
+      "sha": "9ef24ba89d9a3cdd10a200be66a6dda16ca9b310",
+      "message": "chore(release): record macOS onedir candidate",
+      "primary": false,
+      "multi_change_reason": "记录同一修复的 GitHub macOS ARM64/x64 构建与候选校验结果"
     }
   ],
   "modules": [
@@ -146,5 +152,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-09-08T07:36:09Z"
+  "updated_at": "2026-09-08T07:56:16Z"
 }
