@@ -127,7 +127,9 @@
     "First onedir CI attempt failed closed before upload because the copied Python.org Framework binary retained a bundle signature whose covered resources were absent; the build now re-signs every collected Mach-O as an independent code object before strict verification",
     "Second onedir CI attempt passed the Mach-O signature gate, then failed closed because placing the runtime under Contents/MacOS made codesign treat Python dist-info metadata as a code subcomponent; the runtime is now bundled under Contents/Resources and copied out before execution",
     "Third onedir CI attempt built and signed the DMG, verified 203 Mach-O files, launched the desktop-spawned sidecar and reached /health; only the final smoke assertion looked under API STORYLENS_DATA_DIR instead of Tauri Application Support, so the assertion now locates the isolated app_local_data_dir under the smoke HOME",
-    "Fourth onedir CI attempt again reached desktop-spawned /health and validated the copied 203-file Mach-O signature tree, then proved std::fs::copy retained quarantine on macOS; runtime staging now clears extended attributes recursively before atomic activation"
+    "Fourth onedir CI attempt again reached desktop-spawned /health and validated the copied 203-file Mach-O signature tree, then proved std::fs::copy retained quarantine on macOS; runtime staging now clears extended attributes recursively before atomic activation",
+    "GitHub Actions run 34200184220 passed ARM64 and x64 build, all-Mach-O signature verification, macOS-only runtime copy tests, mounted-DMG validation, desktop-spawned sidecar /health, quarantine removal, and _MEI absence checks",
+    "ARM64 onedir candidate from build commit 561cdb54af55edbb90a889f9e99a3b400c7b5b3c: 49096514 bytes, SHA256 ad75e25a42098e5b55051e2e75c05a1a82f25e25f479248a6ad52d41e0e68d64; real-device verification remains required"
   ],
   "data_compatibility": {
     "database_changed": false,
