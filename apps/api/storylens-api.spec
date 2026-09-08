@@ -120,24 +120,57 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name="storylens-api",
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=False,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=PYINSTALLER_CODESIGN_IDENTITY,
-    entitlements_file=None,
-)
+if sys.platform == "darwin":
+    # Keep the Python runtime as visible files on macOS. A onefile executable
+    # extracts Python.framework into a random _MEI directory before startup;
+    # that boundary has proven unreliable under Apple Silicon Library
+    # Validation after the outer sidecar is re-signed by the app bundler.
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name="storylens-api",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        console=False,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=PYINSTALLER_CODESIGN_IDENTITY,
+        entitlements_file=None,
+    )
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.datas,
+        strip=False,
+        upx=False,
+        upx_exclude=[],
+        name="storylens-api",
+    )
+else:
+    # Preserve the established Windows onefile package.
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name="storylens-api",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=False,
+        upx_exclude=[],
+        runtime_tmpdir=None,
+        console=False,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=PYINSTALLER_CODESIGN_IDENTITY,
+        entitlements_file=None,
+    )

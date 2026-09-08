@@ -11,8 +11,14 @@ case "$(rustc -vV | awk '/^host:/ { print $2 }')" in
   *) echo "Unsupported macOS host" >&2; exit 2 ;;
 esac
 
-SIDECAR="$ROOT/apps/api/dist-sidecar/storylens-api"
-DMG="$ROOT/dist/release-macos-$ARCH_LABEL/StoryLens_$(tr -d '[:space:]' < VERSION)_${ARCH_LABEL}.dmg"
+ARTIFACT_SUFFIX="${STORYLENS_MACOS_ARTIFACT_SUFFIX:-}"
+if [[ -n "$ARTIFACT_SUFFIX" && ! "$ARTIFACT_SUFFIX" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "Invalid macOS artifact suffix" >&2
+  exit 2
+fi
+SIDECAR_DIR="$ROOT/apps/api/dist-sidecar/storylens-api"
+SIDECAR="$SIDECAR_DIR/storylens-api"
+DMG="$ROOT/dist/release-macos-$ARCH_LABEL/StoryLens_$(tr -d '[:space:]' < VERSION)_${ARCH_LABEL}${ARTIFACT_SUFFIX:+-$ARTIFACT_SUFFIX}.dmg"
 BUILD_SUMMARY="$ROOT/dist/release-macos-$ARCH_LABEL/build-summary.json"
 [[ -x "$SIDECAR" ]] || { echo "Missing executable sidecar" >&2; exit 3; }
 [[ -f "$DMG" ]] || { echo "Missing DMG" >&2; exit 3; }
@@ -88,13 +94,13 @@ DESKTOP_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$A
   echo "Desktop executable missing: $DESKTOP_EXECUTABLE" >&2
   exit 5
 }
-[[ -x "$APP/Contents/MacOS/storylens-api" ]] || {
-  echo "Bundled sidecar missing from StoryLens.app" >&2
+[[ -x "$APP/Contents/MacOS/storylens-api-runtime/storylens-api" ]] || {
+  echo "Bundled sidecar runtime missing from StoryLens.app" >&2
   find "$APP/Contents" -maxdepth 4 -type f -print >&2
   exit 5
 }
 "$ROOT/.venv/bin/python" scripts/check_macos_sidecar_signature.py \
-  "$APP/Contents/MacOS/storylens-api" --signing-mode "$SIGNING_MODE"
+  "$APP/Contents/MacOS/storylens-api-runtime" --signing-mode "$SIGNING_MODE"
 codesign --verify --deep --strict --verbose=2 "$APP" || {
   echo "StoryLens.app signature verification failed" >&2
   exit 6
@@ -116,10 +122,11 @@ ditto "$APP" "$INSTALLED_APP"
 hdiutil detach "$MOUNT_POINT" -quiet
 
 # Reproduce the downloaded-app condition: the main app may be approved while
-# its nested sidecar still carries quarantine. The desktop must launch its
-# runtime copy rather than executing this quarantined nested file directly.
-xattr -w com.apple.quarantine "0081;$(printf '%x' "$(date +%s)");StoryLens;" \
-  "$INSTALLED_APP/Contents/MacOS/storylens-api"
+# the complete nested sidecar runtime still carries quarantine. The desktop
+# must copy the whole onedir tree without those extended attributes.
+QUARANTINE_VALUE="0081;$(printf '%x' "$(date +%s)");StoryLens;"
+find "$INSTALLED_APP/Contents/MacOS/storylens-api-runtime" -type f \
+  -exec xattr -w com.apple.quarantine "$QUARANTINE_VALUE" {} +
 
 APP_DATA="$TMP_ROOT/app-data"
 APP_HOME="$TMP_ROOT/home"
@@ -159,5 +166,22 @@ curl --silent --fail "http://127.0.0.1:$DESKTOP_PORT/health" >/dev/null || {
   echo "Desktop-spawned sidecar health check failed" >&2
   exit 7
 }
+
+RUNTIME_COPY="$(find "$APP_DATA/runtime" -maxdepth 1 -type d \
+  -name 'storylens-api-*-*' -print -quit)"
+[[ -n "$RUNTIME_COPY" && -x "$RUNTIME_COPY/storylens-api" ]] || {
+  echo "Desktop did not create a complete onedir runtime copy" >&2
+  exit 7
+}
+"$ROOT/.venv/bin/python" scripts/check_macos_sidecar_signature.py \
+  "$RUNTIME_COPY" --signing-mode "$SIGNING_MODE"
+if xattr -p com.apple.quarantine "$RUNTIME_COPY/storylens-api" >/dev/null 2>&1; then
+  echo "Runtime sidecar copy retained quarantine" >&2
+  exit 7
+fi
+if grep -R -q '_MEI' "$APP_DATA/logs" "$TMP_ROOT/desktop.out" "$DESKTOP_STDERR"; then
+  echo "macOS onedir runtime unexpectedly used a PyInstaller _MEI path" >&2
+  exit 7
+fi
 
 echo "MACOS RELEASE SMOKE OK ($ARCH_LABEL)"

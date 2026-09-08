@@ -45,30 +45,38 @@
   ],
   "files": [
     "apps/desktop/src-tauri/src/backend.rs",
+    "apps/desktop/src-tauri/tauri.macos.conf.json",
     "apps/desktop/src/components/desktop/DesktopBootstrap.tsx",
     "apps/desktop/src/components/desktop/DesktopBootstrap.test.tsx",
     "apps/desktop/src/services/desktopRuntime.ts",
     "apps/api/storylens-api.spec",
     "apps/api/tests/test_macos_sidecar_signature.py",
+    "apps/api/tests/test_macos_onedir_packaging.py",
+    ".github/workflows/macos-release.yml",
+    "docs/macos-desktop-release.md",
     "scripts/build_macos_release.sh",
     "scripts/check_macos_sidecar_signature.py",
     "scripts/smoke_macos_release.sh"
   ],
   "user_summary": "修复 Apple Silicon 上 StoryLens 主程序可以打开、但本地分析服务随即退出的问题，并在查看详情中显示真实退出原因。",
-  "technical_summary": "除复制 bundled sidecar 到可写 runtime 目录外，进一步修复 PyInstaller onefile 内嵌 Python Framework 与 Tauri 重签外层 sidecar 的 Team ID 不一致：临时签名构建先把 Python Framework 统一为 ad-hoc，Developer ID 构建把同一身份传入 PyInstaller；构建和 DMG 冒烟均解包 onefile 并强制比较外层与内嵌 Python 的 Team ID，Tauri 清理中间 app 时直接挂载最终 DMG 校验实际交付内容。",
+  "technical_summary": "真实 Apple Silicon 设备证明 onefile 候选仍会在 _MEI 临时目录加载到不同 Team ID 的 Python.framework。macOS Sidecar 因此改为 PyInstaller onedir：完整 Python 运行目录随 App 交付、逐个验证所有 Mach-O 签名，并整体复制到无 quarantine 的版本化运行目录；Windows onefile 保持不变。",
   "acceptance_criteria": [
     "ARM64 DMG 内桌面程序能在 bundled sidecar 带 quarantine 时拉起运行副本",
     "桌面拉起的 sidecar /health 返回成功",
     "查看详情能显示 sidecar 退出状态与错误摘要",
-    "ARM64 sidecar 外层可执行文件与 onefile 内嵌 Python Framework 使用相同 Team ID",
-    "签名不一致时构建必须失败，不能再上传表面通过的 DMG"
+    "ARM64 sidecar 主程序、Python Framework 与全部 Mach-O 使用相同签名身份",
+    "签名不一致时构建必须失败，不能再上传表面通过的 DMG",
+    "macOS 运行日志不得再出现 PyInstaller _MEI 临时 Python.framework 加载路径",
+    "DMG 内及复制后的 onedir Sidecar 必须从桌面程序启动并通过 /health"
   ],
   "tests": [
     "Rust desktop runtime 定向测试",
     "前端 DesktopBootstrap 定向测试",
     "macOS sidecar 签名解析与 Team ID 配对单元测试",
     "GitHub macOS ARM64 quarantine 桌面端到 sidecar 启动冒烟",
-    "DMG 内 onefile 嵌入 Python 签名一致性门禁"
+    "历史 DMG 内 onefile 嵌入 Python 签名一致性门禁",
+    "macOS onedir 文件树与所有 Mach-O 签名一致性门禁",
+    "macOS 完整 Sidecar 目录无扩展属性复制与真实桌面启动冒烟"
   ],
   "verification_evidence": [
     "Rust backend targeted tests: 4 passed",
@@ -83,13 +91,15 @@
     "GitHub Actions run 33301215002 passed ARM64 and x64 build, packaged-DMG signature checks, desktop runtime tests, and release smoke tests",
     "ARM64 packaged sidecar passed outer_team=adhoc and embedded_python_team=adhoc checks before and after mounting the DMG",
     "ARM64 installed-app startup smoke reached /health and reported MACOS RELEASE SMOKE OK (arm64)",
-    "ARM64 candidate SHA256 db81f33d702d4b4508bb3d805f01d4039d76d5b9d3bc3ea62f59d031fb4e15e4"
+    "ARM64 candidate SHA256 db81f33d702d4b4508bb3d805f01d4039d76d5b9d3bc3ea62f59d031fb4e15e4",
+    "User confirmed StoryLens_1.3.6_arm64-signfix-candidate.dmg still exits 255 on a real Apple Silicon machine with different Team IDs while loading _MEI/Python.framework; candidate is superseded",
+    "Replacement uses a visible PyInstaller onedir runtime and remains pending macOS build plus real-device verification"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "仅增强 macOS 发布门禁。"
+    "notes": "仅改变 macOS Sidecar 打包与启动复制方式；不修改数据库和用户数据。"
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -100,5 +110,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-08-30T08:32:49Z"
+  "updated_at": "2026-09-08T00:00:00Z"
 }

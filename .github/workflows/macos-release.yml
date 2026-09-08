@@ -6,7 +6,7 @@ on:
       version:
         description: "Expected repository version"
         required: true
-        default: "1.3.4"
+        default: "1.3.6"
         type: string
 
 permissions:
@@ -75,12 +75,15 @@ jobs:
         run: |
           .venv/bin/python -m pytest -q \
             apps/api/tests/test_paths_runtime.py \
-            apps/api/tests/test_pdf_export_vip_gate.py
+            apps/api/tests/test_pdf_export_vip_gate.py \
+            apps/api/tests/test_macos_sidecar_signature.py \
+            apps/api/tests/test_macos_onedir_packaging.py
 
       - name: Build DMG
         shell: bash
         env:
           STORYLENS_RC_CANDIDATE: "1"
+          STORYLENS_MACOS_ARTIFACT_SUFFIX: "onedir-candidate"
           # Prefer a configured Developer ID. The build script falls back to
           # ad-hoc signing for public Apple Silicon artifacts.
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -92,6 +95,8 @@ jobs:
 
       - name: Release smoke tests
         shell: bash
+        env:
+          STORYLENS_MACOS_ARTIFACT_SUFFIX: "onedir-candidate"
         run: ./scripts/smoke_macos_release.sh
 
       - name: Upload DMG

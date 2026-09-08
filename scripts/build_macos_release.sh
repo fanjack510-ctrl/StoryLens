@@ -18,6 +18,11 @@ if [[ ! -x "$PYTHON" ]]; then
 fi
 
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+ARTIFACT_SUFFIX="${STORYLENS_MACOS_ARTIFACT_SUFFIX:-}"
+if [[ -n "$ARTIFACT_SUFFIX" && ! "$ARTIFACT_SUFFIX" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+  echo "Invalid macOS artifact suffix" >&2
+  exit 2
+fi
 HOST_TRIPLE="$(rustc -vV | awk '/^host:/ { print $2 }')"
 case "$HOST_TRIPLE" in
   aarch64-apple-darwin) ARCH_LABEL="arm64" ;;
@@ -31,9 +36,11 @@ esac
 export APPLE_SIGNING_IDENTITY="${APPLE_SIGNING_IDENTITY:--}"
 if [[ "$APPLE_SIGNING_IDENTITY" == "-" ]]; then
   SIGNING_MODE="adhoc"
+  HARDENED_RUNTIME="false"
   export STORYLENS_PYINSTALLER_CODESIGN_IDENTITY=""
 else
   SIGNING_MODE="developer-id"
+  HARDENED_RUNTIME="true"
   export STORYLENS_PYINSTALLER_CODESIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
 fi
 
@@ -49,28 +56,6 @@ fi
 echo "==> Python sidecar"
 "$PYTHON" scripts/check_sidecar_imports.py
 
-# actions/setup-python supplies a Python.org framework that carries the Python
-# team's signature. PyInstaller onefile embeds that framework, while Tauri
-# later re-signs the outer sidecar. On downloaded Apple Silicon apps, macOS
-# Library Validation rejects that mixed-Team pair. For public ad-hoc builds,
-# normalize the source framework binary to the same ad-hoc identity before it
-# enters the onefile archive. Developer ID builds are signed consistently by
-# PyInstaller via STORYLENS_PYINSTALLER_CODESIGN_IDENTITY instead.
-if [[ "$SIGNING_MODE" == "adhoc" ]]; then
-  PYTHON_SHARED="$("$PYTHON" -c 'import sys; from pathlib import Path; print(Path(sys.base_prefix) / "Python")')"
-  if [[ ! -f "$PYTHON_SHARED" ]]; then
-    echo "Python framework shared library not found: $PYTHON_SHARED" >&2
-    exit 3
-  fi
-  if [[ -w "$PYTHON_SHARED" ]]; then
-    codesign --force --sign - "$PYTHON_SHARED"
-  else
-    sudo codesign --force --sign - "$PYTHON_SHARED"
-  fi
-  codesign --verify --strict --verbose=2 "$PYTHON_SHARED"
-  "$PYTHON" -c 'import sys; print(sys.version)'
-fi
-
 rm -rf apps/api/dist-sidecar apps/api/build/pyinstaller
 "$PYTHON" -m PyInstaller \
   --noconfirm \
@@ -79,26 +64,27 @@ rm -rf apps/api/dist-sidecar apps/api/build/pyinstaller
   --workpath apps/api/build/pyinstaller \
   apps/api/storylens-api.spec
 
-BUILT_SIDECAR="$ROOT/apps/api/dist-sidecar/storylens-api"
+BUILT_SIDECAR_DIR="$ROOT/apps/api/dist-sidecar/storylens-api"
+BUILT_SIDECAR="$BUILT_SIDECAR_DIR/storylens-api"
 if [[ ! -x "$BUILT_SIDECAR" ]]; then
   echo "Sidecar binary missing: $BUILT_SIDECAR" >&2
   exit 3
 fi
+git rev-parse HEAD > "$BUILT_SIDECAR_DIR/.storylens-build-id"
 "$PYTHON" scripts/check_macos_sidecar_signature.py \
-  "$BUILT_SIDECAR" --signing-mode "$SIGNING_MODE"
+  "$BUILT_SIDECAR_DIR" --signing-mode "$SIGNING_MODE"
 "$PYTHON" scripts/check_sidecar_contract_current.py --write
-
-BIN_DIR="$ROOT/apps/desktop/src-tauri/binaries"
-mkdir -p "$BIN_DIR"
-TAURI_SIDECAR="$BIN_DIR/storylens-api-$HOST_TRIPLE"
-cp "$BUILT_SIDECAR" "$TAURI_SIDECAR"
-chmod 755 "$TAURI_SIDECAR"
 
 echo "==> Frontend and Tauri DMG"
 pushd apps/desktop >/dev/null
 npm ci
 npx vite build
-npm run tauri -- build --bundles dmg
+if [[ "$SIGNING_MODE" == "developer-id" ]]; then
+  npm run tauri -- build --bundles dmg \
+    --config '{"bundle":{"macOS":{"hardenedRuntime":true}}}'
+else
+  npm run tauri -- build --bundles dmg
+fi
 popd >/dev/null
 
 DMG_SOURCE="$(find apps/desktop/src-tauri/target/release/bundle/dmg -maxdepth 1 -type f -name '*.dmg' -print -quit)"
@@ -138,7 +124,7 @@ else
   fi
 fi
 "$PYTHON" scripts/check_macos_sidecar_signature.py \
-  "$PACKAGED_APP/Contents/MacOS/storylens-api" --signing-mode "$SIGNING_MODE"
+  "$PACKAGED_APP/Contents/MacOS/storylens-api-runtime" --signing-mode "$SIGNING_MODE"
 codesign --verify --deep --strict --verbose=2 "$PACKAGED_APP"
 cleanup_verify_mount
 trap - EXIT
@@ -147,12 +133,13 @@ RELEASE_DIR="$ROOT/dist/release-macos-$ARCH_LABEL"
 rm -rf "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
 
-DMG_TARGET="$RELEASE_DIR/StoryLens_${VERSION}_${ARCH_LABEL}.dmg"
+DMG_TARGET="$RELEASE_DIR/StoryLens_${VERSION}_${ARCH_LABEL}${ARTIFACT_SUFFIX:+-$ARTIFACT_SUFFIX}.dmg"
 cp "$DMG_SOURCE" "$DMG_TARGET"
 shasum -a 256 "$DMG_TARGET" > "$RELEASE_DIR/SHA256SUMS.txt"
 
 DMG_TARGET="$DMG_TARGET" RELEASE_DIR="$RELEASE_DIR" VERSION="$VERSION" \
-ARCH_LABEL="$ARCH_LABEL" HOST_TRIPLE="$HOST_TRIPLE" SIGNING_MODE="$SIGNING_MODE" "$PYTHON" - <<'PY'
+ARCH_LABEL="$ARCH_LABEL" HOST_TRIPLE="$HOST_TRIPLE" SIGNING_MODE="$SIGNING_MODE" \
+HARDENED_RUNTIME="$HARDENED_RUNTIME" ARTIFACT_SUFFIX="$ARTIFACT_SUFFIX" "$PYTHON" - <<'PY'
 import hashlib
 import json
 import os
@@ -166,6 +153,9 @@ summary = {
     "architecture": os.environ["ARCH_LABEL"],
     "target_triple": os.environ["HOST_TRIPLE"],
     "signing_mode": os.environ["SIGNING_MODE"],
+    "hardened_runtime": os.environ["HARDENED_RUNTIME"] == "true",
+    "sidecar_layout": "onedir",
+    "artifact_suffix": os.environ["ARTIFACT_SUFFIX"],
     "signed": True,
     "notarized": False,
     "signed_and_notarized": False,

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from scripts.check_macos_sidecar_signature import (
     CodeSignature,
-    _extract_embedded_python,
     parse_codesign_details,
+    validate_runtime_signatures,
     validate_signature_pair,
 )
 
@@ -16,55 +18,79 @@ def test_parse_adhoc_codesign_details() -> None:
         "Signature=adhoc\n"
         "TeamIdentifier=not set\n"
     )
-    assert details == CodeSignature(team_identifier=None, adhoc=True)
+    assert details == CodeSignature(
+        team_identifier=None,
+        adhoc=True,
+        hardened_runtime=False,
+    )
 
 
-def test_adhoc_pair_rejects_embedded_python_team_id() -> None:
+def test_adhoc_pair_rejects_python_team_id() -> None:
     with pytest.raises(ValueError, match="must not retain a Team ID"):
         validate_signature_pair(
-            CodeSignature(team_identifier=None, adhoc=True),
-            CodeSignature(team_identifier="PYTHONTEAM", adhoc=False),
+            CodeSignature(team_identifier=None, adhoc=True, hardened_runtime=False),
+            CodeSignature(team_identifier="PYTHONTEAM", adhoc=False, hardened_runtime=False),
             signing_mode="adhoc",
         )
 
 
 def test_developer_id_pair_requires_same_team() -> None:
     validate_signature_pair(
-        CodeSignature(team_identifier="STORYTEAM", adhoc=False),
-        CodeSignature(team_identifier="STORYTEAM", adhoc=False),
+        CodeSignature(team_identifier="STORYTEAM", adhoc=False, hardened_runtime=True),
+        CodeSignature(team_identifier="STORYTEAM", adhoc=False, hardened_runtime=False),
         signing_mode="developer-id",
     )
     with pytest.raises(ValueError, match="different Team IDs"):
         validate_signature_pair(
-            CodeSignature(team_identifier="STORYTEAM", adhoc=False),
-            CodeSignature(team_identifier="PYTHONTEAM", adhoc=False),
+            CodeSignature(team_identifier="STORYTEAM", adhoc=False, hardened_runtime=True),
+            CodeSignature(team_identifier="PYTHONTEAM", adhoc=False, hardened_runtime=False),
             signing_mode="developer-id",
         )
 
 
-def test_extract_embedded_python_ignores_framework_symlink_entries(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path,
-) -> None:
-    payload = b"mach-o-python"
+def test_runtime_signature_set_checks_every_macho() -> None:
+    executable = Path("runtime/storylens-api")
+    python = Path("runtime/_internal/Python.framework/Versions/3.12/Python")
+    extension = Path("runtime/_internal/extension.so")
+    signatures = {
+        executable: CodeSignature(team_identifier=None, adhoc=True, hardened_runtime=False),
+        python: CodeSignature(team_identifier=None, adhoc=True, hardened_runtime=False),
+        extension: CodeSignature(
+            team_identifier="FOREIGNTEAM", adhoc=False, hardened_runtime=False
+        ),
+    }
+    with pytest.raises(ValueError, match="must not retain a Team ID"):
+        validate_runtime_signatures(
+            signatures,
+            executable=executable,
+            python_runtime=python,
+            signing_mode="adhoc",
+        )
 
-    class FakeArchive:
-        toc = {
-            "Python.framework/Versions/3.12/Python": (0, 1, 1, 0, "b"),
-            "Python": (0, 1, 1, 0, "n"),
-            "Python.framework/Python": (0, 1, 1, 0, "n"),
-        }
 
-        def __init__(self, _path: str) -> None:
-            pass
+def test_runtime_signature_set_requires_python_and_executable() -> None:
+    executable = Path("runtime/storylens-api")
+    python = Path("runtime/_internal/Python")
+    with pytest.raises(ValueError, match="Python runtime is missing"):
+        validate_runtime_signatures(
+            {executable: CodeSignature(team_identifier=None, adhoc=True, hardened_runtime=False)},
+            executable=executable,
+            python_runtime=python,
+            signing_mode="adhoc",
+        )
 
-        def extract(self, name: str) -> bytes:
-            assert name == "Python.framework/Versions/3.12/Python"
-            return payload
 
-    import PyInstaller.archive.readers
-
-    monkeypatch.setattr(PyInstaller.archive.readers, "CArchiveReader", FakeArchive)
-    destination = tmp_path / "Python"
-    _extract_embedded_python(tmp_path / "storylens-api", destination)
-    assert destination.read_bytes() == payload
+def test_runtime_signature_set_rejects_hardened_adhoc_executable() -> None:
+    executable = Path("runtime/storylens-api")
+    python = Path("runtime/_internal/Python")
+    signatures = {
+        executable: CodeSignature(team_identifier=None, adhoc=True, hardened_runtime=True),
+        python: CodeSignature(team_identifier=None, adhoc=True, hardened_runtime=False),
+    }
+    with pytest.raises(ValueError, match="must not enable hardened runtime"):
+        validate_runtime_signatures(
+            signatures,
+            executable=executable,
+            python_runtime=python,
+            signing_mode="adhoc",
+        )

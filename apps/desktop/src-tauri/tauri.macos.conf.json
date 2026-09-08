@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "externalBin": [],
+    "macOS": {
+      "hardenedRuntime": false,
+      "files": {
+        "MacOS/storylens-api-runtime": "../../api/dist-sidecar/storylens-api"
+      }
+    }
+  }
+}

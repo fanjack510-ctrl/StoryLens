@@ -112,6 +112,7 @@ fn sidecar_candidates(app: &AppHandle) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
+            paths.push(dir.join("storylens-api-runtime").join("storylens-api"));
             paths.push(dir.join("storylens-api.exe"));
             paths.push(dir.join("storylens-api"));
             paths.push(dir.join("binaries").join("storylens-api.exe"));
@@ -162,6 +163,82 @@ fn resolve_sidecar(app: &AppHandle) -> Result<PathBuf, BackendError> {
     })
 }
 
+fn parse_sidecar_build_id(raw: &str) -> Option<&str> {
+    let value = raw.trim();
+    if value.len() == 40 && value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn remove_runtime_path(path: &std::path::Path) -> std::io::Result<()> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_dir() => std::fs::remove_dir_all(path),
+        Ok(_) => std::fs::remove_file(path),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn copy_runtime_tree(source: &std::path::Path, target: &std::path::Path) -> std::io::Result<()> {
+    use std::os::unix::fs::{symlink, PermissionsExt};
+
+    std::fs::create_dir(target)?;
+    let source_metadata = std::fs::metadata(source)?;
+    let canonical_source = source.canonicalize()?;
+    for entry in std::fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = target.join(entry.file_name());
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            copy_runtime_tree(&source_path, &target_path)?;
+        } else if file_type.is_symlink() {
+            let link = std::fs::read_link(&source_path)?;
+            if link.is_absolute() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "absolute sidecar runtime symlink",
+                ));
+            }
+            let resolved = source_path
+                .parent()
+                .ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, "orphan runtime symlink")
+                })?
+                .join(&link)
+                .canonicalize()?;
+            if !resolved.starts_with(&canonical_source) {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "sidecar runtime symlink escapes its root",
+                ));
+            }
+            symlink(link, target_path)?;
+        } else if file_type.is_file() {
+            std::fs::copy(&source_path, &target_path)?;
+            let metadata = std::fs::metadata(&source_path)?;
+            std::fs::set_permissions(
+                &target_path,
+                std::fs::Permissions::from_mode(metadata.permissions().mode()),
+            )?;
+        } else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "unsupported sidecar runtime entry",
+            ));
+        }
+    }
+    std::fs::set_permissions(
+        target,
+        std::fs::Permissions::from_mode(source_metadata.permissions().mode()),
+    )?;
+    Ok(())
+}
+
 fn prepare_sidecar_for_launch(
     app: &AppHandle,
     bundled_path: &PathBuf,
@@ -199,6 +276,53 @@ fn prepare_sidecar_for_launch(
                 }
             })
             .collect();
+        let bundled_runtime = bundled_path.parent().filter(|parent| {
+            parent.join("_internal").is_dir()
+                && parent.join(".storylens-build-id").is_file()
+                && parent.join("storylens-api").is_file()
+        });
+        if let Some(source_runtime) = bundled_runtime {
+            let raw_build_id = std::fs::read_to_string(source_runtime.join(".storylens-build-id"))
+                .map_err(|e| BackendError {
+                    user_message: "本地分析服务安装不完整，请重新安装 StoryLens。".into(),
+                    detail: format!("read macOS sidecar build id failed: {e}"),
+                })?;
+            let build_id = parse_sidecar_build_id(&raw_build_id).ok_or_else(|| BackendError {
+                user_message: "本地分析服务安装不完整，请重新安装 StoryLens。".into(),
+                detail: "invalid macOS sidecar build id".into(),
+            })?;
+            let target_dir =
+                runtime_dir.join(format!("storylens-api-{safe_version}-{}", &build_id[..12]));
+            let target_executable = target_dir.join("storylens-api");
+            if target_executable.is_file() && target_dir.join("_internal").is_dir() {
+                return Ok(target_executable);
+            }
+            let temporary_dir = runtime_dir.join(format!(
+                ".storylens-api-{safe_version}-{}-{}.tmpdir",
+                &build_id[..12],
+                std::process::id()
+            ));
+            remove_runtime_path(&temporary_dir).map_err(|e| BackendError {
+                user_message: "无法准备本地分析服务。请重新安装 StoryLens 后重试。".into(),
+                detail: format!("remove stale macOS runtime staging directory failed: {e}"),
+            })?;
+            copy_runtime_tree(source_runtime, &temporary_dir).map_err(|e| BackendError {
+                user_message: "无法准备本地分析服务。请重新安装 StoryLens 后重试。".into(),
+                detail: format!("copy macOS sidecar runtime failed: {e}"),
+            })?;
+            remove_runtime_path(&target_dir).map_err(|e| BackendError {
+                user_message: "无法更新本地分析服务。请退出 StoryLens 后重新打开。".into(),
+                detail: format!("remove previous macOS sidecar runtime failed: {e}"),
+            })?;
+            std::fs::rename(&temporary_dir, &target_dir).map_err(|e| BackendError {
+                user_message: "无法更新本地分析服务。请退出 StoryLens 后重新打开。".into(),
+                detail: format!("activate macOS sidecar runtime failed: {e}"),
+            })?;
+            return Ok(target_executable);
+        }
+
+        // Compatibility path for legacy onefile bundles used before the
+        // macOS onedir runtime was introduced.
         let target = runtime_dir.join(format!("storylens-api-{safe_version}"));
         let temporary = runtime_dir.join(format!(
             ".storylens-api-{safe_version}-{}.tmp",
@@ -863,5 +987,69 @@ mod tests {
         assert!(!owned.contains(&50));
         assert!(is_owned_candidate(200, &owned, &baseline));
         assert!(!is_owned_candidate(50, &owned, &baseline));
+    }
+
+    #[test]
+    fn sidecar_build_id_requires_full_lower_or_upper_hex_commit() {
+        assert_eq!(
+            parse_sidecar_build_id("0123456789abcdef0123456789abcdef01234567\n"),
+            Some("0123456789abcdef0123456789abcdef01234567")
+        );
+        assert_eq!(parse_sidecar_build_id("short"), None);
+        assert_eq!(
+            parse_sidecar_build_id("0123456789abcdef0123456789abcdef0123456/"),
+            None
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn runtime_tree_copy_preserves_relative_links_and_read_only_directories() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+
+        let root = std::env::temp_dir().join(format!(
+            "storylens-runtime-copy-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock after unix epoch")
+                .as_nanos()
+        ));
+        let source = root.join("source");
+        let target = root.join("target");
+        let internal = source.join("_internal");
+        std::fs::create_dir_all(&internal).expect("create source runtime");
+        std::fs::write(internal.join("Python"), b"runtime").expect("write runtime file");
+        symlink("Python", internal.join("Python-current")).expect("create runtime symlink");
+        std::fs::set_permissions(&internal, std::fs::Permissions::from_mode(0o555))
+            .expect("make source directory read-only");
+
+        copy_runtime_tree(&source, &target).expect("copy complete runtime tree");
+
+        assert_eq!(
+            std::fs::read(target.join("_internal/Python")).expect("read copied runtime"),
+            b"runtime"
+        );
+        assert_eq!(
+            std::fs::read_link(target.join("_internal/Python-current"))
+                .expect("read copied symlink"),
+            std::path::PathBuf::from("Python")
+        );
+        assert_eq!(
+            std::fs::metadata(target.join("_internal"))
+                .expect("read copied permissions")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o555
+        );
+        std::fs::set_permissions(&internal, std::fs::Permissions::from_mode(0o755))
+            .expect("restore source permissions");
+        std::fs::set_permissions(
+            target.join("_internal"),
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .expect("restore target permissions");
+        std::fs::remove_dir_all(root).expect("remove runtime copy fixture");
     }
 }
