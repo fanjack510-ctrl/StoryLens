@@ -47,6 +47,12 @@
       "message": "fix(macos): normalize onedir Mach-O signatures",
       "primary": false,
       "multi_change_reason": "同一 onedir 修复的 CI 严格签名门禁补充：规范化收集目录内全部 Mach-O 签名"
+    },
+    {
+      "sha": "8e1723b47cfce3a68248206345c35bd9e07f7b17",
+      "message": "fix(macos): bundle sidecar runtime as app resources",
+      "primary": false,
+      "multi_change_reason": "同一 onedir 修复的 Tauri App bundle 布局兼容：运行树由 MacOS 迁移到 Resources 后再复制执行"
     }
   ],
   "modules": [
@@ -124,5 +130,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-09-08T07:01:56Z"
+  "updated_at": "2026-09-08T07:11:51Z"
 }
