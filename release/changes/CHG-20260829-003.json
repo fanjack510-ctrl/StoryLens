@@ -113,7 +113,8 @@
     "User confirmed StoryLens_1.3.6_arm64-signfix-candidate.dmg still exits 255 on a real Apple Silicon machine with different Team IDs while loading _MEI/Python.framework; candidate is superseded",
     "Replacement uses a visible PyInstaller onedir runtime and remains pending macOS build plus real-device verification",
     "First onedir CI attempt failed closed before upload because the copied Python.org Framework binary retained a bundle signature whose covered resources were absent; the build now re-signs every collected Mach-O as an independent code object before strict verification",
-    "Second onedir CI attempt passed the Mach-O signature gate, then failed closed because placing the runtime under Contents/MacOS made codesign treat Python dist-info metadata as a code subcomponent; the runtime is now bundled under Contents/Resources and copied out before execution"
+    "Second onedir CI attempt passed the Mach-O signature gate, then failed closed because placing the runtime under Contents/MacOS made codesign treat Python dist-info metadata as a code subcomponent; the runtime is now bundled under Contents/Resources and copied out before execution",
+    "Third onedir CI attempt built and signed the DMG, verified 203 Mach-O files, launched the desktop-spawned sidecar and reached /health; only the final smoke assertion looked under API STORYLENS_DATA_DIR instead of Tauri Application Support, so the assertion now locates the isolated app_local_data_dir under the smoke HOME"
   ],
   "data_compatibility": {
     "database_changed": false,

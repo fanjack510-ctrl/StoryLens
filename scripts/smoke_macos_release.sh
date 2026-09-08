@@ -167,8 +167,8 @@ curl --silent --fail "http://127.0.0.1:$DESKTOP_PORT/health" >/dev/null || {
   exit 7
 }
 
-RUNTIME_COPY="$(find "$APP_DATA/runtime" -maxdepth 1 -type d \
-  -name 'storylens-api-*-*' -print -quit)"
+RUNTIME_COPY="$(find "$APP_HOME/Library/Application Support" -type d \
+  -path '*/runtime/storylens-api-*-*' -print -quit 2>/dev/null || true)"
 [[ -n "$RUNTIME_COPY" && -x "$RUNTIME_COPY/storylens-api" ]] || {
   echo "Desktop did not create a complete onedir runtime copy" >&2
   exit 7

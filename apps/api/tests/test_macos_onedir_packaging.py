@@ -46,6 +46,8 @@ def test_release_checks_packaged_onedir_instead_of_onefile_archive() -> None:
         encoding="utf-8"
     )
     assert '"$APP/Contents/Resources/storylens-api-runtime"' in smoke
+    assert 'find "$APP_HOME/Library/Application Support"' in smoke
+    assert 'find "$APP_DATA/runtime"' not in smoke
     assert "CArchiveReader" not in checker
     assert "_runtime_macho_paths" in checker
     assert "for signature in signatures.values()" in checker
