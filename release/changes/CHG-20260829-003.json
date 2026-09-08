@@ -35,6 +35,12 @@
       "message": "fix(macos): verify packaged app from generated DMG",
       "primary": false,
       "multi_change_reason": "同一签名门禁对 Tauri 生成 DMG 后清理中间 app 的兼容修复"
+    },
+    {
+      "sha": "e0a095dec61c10941a8aef77972b435891bf66ea",
+      "message": "fix(macos): replace onefile sidecar with onedir runtime",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -110,5 +116,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-29T03:10:00Z",
-  "updated_at": "2026-09-08T00:00:00Z"
+  "updated_at": "2026-09-08T06:51:32Z"
 }
