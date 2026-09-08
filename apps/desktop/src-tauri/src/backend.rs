@@ -246,6 +246,21 @@ fn copy_runtime_tree(source: &std::path::Path, target: &std::path::Path) -> std:
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
+fn clear_runtime_extended_attributes(path: &std::path::Path) -> std::io::Result<()> {
+    let status = std::process::Command::new("/usr/bin/xattr")
+        .args(["-c", "-r"])
+        .arg(path)
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(std::io::Error::other(
+            "xattr failed to clear sidecar runtime attributes",
+        ))
+    }
+}
+
 fn prepare_sidecar_for_launch(
     app: &AppHandle,
     bundled_path: &PathBuf,
@@ -316,6 +331,10 @@ fn prepare_sidecar_for_launch(
             copy_runtime_tree(source_runtime, &temporary_dir).map_err(|e| BackendError {
                 user_message: "无法准备本地分析服务。请重新安装 StoryLens 后重试。".into(),
                 detail: format!("copy macOS sidecar runtime failed: {e}"),
+            })?;
+            clear_runtime_extended_attributes(&temporary_dir).map_err(|e| BackendError {
+                user_message: "无法准备本地分析服务。请重新安装 StoryLens 后重试。".into(),
+                detail: format!("clear macOS sidecar runtime attributes failed: {e}"),
             })?;
             remove_runtime_path(&target_dir).map_err(|e| BackendError {
                 user_message: "无法更新本地分析服务。请退出 StoryLens 后重新打开。".into(),
@@ -1033,8 +1052,23 @@ mod tests {
 
         copy_runtime_tree(&source, &target).expect("copy complete runtime tree");
 
+        let target_python = target.join("_internal/Python");
+        let xattr_status = std::process::Command::new("/usr/bin/xattr")
+            .args(["-w", "com.apple.quarantine", "test-quarantine"])
+            .arg(&target_python)
+            .status()
+            .expect("write quarantine fixture");
+        assert!(xattr_status.success());
+        clear_runtime_extended_attributes(&target).expect("clear runtime attributes");
+        let quarantine = std::process::Command::new("/usr/bin/xattr")
+            .args(["-p", "com.apple.quarantine"])
+            .arg(&target_python)
+            .output()
+            .expect("inspect copied quarantine");
+        assert!(!quarantine.status.success());
+
         assert_eq!(
-            std::fs::read(target.join("_internal/Python")).expect("read copied runtime"),
+            std::fs::read(&target_python).expect("read copied runtime"),
             b"runtime"
         );
         assert_eq!(

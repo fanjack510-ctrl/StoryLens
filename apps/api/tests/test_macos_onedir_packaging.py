@@ -27,6 +27,8 @@ def test_macos_bundle_contains_complete_sidecar_runtime() -> None:
     backend = (REPO / "apps/desktop/src-tauri/src/backend.rs").read_text(encoding="utf-8")
     assert '.join("Resources")' in backend
     assert '.join("storylens-api-runtime")' in backend
+    assert 'Command::new("/usr/bin/xattr")' in backend
+    assert '.args(["-c", "-r"])' in backend
 
 
 def test_release_checks_packaged_onedir_instead_of_onefile_archive() -> None:
