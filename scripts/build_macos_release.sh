@@ -71,6 +71,22 @@ if [[ ! -x "$BUILT_SIDECAR" ]]; then
   exit 3
 fi
 git rev-parse HEAD > "$BUILT_SIDECAR_DIR/.storylens-build-id"
+
+# PyInstaller copies the Python.org framework signature into the onedir tree,
+# but the collected framework does not retain every resource covered by that
+# original bundle signature. Normalize every Mach-O as an independent code
+# object before verification and before Tauri places the tree in StoryLens.app.
+# This also guarantees one identity across extension modules and Python itself.
+while IFS= read -r -d '' MACHO_PATH; do
+  if file -b "$MACHO_PATH" | grep -q 'Mach-O'; then
+    if [[ "$SIGNING_MODE" == "developer-id" ]]; then
+      codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$MACHO_PATH"
+    else
+      codesign --force --sign - "$MACHO_PATH"
+    fi
+  fi
+done < <(find "$BUILT_SIDECAR_DIR" -type f -print0)
+
 "$PYTHON" scripts/check_macos_sidecar_signature.py \
   "$BUILT_SIDECAR_DIR" --signing-mode "$SIGNING_MODE"
 "$PYTHON" scripts/check_sidecar_contract_current.py --write

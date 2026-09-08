@@ -40,6 +40,10 @@ Validation 拒绝。`onedir` 让全部运行时文件在 DMG 构建和安装启�
 `different Team IDs`，因此已失效，不得继续作为修复版分发。新候选必须带
 `onedir-candidate` 后缀，并在真实问题机器通过后才能替换正式资产。
 
+onedir 收集完成后，构建脚本会把其中每个 Mach-O 作为独立代码对象重新签名，
+再执行严格校验。这一步同时清除 Python.org Framework 原始 bundle 签名对未随
+PyInstaller 收集的资源文件的依赖，避免 `code has no resources` 的无效签名。
+
 本地 Mac 也可以运行：
 
 ```bash

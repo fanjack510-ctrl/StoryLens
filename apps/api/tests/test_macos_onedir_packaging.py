@@ -31,6 +31,9 @@ def test_release_checks_packaged_onedir_instead_of_onefile_archive() -> None:
     smoke = (REPO / "scripts/smoke_macos_release.sh").read_text(encoding="utf-8")
     checker = (REPO / "scripts/check_macos_sidecar_signature.py").read_text(encoding="utf-8")
     assert 'BUILT_SIDECAR_DIR="$ROOT/apps/api/dist-sidecar/storylens-api"' in build
+    assert 'find "$BUILT_SIDECAR_DIR" -type f -print0' in build
+    assert 'codesign --force --sign - "$MACHO_PATH"' in build
+    assert "codesign --force --options runtime --timestamp" in build
     assert '"$PACKAGED_APP/Contents/MacOS/storylens-api-runtime"' in build
     assert '"sidecar_layout": "onedir"' in build
     assert '"hardened_runtime": os.environ["HARDENED_RUNTIME"] == "true"' in build
