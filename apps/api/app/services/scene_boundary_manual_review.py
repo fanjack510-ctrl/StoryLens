@@ -230,33 +230,51 @@ def validate_scene_partition_v1(
         raise SceneBoundaryError("SCENE_PARTITION_GAP")
 
 
-def get_confirmed_revision(session: Session, chapter_id: int) -> BoundaryRevision | None:
-    return _confirmed_revision(session, chapter_id)
+def get_confirmed_revision(
+    session: Session,
+    chapter_id: int,
+    *,
+    analysis_run_id: int | None = None,
+) -> BoundaryRevision | None:
+    return _confirmed_revision(session, chapter_id, analysis_run_id=analysis_run_id)
 
 
-def _confirmed_revision(session: Session, chapter_id: int) -> BoundaryRevision | None:
-    return session.scalar(
-        select(BoundaryRevision)
-        .where(
-            BoundaryRevision.chapter_id == chapter_id,
-            BoundaryRevision.status == "confirmed",
-        )
-        .order_by(BoundaryRevision.id.desc())
+def _confirmed_revision(
+    session: Session,
+    chapter_id: int,
+    *,
+    analysis_run_id: int | None = None,
+) -> BoundaryRevision | None:
+    query = select(BoundaryRevision).where(
+        BoundaryRevision.chapter_id == chapter_id,
+        BoundaryRevision.status == "confirmed",
     )
+    if analysis_run_id is not None:
+        query = query.where(BoundaryRevision.analysis_run_id == analysis_run_id)
+    return session.scalar(query.order_by(BoundaryRevision.id.desc()))
 
 
-def _draft_revision(session: Session, chapter_id: int) -> BoundaryRevision | None:
-    return session.scalar(
-        select(BoundaryRevision)
-        .where(
-            BoundaryRevision.chapter_id == chapter_id,
-            BoundaryRevision.status == "draft",
-        )
-        .order_by(BoundaryRevision.id.desc())
+def _draft_revision(
+    session: Session,
+    chapter_id: int,
+    *,
+    analysis_run_id: int | None = None,
+) -> BoundaryRevision | None:
+    query = select(BoundaryRevision).where(
+        BoundaryRevision.chapter_id == chapter_id,
+        BoundaryRevision.status == "draft",
     )
+    if analysis_run_id is not None:
+        query = query.where(BoundaryRevision.analysis_run_id == analysis_run_id)
+    return session.scalar(query.order_by(BoundaryRevision.id.desc()))
 
 
-def _model_revision(session: Session, chapter_id: int) -> BoundaryRevision | None:
+def _model_revision(
+    session: Session,
+    chapter_id: int,
+    *,
+    analysis_run_id: int | None = None,
+) -> BoundaryRevision | None:
     """The AI's proposal, whatever state it is in.
 
     "proposed" joins the list because v4.0 publishes its segmentation *before* anyone has
@@ -264,15 +282,14 @@ def _model_revision(session: Session, chapter_id: int) -> BoundaryRevision | Non
     made the screen report 「AI 场景数：0 · 新增 6」 and credit the reader with six scenes
     the model had found.
     """
-    return session.scalar(
-        select(BoundaryRevision)
-        .where(
-            BoundaryRevision.chapter_id == chapter_id,
-            BoundaryRevision.source == "model",
-            BoundaryRevision.status.in_(["proposed", "confirmed", "superseded"]),
-        )
-        .order_by(BoundaryRevision.id.desc())
+    query = select(BoundaryRevision).where(
+        BoundaryRevision.chapter_id == chapter_id,
+        BoundaryRevision.source == "model",
+        BoundaryRevision.status.in_(["proposed", "confirmed", "superseded"]),
     )
+    if analysis_run_id is not None:
+        query = query.where(BoundaryRevision.analysis_run_id == analysis_run_id)
+    return session.scalar(query.order_by(BoundaryRevision.id.desc()))
 
 
 def _next_revision_number(session: Session, chapter_id: int, review_session_id: int | None) -> int:
@@ -432,18 +449,19 @@ def create_or_get_scene_boundary_draft_v1(
     session: Session,
     chapter_id: int,
     *,
+    analysis_run_id: int | None = None,
     confirmed_by: str = "user",
 ) -> BoundaryRevision:
-    draft = _draft_revision(session, chapter_id)
+    draft = _draft_revision(session, chapter_id, analysis_run_id=analysis_run_id)
     if draft is not None:
         return draft
-    base = _confirmed_revision(session, chapter_id)
+    base = _confirmed_revision(session, chapter_id, analysis_run_id=analysis_run_id)
     if base is None:
         # Nothing confirmed yet — the AI's proposal is what the reader is adjusting. Without
         # this the first edit before the first confirm forked from the legacy single-scene
         # partition and silently threw away the segmentation.
-        base = _model_revision(session, chapter_id)
-    if base is None:
+        base = _model_revision(session, chapter_id, analysis_run_id=analysis_run_id)
+    if base is None and analysis_run_id is None:
         base = ensure_legacy_confirmed_revision_v1(session, chapter_id)
     if base is None:
         raise SceneBoundaryError("SCENE_PARTITION_EMPTY", "No confirmed revision to fork")
@@ -523,7 +541,11 @@ def restore_ai_partition_into_draft_v1(session: Session, revision_id: int) -> Bo
     draft = session.get(BoundaryRevision, revision_id)
     if draft is None or draft.status != "draft":
         raise SceneBoundaryError("SCENE_PARTITION_EMPTY")
-    model = _model_revision(session, draft.chapter_id)
+    model = _model_revision(
+        session,
+        draft.chapter_id,
+        analysis_run_id=draft.analysis_run_id,
+    )
     if model is None:
         raise SceneBoundaryError("SCENE_PARTITION_EMPTY", "No AI model revision")
     scenes = parse_partition_json(model.final_boundaries_json)
@@ -689,7 +711,11 @@ def confirm_scene_revision_v1(
     boundary_hash = compute_scene_boundary_hash_v1(
         revision.chapter_id, chapter_hash, scenes
     )
-    existing = _confirmed_revision(session, revision.chapter_id)
+    existing = _confirmed_revision(
+        session,
+        revision.chapter_id,
+        analysis_run_id=revision.analysis_run_id,
+    )
     if (
         existing is not None
         and existing.id != revision.id
@@ -704,6 +730,7 @@ def confirm_scene_revision_v1(
     for old in session.scalars(
         select(BoundaryRevision).where(
             BoundaryRevision.chapter_id == revision.chapter_id,
+            BoundaryRevision.analysis_run_id == revision.analysis_run_id,
             BoundaryRevision.status == "confirmed",
             BoundaryRevision.id != revision.id,
         )
@@ -713,6 +740,7 @@ def confirm_scene_revision_v1(
     for journey in session.scalars(
         select(ReaderJourneyRun).where(
             ReaderJourneyRun.chapter_id == revision.chapter_id,
+            ReaderJourneyRun.analysis_run_id == revision.analysis_run_id,
             ReaderJourneyRun.result_status == "current",
         )
     ):
@@ -914,11 +942,29 @@ async def confirm_scene_revision_and_start_journey_v1(
     return revision, journey, already_confirmed, None
 
 
-def get_scene_boundaries_overview_v1(session: Session, chapter_id: int) -> dict[str, Any]:
-    ensure_legacy_confirmed_revision_v1(session, chapter_id)
-    confirmed = _confirmed_revision(session, chapter_id)
-    draft = _draft_revision(session, chapter_id)
-    model = _model_revision(session, chapter_id)
+def get_scene_boundaries_overview_v1(
+    session: Session,
+    chapter_id: int,
+    *,
+    analysis_run_id: int | None = None,
+) -> dict[str, Any]:
+    if analysis_run_id is None:
+        ensure_legacy_confirmed_revision_v1(session, chapter_id)
+    confirmed = _confirmed_revision(
+        session,
+        chapter_id,
+        analysis_run_id=analysis_run_id,
+    )
+    draft = _draft_revision(
+        session,
+        chapter_id,
+        analysis_run_id=analysis_run_id,
+    )
+    model = _model_revision(
+        session,
+        chapter_id,
+        analysis_run_id=analysis_run_id,
+    )
     chapter_hash = compute_chapter_text_hash_v1(session, chapter_id)
 
     def _pack(revision: BoundaryRevision | None) -> dict[str, Any] | None:

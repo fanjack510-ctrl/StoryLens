@@ -10,6 +10,12 @@ import type {
   SceneParagraphs,
   SceneResultItem,
 } from "../types";
+
+function withAnalysisRunScope(path: string, analysisRunId?: number | null): string {
+  if (analysisRunId == null) return path;
+  return `${path}?analysis_run_id=${encodeURIComponent(String(analysisRunId))}`;
+}
+
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
     method: "POST", body: JSON.stringify(payload),
@@ -400,17 +406,23 @@ export const analysisApi = {
     }),
   readerJourneyExportUrl: (journeyRunId: number) =>
     `${getApiBase()}/api/v1/reader-journey-runs/${journeyRunId}/export?format=json`,
-  sceneBoundariesOverview: (chapterId: number) =>
-    api<SceneBoundariesOverview>(`/api/v1/chapters/${chapterId}/scene-boundaries`),
-  createSceneBoundaryDraft: (chapterId: number) =>
+  sceneBoundariesOverview: (chapterId: number, analysisRunId?: number | null) =>
+    api<SceneBoundariesOverview>(
+      withAnalysisRunScope(`/api/v1/chapters/${chapterId}/scene-boundaries`, analysisRunId),
+    ),
+  createSceneBoundaryDraft: (chapterId: number, analysisRunId?: number | null) =>
     api<{ revision_id: number; revision_etag: string; scenes: ScenePartitionItem[] }>(
-      `/api/v1/chapters/${chapterId}/scene-boundaries/draft`,
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft`,
+        analysisRunId,
+      ),
       { method: "POST" },
     ),
   saveSceneBoundaryDraft: (
     chapterId: number,
     revisionId: number,
     body: { expected_etag: string; scenes: ScenePartitionItem[] },
+    analysisRunId?: number | null,
   ) =>
     api<{
       revision_id: number;
@@ -419,10 +431,16 @@ export const analysisApi = {
       scenes: ScenePartitionItem[];
       status?: string;
       updated_at?: string | null;
-    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}`, {
-      method: "PUT",
-      body: JSON.stringify(body),
-    }),
+    }>(
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}`,
+        analysisRunId,
+      ),
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+      },
+    ),
   splitSceneBoundaryDraft: (
     chapterId: number,
     revisionId: number,
@@ -432,6 +450,7 @@ export const analysisApi = {
       client_request_id?: string;
       scene_order?: number;
     },
+    analysisRunId?: number | null,
   ) =>
     api<{
       revision_id: number;
@@ -442,11 +461,21 @@ export const analysisApi = {
       updated_at?: string | null;
       already_split?: boolean;
       status?: string;
-    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/split`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-  restoreSceneBoundaryAi: (chapterId: number, revisionId: number) =>
+    }>(
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/split`,
+        analysisRunId,
+      ),
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
+  restoreSceneBoundaryAi: (
+    chapterId: number,
+    revisionId: number,
+    analysisRunId?: number | null,
+  ) =>
     api<{
       revision_id: number;
       revision_etag: string;
@@ -454,9 +483,13 @@ export const analysisApi = {
       boundary_hash?: string | null;
       status?: string;
       updated_at?: string | null;
-    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/restore-ai`, {
-      method: "POST",
-    }),
+    }>(
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/restore-ai`,
+        analysisRunId,
+      ),
+      { method: "POST" },
+    ),
   confirmSceneBoundary: (
     chapterId: number,
     revisionId: number,
@@ -465,20 +498,41 @@ export const analysisApi = {
       start_journey?: boolean;
       journey_options?: Record<string, unknown>;
     },
+    analysisRunId?: number | null,
   ) =>
     api<SceneBoundaryConfirmResponse>(
-      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/confirm`,
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/confirm`,
+        analysisRunId,
+      ),
       { method: "POST", body: JSON.stringify(body) },
     ),
-  discardSceneBoundaryDraft: (chapterId: number, revisionId: number) =>
-    api<void>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/discard`, {
-      method: "POST",
-    }),
-  sceneBoundaryDiff: (chapterId: number, revisionId: number) =>
+  discardSceneBoundaryDraft: (
+    chapterId: number,
+    revisionId: number,
+    analysisRunId?: number | null,
+  ) =>
+    api<void>(
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/discard`,
+        analysisRunId,
+      ),
+      { method: "POST" },
+    ),
+  sceneBoundaryDiff: (
+    chapterId: number,
+    revisionId: number,
+    analysisRunId?: number | null,
+  ) =>
     api<{
       revision_id: number;
       against_revision_id: number | null;
       changes: Array<Record<string, unknown>>;
       scene_count_delta: number;
-    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/diff`),
+    }>(
+      withAnalysisRunScope(
+        `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/diff`,
+        analysisRunId,
+      ),
+    ),
 };

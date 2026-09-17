@@ -59,9 +59,37 @@ def _chapter_or_404(session: Session, chapter_id: int) -> Chapter:
     return chapter
 
 
-def _revision_or_404(session: Session, revision_id: int, chapter_id: int) -> BoundaryRevision:
+def _analysis_run_for_chapter_or_404(
+    session: Session,
+    analysis_run_id: int,
+    chapter_id: int,
+) -> AnalysisRun:
+    run = session.get(AnalysisRun, analysis_run_id)
+    if (
+        run is None
+        or run.task_type != "scene_pipeline"
+        or run.subject_type != "chapter"
+        or run.subject_id != str(chapter_id)
+    ):
+        raise error(404, "ANALYSIS_RUN_NOT_FOUND", "单章分析任务不存在或不属于当前章节")
+    return run
+
+
+def _revision_or_404(
+    session: Session,
+    revision_id: int,
+    chapter_id: int,
+    analysis_run_id: int | None = None,
+) -> BoundaryRevision:
     revision = session.get(BoundaryRevision, revision_id)
-    if revision is None or revision.chapter_id != chapter_id:
+    if (
+        revision is None
+        or revision.chapter_id != chapter_id
+        or (
+            analysis_run_id is not None
+            and revision.analysis_run_id != analysis_run_id
+        )
+    ):
         raise error(404, "SCENE_REVISION_NOT_FOUND", "场景边界修订不存在")
     return revision
 
@@ -96,9 +124,21 @@ def _pack_overview(raw: dict) -> SceneBoundariesOverviewResponse:
     "/chapters/{chapter_id}/scene-boundaries",
     response_model=SceneBoundariesOverviewResponse,
 )
-def get_scene_boundaries(chapter_id: int, session: Session = Depends(get_db)):
+def get_scene_boundaries(
+    chapter_id: int,
+    analysis_run_id: int | None = None,
+    session: Session = Depends(get_db),
+):
     _chapter_or_404(session, chapter_id)
-    return _pack_overview(get_scene_boundaries_overview_v1(session, chapter_id))
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    return _pack_overview(
+        get_scene_boundaries_overview_v1(
+            session,
+            chapter_id,
+            analysis_run_id=analysis_run_id,
+        )
+    )
 
 
 @router.post(
@@ -106,10 +146,20 @@ def get_scene_boundaries(chapter_id: int, session: Session = Depends(get_db)):
     response_model=SceneBoundaryDraftCreateResponse,
     status_code=201,
 )
-def create_scene_boundary_draft(chapter_id: int, session: Session = Depends(get_db)):
+def create_scene_boundary_draft(
+    chapter_id: int,
+    analysis_run_id: int | None = None,
+    session: Session = Depends(get_db),
+):
     _chapter_or_404(session, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
     try:
-        draft = create_or_get_scene_boundary_draft_v1(session, chapter_id)
+        draft = create_or_get_scene_boundary_draft_v1(
+            session,
+            chapter_id,
+            analysis_run_id=analysis_run_id,
+        )
         session.commit()
     except SceneBoundaryError as exc:
         raise _scene_boundary_http_error(exc) from exc
@@ -132,9 +182,12 @@ def save_scene_boundary_draft(
     chapter_id: int,
     revision_id: int,
     body: SceneBoundaryDraftSaveRequest,
+    analysis_run_id: int | None = None,
     session: Session = Depends(get_db),
 ):
-    _revision_or_404(session, revision_id, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    _revision_or_404(session, revision_id, chapter_id, analysis_run_id)
     try:
         draft = save_scene_boundary_draft_v1(
             session,
@@ -164,9 +217,12 @@ def split_scene_boundary_draft(
     chapter_id: int,
     revision_id: int,
     body: SceneBoundarySplitRequest,
+    analysis_run_id: int | None = None,
     session: Session = Depends(get_db),
 ):
-    _revision_or_404(session, revision_id, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    _revision_or_404(session, revision_id, chapter_id, analysis_run_id)
     try:
         result = split_scene_at_paragraph_v1(
             session,
@@ -199,9 +255,12 @@ def split_scene_boundary_draft(
 def restore_ai_partition(
     chapter_id: int,
     revision_id: int,
+    analysis_run_id: int | None = None,
     session: Session = Depends(get_db),
 ):
-    _revision_or_404(session, revision_id, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    _revision_or_404(session, revision_id, chapter_id, analysis_run_id)
     try:
         draft = restore_ai_partition_into_draft_v1(session, revision_id)
         session.commit()
@@ -227,11 +286,14 @@ async def confirm_scene_boundary(
     revision_id: int,
     body: SceneBoundaryConfirmRequest,
     background: BackgroundTasks,
+    analysis_run_id: int | None = None,
     session: Session = Depends(get_db),
     session_factory=Depends(get_session_factory),
     gateway: ModelGateway = Depends(get_model_gateway),
 ):
-    _revision_or_404(session, revision_id, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    _revision_or_404(session, revision_id, chapter_id, analysis_run_id)
     # The gateway arrives from the registry with bootstrap defaults; the user's actual
     # provider row lives in the database. Every other paid path binds it before use and
     # this one never did, so the analysis queued right here died on
@@ -393,9 +455,12 @@ async def confirm_scene_boundary(
 def discard_scene_boundary_draft(
     chapter_id: int,
     revision_id: int,
+    analysis_run_id: int | None = None,
     session: Session = Depends(get_db),
 ):
-    _revision_or_404(session, revision_id, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    _revision_or_404(session, revision_id, chapter_id, analysis_run_id)
     try:
         discard_scene_boundary_draft_v1(session, revision_id)
         session.commit()
@@ -411,9 +476,12 @@ def discard_scene_boundary_draft(
 def get_scene_boundary_diff(
     chapter_id: int,
     revision_id: int,
+    analysis_run_id: int | None = None,
     session: Session = Depends(get_db),
 ):
-    _revision_or_404(session, revision_id, chapter_id)
+    if analysis_run_id is not None:
+        _analysis_run_for_chapter_or_404(session, analysis_run_id, chapter_id)
+    _revision_or_404(session, revision_id, chapter_id, analysis_run_id)
     try:
         diff = compute_diff_summary_v1(session, revision_id)
     except SceneBoundaryError as exc:

@@ -205,6 +205,25 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     expect(screen.getByTestId("scene-boundary-waiting-lead")).toHaveTextContent("共 2 个场景");
   });
 
+  it("binds overview and draft operations to the current analysis run", async () => {
+    vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(overviewFixture() as any);
+    vi.mocked(analysisApi.createSceneBoundaryDraft).mockResolvedValue({
+      revision_id: 11,
+      revision_etag: "etag-draft",
+      scenes: MODEL_SCENES,
+    });
+
+    renderPanel({ analysisRunId: 69 });
+
+    await waitFor(() =>
+      expect(analysisApi.sceneBoundariesOverview).toHaveBeenCalledWith(2, 69),
+    );
+    fireEvent.click(await screen.findByTestId("scene-boundary-open-editor"));
+    await waitFor(() =>
+      expect(analysisApi.createSceneBoundaryDraft).toHaveBeenCalledWith(2, 69),
+    );
+  });
+
   it("lists the proposed scenes so there is something to confirm", async () => {
     // The screen used to ask for a yes on a bare count. Nobody can confirm a division they
     // cannot see, so each proposed scene shows its paragraph range and its opening line.
@@ -232,7 +251,7 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     });
     renderPanel();
     fireEvent.click(await screen.findByTestId("scene-boundary-open-editor"));
-    await waitFor(() => expect(analysisApi.createSceneBoundaryDraft).toHaveBeenCalledWith(2));
+    await waitFor(() => expect(analysisApi.createSceneBoundaryDraft).toHaveBeenCalledWith(2, null));
     expect(await screen.findByTestId("scene-boundary-editor-body")).toBeInTheDocument();
     expect(screen.getByTestId("scene-boundary-para-P1")).toHaveTextContent("第一段。");
   });
@@ -248,6 +267,7 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
         2,
         11,
         expect.objectContaining({ expected_etag: "etag-A" }),
+        null,
       ),
     );
     await waitFor(() =>
@@ -322,6 +342,7 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
         2,
         11,
         expect.objectContaining({ expected_etag: "etag-F", start_journey: false }),
+        null,
       ),
     );
     expect(await screen.findByTestId("scene-boundary-success")).toHaveTextContent("场景划分已确认");
@@ -460,7 +481,9 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     });
     renderPanel();
     fireEvent.click(await screen.findByTestId("scene-boundary-restore-ai"));
-    await waitFor(() => expect(analysisApi.restoreSceneBoundaryAi).toHaveBeenCalledWith(2, 11));
+    await waitFor(() =>
+      expect(analysisApi.restoreSceneBoundaryAi).toHaveBeenCalledWith(2, 11, null),
+    );
   });
 
   it("warns on leave while persist still dirty", async () => {
@@ -496,6 +519,7 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
         2,
         11,
         expect.objectContaining({ start_journey: true, expected_etag: "etag-A" }),
+        null,
       ),
     );
     expect(onConfirmed).toHaveBeenCalledWith(

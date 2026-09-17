@@ -84,6 +84,7 @@ function toDraftSummary(snapshot: DraftSnapshot, base?: SceneBoundaryRevisionSum
 export function SceneBoundaryReviewPanel({
   chapterId,
   chapterTitle,
+  analysisRunId = null,
   journeyRunning = false,
   journeyRevisionId = null,
   onExit,
@@ -119,9 +120,18 @@ export function SceneBoundaryReviewPanel({
     setDirty(next);
   }, []);
 
+  const sceneBoundaryQueryKey = useMemo(
+    () => [
+      "scene-boundaries",
+      chapterId,
+      ...(analysisRunId == null ? [] : [analysisRunId]),
+    ] as const,
+    [analysisRunId, chapterId],
+  );
+
   const overviewQuery = useQuery({
-    queryKey: ["scene-boundaries", chapterId],
-    queryFn: () => analysisApi.sceneBoundariesOverview(chapterId),
+    queryKey: sceneBoundaryQueryKey,
+    queryFn: () => analysisApi.sceneBoundariesOverview(chapterId, analysisRunId),
     // Boundary confirmation is a transition gate, so the app-wide 10-second
     // freshness window is unsafe here: the backend may have created a proposal
     // moments after the cached empty overview was read by BookRoutePage.
@@ -172,39 +182,45 @@ export function SceneBoundaryReviewPanel({
 
   const patchOverviewDraft = useCallback(
     (snapshot: DraftSnapshot | null) => {
-      qc.setQueryData<SceneBoundariesOverview>(["scene-boundaries", chapterId], (prev) => {
-        if (!prev) return prev;
-        if (!snapshot) {
-          return { ...prev, draft_revision: null, awaiting_confirmation: false };
-        }
-        const packed = toDraftSummary(snapshot, prev.draft_revision);
-        return {
-          ...prev,
-          draft_revision: packed,
-          awaiting_confirmation: prev.awaiting_confirmation || snapshot.status === "draft",
-        };
-      });
+      qc.setQueryData<SceneBoundariesOverview>(
+        sceneBoundaryQueryKey,
+        (prev) => {
+          if (!prev) return prev;
+          if (!snapshot) {
+            return { ...prev, draft_revision: null, awaiting_confirmation: false };
+          }
+          const packed = toDraftSummary(snapshot, prev.draft_revision);
+          return {
+            ...prev,
+            draft_revision: packed,
+            awaiting_confirmation: prev.awaiting_confirmation || snapshot.status === "draft",
+          };
+        },
+      );
     },
-    [chapterId, qc],
+    [qc, sceneBoundaryQueryKey],
   );
 
   const patchOverviewConfirmed = useCallback(
     (snapshot: DraftSnapshot) => {
-      qc.setQueryData<SceneBoundariesOverview>(["scene-boundaries", chapterId], (prev) => {
-        if (!prev) return prev;
-        const packed = toDraftSummary(
-          { ...snapshot, status: "confirmed" },
-          prev.confirmed_revision || prev.draft_revision || prev.model_revision,
-        );
-        return {
-          ...prev,
-          draft_revision: null,
-          confirmed_revision: packed,
-          awaiting_confirmation: false,
-        };
-      });
+      qc.setQueryData<SceneBoundariesOverview>(
+        sceneBoundaryQueryKey,
+        (prev) => {
+          if (!prev) return prev;
+          const packed = toDraftSummary(
+            { ...snapshot, status: "confirmed" },
+            prev.confirmed_revision || prev.draft_revision || prev.model_revision,
+          );
+          return {
+            ...prev,
+            draft_revision: null,
+            confirmed_revision: packed,
+            awaiting_confirmation: false,
+          };
+        },
+      );
     },
-    [chapterId, qc],
+    [qc, sceneBoundaryQueryKey],
   );
 
   // Open existing draft once; do not re-sync from overview after local/mutation updates.
@@ -265,7 +281,7 @@ export function SceneBoundaryReviewPanel({
   }, []);
 
   const createDraftMutation = useMutation({
-    mutationFn: () => analysisApi.createSceneBoundaryDraft(chapterId),
+    mutationFn: () => analysisApi.createSceneBoundaryDraft(chapterId, analysisRunId),
     onSuccess: (data) => {
       const raw = data as {
         revision_id: number;
@@ -297,10 +313,15 @@ export function SceneBoundaryReviewPanel({
     async (scenes: ScenePartition[]) => {
       const current = draftRef.current;
       if (!current.revisionId || !current.etag) throw new Error("缺少草稿修订");
-      const data = await analysisApi.saveSceneBoundaryDraft(chapterId, current.revisionId, {
-        expected_etag: current.etag,
-        scenes,
-      });
+      const data = await analysisApi.saveSceneBoundaryDraft(
+        chapterId,
+        current.revisionId,
+        {
+          expected_etag: current.etag,
+          scenes,
+        },
+        analysisRunId,
+      );
       const snapshot: DraftSnapshot = {
         revision_id: data.revision_id,
         revision_etag: data.revision_etag,
@@ -313,7 +334,7 @@ export function SceneBoundaryReviewPanel({
       patchOverviewDraft(snapshot);
       return snapshot;
     },
-    [applyDraftSnapshot, chapterId, patchOverviewDraft],
+    [analysisRunId, applyDraftSnapshot, chapterId, patchOverviewDraft],
   );
 
   const enqueuePersist = useCallback(
@@ -356,12 +377,17 @@ export function SceneBoundaryReviewPanel({
       setSuccessMessage(undefined);
       const run = persistChainRef.current.then(async () => {
         try {
-          const data = await analysisApi.splitSceneBoundaryDraft(chapterId, current.revisionId!, {
-            expected_etag: draftRef.current.etag,
-            boundary_after_paragraph_id: paragraphId,
-            client_request_id: clientRequestId,
-            scene_order: sceneOrder,
-          });
+          const data = await analysisApi.splitSceneBoundaryDraft(
+            chapterId,
+            current.revisionId!,
+            {
+              expected_etag: draftRef.current.etag,
+              boundary_after_paragraph_id: paragraphId,
+              client_request_id: clientRequestId,
+              scene_order: sceneOrder,
+            },
+            analysisRunId,
+          );
           const snapshot: DraftSnapshot = {
             revision_id: data.revision_id,
             revision_etag: data.revision_etag,
@@ -395,6 +421,7 @@ export function SceneBoundaryReviewPanel({
       return run;
     },
     [
+      analysisRunId,
       applyDraftSnapshot,
       chapterId,
       handleMappedError,
@@ -446,7 +473,11 @@ export function SceneBoundaryReviewPanel({
     mutationFn: async () => {
       const current = draftRef.current;
       if (!current.revisionId) throw new Error("缺少草稿修订");
-      return analysisApi.restoreSceneBoundaryAi(chapterId, current.revisionId);
+      return analysisApi.restoreSceneBoundaryAi(
+        chapterId,
+        current.revisionId,
+        analysisRunId,
+      );
     },
     onSuccess: (data) => {
       const snapshot: DraftSnapshot = {
@@ -468,14 +499,20 @@ export function SceneBoundaryReviewPanel({
     mutationFn: async () => {
       const current = draftRef.current;
       if (!current.revisionId) throw new Error("缺少草稿修订");
-      return analysisApi.discardSceneBoundaryDraft(chapterId, current.revisionId);
+      return analysisApi.discardSceneBoundaryDraft(
+        chapterId,
+        current.revisionId,
+        analysisRunId,
+      );
     },
     onSuccess: () => {
       markDirty(false);
       setEditorOpen(false);
       draftRef.current = { revisionId: null, etag: "", scenes: [] };
       patchOverviewDraft(null);
-      void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
+      void qc.invalidateQueries({
+        queryKey: sceneBoundaryQueryKey,
+      });
     },
     onError: handleMappedError,
   });
@@ -492,11 +529,16 @@ export function SceneBoundaryReviewPanel({
         await persistDraft(current.scenes);
       }
       const latest = draftRef.current;
-      return analysisApi.confirmSceneBoundary(chapterId, latest.revisionId || targetId, {
-        expected_etag: latest.etag || etag,
-        start_journey: startJourney,
-        journey_options: {},
-      });
+      return analysisApi.confirmSceneBoundary(
+        chapterId,
+        latest.revisionId || targetId,
+        {
+          expected_etag: latest.etag || etag,
+          start_journey: startJourney,
+          journey_options: {},
+        },
+        analysisRunId,
+      );
     },
     onSuccess: (result, startJourney) => {
       markDirty(false);

@@ -1,0 +1,51 @@
+{
+  "id": "CHG-20260917-001",
+  "title": "Desktop 单章场景边界 Run 绑定循环修复",
+  "type": "fix",
+  "base_version": "1.4.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop",
+    "api"
+  ],
+  "files": [
+    "apps/api/app/api/v1/scene_boundaries.py",
+    "apps/api/app/services/scene_boundary_manual_review.py",
+    "apps/api/tests/test_scene_boundary_analysis_run_scope.py",
+    "apps/desktop/src/services/analysisApi.ts",
+    "apps/desktop/src/components/analysis/SceneBoundaryReviewPanel.tsx",
+    "apps/desktop/src/components/analysis/SceneBoundaryReviewPanel.chg041.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx"
+  ],
+  "user_summary": "确保场景边界确认只作用于当前单章分析任务，避免旧任务与新任务交叉导致反复确认。",
+  "technical_summary": "Scene boundary review is now scoped by analysis_run_id across overview, draft, split, save, restore, confirm, discard, and diff calls. The server validates Run/Chapter/Revision ownership and confirmation only supersedes revisions and journeys from the same AnalysisRun; legacy chapter-only reads remain compatible.",
+  "acceptance_criteria": [
+    "A new analysis run on a chapter with an older confirmed run displays only the new run's model proposal.",
+    "Confirming the new run keeps the older run's confirmed boundary intact and advances the new run.",
+    "Revision mutations fail closed when the supplied analysis run does not own the revision."
+  ],
+  "tests": [
+    "API scene-boundary run-scope/manual-review/v4.0 suite: 25 passed",
+    "Desktop SceneBoundaryReviewPanel and BookRoute journey navigation: 30 passed",
+    "Desktop TypeScript typecheck passed"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema or data migration. Existing chapter-only callers retain the historical latest-revision behavior; the active Desktop workflow supplies analysis_run_id."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-09-17T14:16:23Z",
+  "updated_at": "2026-09-17T14:26:19Z"
+}

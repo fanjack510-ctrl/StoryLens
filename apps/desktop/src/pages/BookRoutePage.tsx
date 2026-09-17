@@ -1006,8 +1006,8 @@ export function BookRoutePage() {
   const sceneBoundaryReviewView = searchParams.get("view") === "scene-boundary-review";
 
   const sceneBoundariesQuery = useQuery({
-    queryKey: ["scene-boundaries", chapterId],
-    queryFn: () => analysisApi.sceneBoundariesOverview(chapterId!),
+    queryKey: ["scene-boundaries", chapterId, analysisRunId],
+    queryFn: () => analysisApi.sceneBoundariesOverview(chapterId!, analysisRunId),
     enabled: Boolean(chapterId) && (Boolean(analysisRunId) || sceneBoundaryReviewView),
     retry: false,
   });
@@ -1858,7 +1858,9 @@ export function BookRoutePage() {
             onExit={() => setView(analysisRunId ? "progress" : "reading", "user")}
             onConfirmed={({ journeyStarted, journeyRunId: confirmedJourneyRunId }) => {
               void qc.invalidateQueries({ queryKey: ["reader-journey"] });
-              void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
+              void qc.invalidateQueries({
+                queryKey: ["scene-boundaries", chapterId, analysisRunId],
+              });
               void journey.refetch();
               void progress.refresh();
               // Always route with journeyRun when API returned an id (even if start
