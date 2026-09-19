@@ -7,7 +7,7 @@
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "{\"contract_version\": \"v2\", \"evidence_contract_version\": \"v2\", \"coverage_scope\": \"partial_span\", \"context_capabilities\": {}, \"stages\": [{\"local_stage_ref\": \"S1\", \"order_index\": 0, \"stage_type\": \"rising\", \"title\": \"Stage S1\", \"summary\": {\"value\": \"过期束引用合成阶段\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.7}, \"start_boundary\": {\"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"note\": null, \"value\": null}, \"end_boundary\": {\"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"note\": null, \"value\": null}, \"supporting_citation_ids\": [], \"related_turning_point_refs\": [], \"narrative_function\": \"advance plot\", \"confidence\": 0.6}], \"turning_points\": [], \"analysis_confidence\": 0.7, \"limitations\": []}"
+        "content": "{\"contract_version\": \"v2\", \"evidence_contract_version\": \"v2\", \"coverage_scope\": \"full_selected_range\", \"context_capabilities\": {}, \"stages\": [{\"local_stage_ref\": \"S1\", \"order_index\": 0, \"stage_type\": \"rising\", \"title\": \"Stage S1\", \"summary\": {\"value\": \"过期束引用合成阶段\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.7}, \"start_boundary\": {\"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"note\": null, \"value\": null}, \"end_boundary\": {\"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"note\": null, \"value\": null}, \"supporting_citation_ids\": [], \"related_turning_point_refs\": [], \"narrative_function\": \"advance plot\", \"confidence\": 0.6}], \"turning_points\": [], \"analysis_confidence\": 0.7, \"limitations\": []}"
       },
       "finish_reason": "stop"
     }

@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-ss-v2-empty-repair-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"evidence_contract_version\": \"v2\", \"coverage_scope\": \"full_selected_range\", \"context_capabilities\": {}, \"stages\": [], \"turning_points\": [], \"analysis_confidence\": 0.1, \"limitations\": [\"empty after repair\"]}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5000,
+    "completion_tokens": 60,
+    "total_tokens": 5060
+  },
+  "http_status": 200,
+  "request_id": "fake-http-ss-v2-empty-repair-1"
+}

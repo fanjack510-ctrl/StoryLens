@@ -23,6 +23,9 @@ from app.narrative_core.private_engine_contract.errors import (
     PrivateEngineErrorCode,
     private_engine_error,
 )
+from app.narrative_core.product_contract.module_results import (
+    normalize_coverage_scope_wire,
+)
 from app.narrative_core.private_engine_contract.provider_gateway import (
     FORBIDDEN_PROVIDER_REQUEST_KEYS,
     NormalizedProviderUsage,
@@ -559,6 +562,7 @@ class BailianOpenAICompatibleProviderAdapter:
             validate_book_overview_provider_output_v2,
         )
         from app.narrative_core.services.structure_stages_output_contract_v2 import (
+            FAILURE_EMPTY_RESULT_AFTER_REPAIR as FAILURE_EMPTY_RESULT_AFTER_REPAIR_SS_V2,
             FAILURE_REPAIR_EXHAUSTED as FAILURE_REPAIR_EXHAUSTED_SS_V2,
             MAX_REPAIR_COUNT as MAX_REPAIR_COUNT_SS_V2,
             OUTPUT_CONTRACT_ID as OUTPUT_CONTRACT_ID_SS_V2,
@@ -623,6 +627,7 @@ class BailianOpenAICompatibleProviderAdapter:
             response_schema = structure_stages_result_v2_json_schema(
                 citation_ids=tuple(getattr(payload, "allowed_citation_ids", ()) or ()),
                 catalog=getattr(payload, "citation_catalog", None),
+                capabilities=getattr(payload, "context_capabilities", None),
             )
         if enforce_book_overview and response_schema is None:
             response_schema = book_overview_result_json_schema()
@@ -1184,6 +1189,11 @@ class BailianOpenAICompatibleProviderAdapter:
                     )
                 contract_diag["repair_attempted"] = True
                 contract_diag["repair_status"] = "ATTEMPTED"
+                initial_empty_or_binding = str(validation.failure_code or "") in {
+                    "STRUCTURE_REQUIRED_STAGE_MISSING",
+                    "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+                    FAILURE_EMPTY_RESULT_AFTER_REPAIR_SS_V2,
+                }
                 repair_msg = ss_repair_instruction_text_v2(
                     failure_code=str(validation.failure_code or "CONTRACT_FAILED"),
                     observed_fields=validation.observed_top_level_fields,
@@ -1191,6 +1201,16 @@ class BailianOpenAICompatibleProviderAdapter:
                         getattr(payload, "allowed_citation_ids", ()) or ()
                     ),
                     capabilities=caps_payload,
+                    actual_coverage_scope=(
+                        normalize_coverage_scope_wire(
+                            (candidate or {}).get("coverage_scope")
+                        )
+                        or ""
+                    ),
+                    stage_count=len((candidate or {}).get("stages") or ()),
+                    turning_point_count=len(
+                        (candidate or {}).get("turning_points") or ()
+                    ),
                 )
                 repair_messages = [dict(m) for m in messages] + [
                     {"role": "user", "content": repair_msg}
@@ -1215,6 +1235,11 @@ class BailianOpenAICompatibleProviderAdapter:
                 if repair_structured is None:
                     contract_diag["repair_status"] = "FAILED"
                     contract_diag["repaired_contract_status"] = "FAILED"
+                    fail_code = (
+                        FAILURE_EMPTY_RESULT_AFTER_REPAIR_SS_V2
+                        if initial_empty_or_binding
+                        else FAILURE_REPAIR_EXHAUSTED_SS_V2
+                    )
                     _publish_attempt_audit(
                         ids=list(provider_request_ids),
                         token_input=token_in,
@@ -1224,14 +1249,14 @@ class BailianOpenAICompatibleProviderAdapter:
                         host_value=host,
                         finish_reason_value=finish_reason,
                         cost_value=self._resolve_cost(token_in, token_out),
-                        failure_code=FAILURE_REPAIR_EXHAUSTED_SS_V2,
+                        failure_code=fail_code,
                         output_contract=contract_diag,
                         claim_diags_initial=initial_claim_diags,
                         claim_diags_repair=[],
                     )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
-                        detail_code=FAILURE_REPAIR_EXHAUSTED_SS_V2,
+                        detail_code=fail_code,
                     )
                 repair_candidate = strip_provider_audit(repair_structured)
                 repair_validation = validate_structure_stages_provider_output_v2(
@@ -1260,8 +1285,21 @@ class BailianOpenAICompatibleProviderAdapter:
                 )
                 if not repair_validation.ok:
                     contract_diag["repair_status"] = "FAILED"
-                    fail_code = str(
-                        repair_validation.failure_code or FAILURE_REPAIR_EXHAUSTED_SS_V2
+                    repair_fail = str(repair_validation.failure_code or "")
+                    empty_after = initial_empty_or_binding or repair_fail in {
+                        "STRUCTURE_REQUIRED_STAGE_MISSING",
+                        "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+                    } or (
+                        len((repair_candidate or {}).get("stages") or ()) < 1
+                        and initial_empty_or_binding
+                    )
+                    fail_code = (
+                        FAILURE_EMPTY_RESULT_AFTER_REPAIR_SS_V2
+                        if empty_after
+                        else str(
+                            repair_validation.failure_code
+                            or FAILURE_REPAIR_EXHAUSTED_SS_V2
+                        )
                     )
                     _publish_attempt_audit(
                         ids=list(provider_request_ids),

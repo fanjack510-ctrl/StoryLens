@@ -475,13 +475,27 @@ class PrivateLabRunExecutor:
         if not bool(meta.get("dry_run", True)):
             live_ok = True
             for mr in results:
+                persist_mr = dict(mr.get("persistence_summary") or {})
+                evidence_mr = dict(mr.get("evidence_summary") or {})
+                validation_mr = dict(mr.get("validation_summary") or {})
+                no_obs = bool(
+                    persist_mr.get("no_observation")
+                    or evidence_mr.get("no_observation")
+                    or validation_mr.get("no_observation")
+                    or (persist_mr.get("pipeline_diagnostics") or {}).get("no_observation")
+                )
                 if mr.get("status") != "success":
                     live_ok = False
                 if not (mr.get("usage") or {}).get("provider_request_id"):
                     live_ok = False
-                if not (mr.get("persistence_summary") or {}).get("orm_written"):
+                if no_obs:
+                    # Artifact-only no-observation terminal — skip evidence/ORM asset gates.
+                    if persist_mr.get("persistence_complete") is False:
+                        live_ok = False
+                    continue
+                if not persist_mr.get("orm_written"):
                     live_ok = False
-                if int((mr.get("evidence_summary") or {}).get("count") or 0) < 1:
+                if int(evidence_mr.get("count") or 0) < 1:
                     live_ok = False
             if not live_ok:
                 try:
@@ -732,7 +746,20 @@ class PrivateLabRunExecutor:
                             )
 
                             schema = structure_stages_result_v2_json_schema(
-                                catalog=citation_catalog
+                                catalog=citation_catalog,
+                                capabilities=dict(
+                                    meta.get("context_capabilities")
+                                    or (
+                                        (meta.get("execution_context_binding") or {}).get(
+                                            "context_capabilities"
+                                        )
+                                        if isinstance(
+                                            meta.get("execution_context_binding"), dict
+                                        )
+                                        else {}
+                                    )
+                                    or {}
+                                ),
                             )
                         else:
                             from storylens_private_engine.citation import (
@@ -911,7 +938,31 @@ class PrivateLabRunExecutor:
             raise PrivateWholeBookLabRunError(
                 PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
                 run_id=int(run.id),
-                detail_code=f"MODULE_{str(usage.status).upper()}",
+                detail_code=(
+                    str(
+                        (dict(usage.usage or {}).get("failure_code"))
+                        or (dict(usage.usage or {}).get("output_contract") or {}).get(
+                            "failure_code"
+                        )
+                        or ""
+                    ).strip()
+                    or f"MODULE_{str(usage.status).upper()}"
+                )
+                if str(
+                    (dict(usage.usage or {}).get("failure_code"))
+                    or (dict(usage.usage or {}).get("output_contract") or {}).get(
+                        "failure_code"
+                    )
+                    or ""
+                ).strip()
+                in {
+                    "STRUCTURE_REQUIRED_STAGE_MISSING",
+                    "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+                    "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR",
+                    "STRUCTURE_CONTRACT_FAILURE",
+                    "REPAIR_EXHAUSTED",
+                }
+                else f"MODULE_{str(usage.status).upper()}",
             )
 
         provider_usage = dict(usage.usage or {})
@@ -1149,6 +1200,19 @@ class PrivateLabRunExecutor:
                             catalog=citation_catalog,
                             capabilities=ss_caps_dict or None,
                         )
+                        if (
+                            str(getattr(mapped, "status", "") or "") != "mapped"
+                            or getattr(mapped, "failure_code", None)
+                            or len(tuple(mapped.asset_candidates or ())) < 1
+                        ):
+                            raise PrivateWholeBookLabRunError(
+                                PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                                run_id=int(run.id),
+                                detail_code=str(
+                                    getattr(mapped, "failure_code", None)
+                                    or "STRUCTURE_MAPPER_FAILURE"
+                                ),
+                            )
                         structured_pol = dict(structured_pol)
                         structured_pol.update(dict(mapped.normalized))
                         structured_pol.update(mapping_diagnostics(mapped))
@@ -1175,10 +1239,47 @@ class PrivateLabRunExecutor:
                             )
                         if citation_catalog is not None:
                             provider_policy["citation_catalog"] = private_catalog
+                            provider_policy["citation_catalog_public"] = citation_catalog
                         if ss_caps_obj is not None:
                             provider_policy["structure_context_capabilities"] = ss_caps_obj
                         if ss_caps_dict:
                             provider_policy["context_capabilities"] = ss_caps_dict
+                        # Freeze selection into provider_policy so Runtime never expands
+                        # to full-book units (catalog 32 must not become 48).
+                        provider_policy["selected_paragraph_ids"] = [
+                            str(x) for x in selected_pids
+                        ]
+                        provider_policy["execution_context_binding"] = (
+                            expected_binding.safe_dict()
+                            if hasattr(expected_binding, "safe_dict")
+                            else dict(raw_binding or {})
+                        )
+                        exec_mat_meta = meta.get(
+                            "structure_stages_execution_materialization"
+                        )
+                        if isinstance(exec_mat_meta, dict):
+                            provider_policy[
+                                "structure_stages_execution_materialization"
+                            ] = dict(exec_mat_meta)
+                        elif isinstance(meta.get("catalog_materialization"), dict):
+                            try:
+                                from app.narrative_core.services.structure_stages_execution_materialization import (
+                                    materialization_from_binding_and_catalog,
+                                )
+
+                                rebuilt = materialization_from_binding_and_catalog(
+                                    binding=expected_binding.safe_dict()
+                                    if hasattr(expected_binding, "safe_dict")
+                                    else dict(raw_binding or {}),
+                                    catalog_mat=meta.get("catalog_materialization") or {},
+                                )
+                                mat_safe = rebuilt.safe_dict()
+                                provider_policy[
+                                    "structure_stages_execution_materialization"
+                                ] = mat_safe
+                                meta["structure_stages_execution_materialization"] = mat_safe
+                            except Exception:  # noqa: BLE001
+                                pass
                         if meta.get("citation_catalog_fingerprint"):
                             structured_pol["catalog_fingerprint"] = meta[
                                 "citation_catalog_fingerprint"
@@ -1297,7 +1398,34 @@ class PrivateLabRunExecutor:
                         detail_code="LIVE_SYNTHETIC_ARTIFACT_FORBIDDEN",
                     )
                 # Live path: never accept port_only / recording fallback / artifact-only.
-                if live_requested and (
+                # Prefer precise first-root-cause codes over LIVE_ORM_PERSISTENCE_REQUIRED.
+                # Explicit No-Observation (artifact-only) is a successful terminal.
+                no_obs = bool(
+                    persist.get("no_observation")
+                    or validation_summary.get("no_observation")
+                    or (pipeline_diagnostics or {}).get("no_observation")
+                    or str(pipeline_status) == "completed_no_observation"
+                )
+                if no_obs and persist.get("persistence_complete"):
+                    evidence_summary = {
+                        "validated": True,
+                        "count": 0,
+                        "coverage_incomplete": False,
+                        "no_observation": True,
+                    }
+                    validation_summary = {
+                        **validation_summary,
+                        "accepted": True,
+                        "no_observation": True,
+                    }
+                    persistence_summary["no_observation"] = True
+                    persistence_summary["persistence_complete"] = True
+                    persistence_summary["orm_written"] = bool(
+                        persist.get("artifact_written") or persist.get("orm_written")
+                    )
+                    persistence_summary["candidate_written"] = True
+                    persistence_summary["evidence_written"] = True
+                elif live_requested and (
                     persist.get("fallback") == "port_only"
                     or persist.get("fallback_used")
                     or self._use_recording_persistence
@@ -1305,10 +1433,43 @@ class PrivateLabRunExecutor:
                     or not persist.get("orm_written")
                     or not persist.get("candidate_written")
                 ):
+                    pipeline_diag = dict(
+                        getattr(pipeline, "pipeline_diagnostics", {}) or {}
+                    )
+                    precise = str(
+                        pipeline_diag.get("failure_code")
+                        or pipeline_diag.get("first_rejection_code")
+                        or validation_summary.get("error_code")
+                        or ""
+                    ).strip()
+                    precise_boundary = str(
+                        pipeline_diag.get("failure_boundary")
+                        or pipeline_diag.get("first_object_loss_boundary")
+                        or ""
+                    ).strip()
+                    if precise in {
+                        "STRUCTURE_REQUIRED_STAGE_MISSING",
+                        "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+                        "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR",
+                        "STRUCTURE_CONTRACT_FAILURE",
+                        "EXECUTION_CONTEXT_CATALOG_MISMATCH",
+                        "EXECUTION_CONTEXT_BINDING_FAILURE",
+                        "EXECUTION_CONTEXT_FINGERPRINT_MISMATCH",
+                        "MODULE_OUTPUT_SCHEMA_INVALID",
+                        "MODULE_OUTPUT_REFERENCE_INVALID",
+                        "MODULE_EVIDENCE_INSUFFICIENT",
+                    } or precise_boundary in {
+                        "STRUCTURE_CONTRACT_FAILURE",
+                        "EXECUTION_CONTEXT_BINDING_FAILURE",
+                        "EVIDENCE_VALIDATION_REJECTED",
+                    }:
+                        detail = precise or precise_boundary or "STRUCTURE_CONTRACT_FAILURE"
+                    else:
+                        detail = "LIVE_ORM_PERSISTENCE_REQUIRED"
                     raise PrivateWholeBookLabRunError(
                         PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
                         run_id=int(run.id),
-                        detail_code="LIVE_ORM_PERSISTENCE_REQUIRED",
+                        detail_code=detail,
                     )
             except PrivateWholeBookLabRunError:
                 raise
@@ -1431,6 +1592,21 @@ class PrivateLabRunExecutor:
             _fail("LIVE_REQUEST_NOT_CONFIRMED")
         if usage.get("synthetic_success"):
             _fail("LIVE_SYNTHETIC_SUCCESS_FORBIDDEN")
+        no_obs = bool(
+            persistence_summary.get("no_observation")
+            or validation_summary.get("no_observation")
+            or evidence_summary.get("no_observation")
+        )
+        if no_obs:
+            if not validation_summary.get("accepted"):
+                _fail("LIVE_VALIDATION_NOT_ACCEPTED")
+            if persistence_summary.get("persistence_complete") is False:
+                _fail("LIVE_PERSISTENCE_INCOMPLETE")
+            if persistence_summary.get("fallback") or persistence_summary.get(
+                "fallback_used"
+            ):
+                _fail("LIVE_PERSISTENCE_FALLBACK_FORBIDDEN")
+            return
         if not validation_summary.get("accepted"):
             _fail("LIVE_VALIDATION_NOT_ACCEPTED")
         if int(evidence_summary.get("count") or 0) < 1:

@@ -99,6 +99,26 @@ class LiveModulePipelineDiagnostics:
     locator_rejected_count: int = 0
     critical_claims_without_citation_count: int = 0
     persistence_complete: bool | None = None
+    # CHG-20260725-001 Structure Stages empty-policy / coverage counters (safe only).
+    expected_coverage_scope: str | None = None
+    actual_coverage_scope: str | None = None
+    stages_count: int = 0
+    turning_points_count: int = 0
+    limitations_count: int = 0
+    module_result_envelope_count: int = 0
+    structure_stage_candidate_count: int = 0
+    turning_point_projection_count: int = 0
+    repair_required: bool | None = None
+    no_observation: bool = False
+    first_rejection_code: str | None = None
+    first_object_loss_boundary: str | None = None
+    selected_paragraph_ids: list[str] = field(default_factory=list)
+    selected_paragraph_count: int = 0
+    estimate_executor_catalog_match: bool | None = None
+    provider_resolver_catalog_match: bool | None = None
+    provider_evidence_catalog_match: bool | None = None
+    provider_diagnostics_catalog_match: bool | None = None
+    provider_artifact_catalog_match: bool | None = None
 
     def to_safe_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -164,6 +184,26 @@ def fingerprint_structured_output(structured: Mapping[str, Any] | None) -> str |
 def infer_failure_boundary(diag: LiveModulePipelineDiagnostics) -> str | None:
     if diag.failure_boundary:
         return diag.failure_boundary
+    # Structure contract / empty-policy failures take precedence over ORM/candidate empties.
+    first_code = str(
+        getattr(diag, "first_rejection_code", None)
+        or diag.failure_code
+        or diag.dto_mapper_failure_code
+        or diag.initial_contract_failure_code
+        or ""
+    )
+    structure_contract_codes = {
+        "STRUCTURE_CONTRACT_FAILURE",
+        "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR",
+        "STRUCTURE_REQUIRED_STAGE_MISSING",
+        "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+        "EXECUTION_CONTEXT_CATALOG_MISMATCH",
+        "EXECUTION_CONTEXT_BINDING_FAILURE",
+    }
+    if first_code in structure_contract_codes or (
+        getattr(diag, "first_object_loss_boundary", None) == "STRUCTURE_CONTRACT_FAILURE"
+    ):
+        return "STRUCTURE_CONTRACT_FAILURE"
     if not diag.structured_output_present:
         return "PROVIDER_RESULT_EMPTY"
     if diag.dto_mapper_status == "rejected" or (
