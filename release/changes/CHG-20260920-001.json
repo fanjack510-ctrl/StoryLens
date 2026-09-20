@@ -11,6 +11,12 @@
       "message": "fix(desktop): parse whole-document chapter structure",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "d8a0aa0e57eff201e072aff4dd58d8ead8eec9c0",
+      "message": "fix(desktop): import books with empty structural headings",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -36,12 +42,13 @@
     "apps/desktop/src/types/index.ts"
   ],
   "user_summary": "修复目录条目误判正文、引言与后记等结构单元漏切，以及末章吞入附属材料导致异常膨胀的问题。",
-  "technical_summary": "Import now parses the whole document through normalized paragraph evidence, heading candidates, explicit and implicit TOC detection, global sequence resolution, typed unit boundaries, structure validation, and conservative oversized-unit repair. DOCX style metadata is retained. Analyzable routing counts introduction, chapters, and afterword while excluding front matter, notes, acknowledgements, and references.",
+  "technical_summary": "Import now parses the whole document through normalized paragraph evidence, heading candidates, explicit and implicit TOC detection, global sequence resolution, typed unit boundaries, structure validation, and conservative oversized-unit repair. DOCX style metadata is retained. Analyzable routing counts introduction, chapters, and afterword while excluding front matter, notes, acknowledgements, and references. EPUB navigation documents are excluded from readable content, and heading-only structural units remain diagnostic-only instead of entering the legacy Chapter table.",
   "acceptance_criteria": [
     "Explicit and implicit table-of-contents entries never become body units when the real headings appear later.",
     "Introduction, numbered chapters, afterword, notes, acknowledgements, appendices, and references retain distinct structure types and analyzability.",
     "Oversized final units are rescanned for missing back-matter boundaries without book-title, chapter-number, or page-number special cases.",
-    "The Life 3.0 acceptance document resolves to introduction, chapters 1 through 8, and afterword as ten analyzable units, with notes and acknowledgements excluded from analysis routing."
+    "The Life 3.0 acceptance document resolves to introduction, chapters 1 through 8, and afterword as ten analyzable units, with notes and acknowledgements excluded from analysis routing.",
+    "EPUB navigation documents and heading-only structural units never create empty persisted chapters or fail an otherwise valid import."
   ],
   "tests": [
     "Targeted API structure/import/routing suite: 103 passed",
@@ -49,7 +56,8 @@
     "Desktop TypeScript typecheck passed",
     "New parser Ruff checks passed",
     "Version, Change Registry, and project scaffold checks passed",
-    "Real Life 3.0 DOCX: 10 analyzable units, 8 numbered chapters, 1 TOC region, 0 warnings"
+    "Real Life 3.0 DOCX: 10 analyzable units, 8 numbered chapters, 1 TOC region, 0 warnings",
+    "Import regression suite (TXT/DOCX/EPUB, structure, formats, delete): 68 passed"
   ],
   "verification_evidence": [],
   "data_compatibility": {
@@ -67,5 +75,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-09-20T04:07:53Z",
-  "updated_at": "2026-09-20T04:08:05Z"
+  "updated_at": "2026-09-20T06:56:34Z"
 }
