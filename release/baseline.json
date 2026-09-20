@@ -1,13 +1,13 @@
 {
-  "version": "1.3.6",
-  "git_tag": "v1.3.6",
-  "git_commit": "45a44c8a39bc2904f1dc2035c928c4ee54d5c883",
-  "status": "legacy_verified",
-  "released_at": "2026-08-29T00:00:00Z",
+  "version": "1.3.8",
+  "git_tag": "v1.3.8",
+  "git_commit": "abde576c865ff2e29da7ebc6c46c7c553a4d09ba",
+  "status": "verified",
+  "released_at": "2026-09-20T09:03:52Z",
   "channel": "stable",
-  "installer_sha256": null,
+  "installer_sha256": "248e2bdf8e6f65fdda7ca74fe5547f07f9a9c307e4275fb8286310ac3388fce4",
   "updater_sha256": null,
-  "manifest_url": null,
-  "notes": "Immutable Desktop v1.3.6 source baseline verified by tag and full commit; installer digest is unavailable in this checkout.",
-  "legacy_source_baseline": true
+  "manifest_url": "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.3.8",
+  "notes": "StoryLens v1.3.8 stable GitHub release; tag, installer digest, formal build gates, isolated Windows smoke, and publication time verified. Direct installer only; updater signing artifacts were not produced.",
+  "legacy_source_baseline": false
 }
