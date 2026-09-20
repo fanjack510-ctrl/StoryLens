@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AnalysisRun, Book, Chapter, ReaderJourneyRun
+from app.db.models import AnalysisRun, Book, BookSnapshot, Chapter, ReaderJourneyRun
 
 # Statuses that still write / hold the book — block delete until stopped.
 BOOK_ACTIVE_ANALYSIS_STATUSES = (
@@ -115,6 +115,19 @@ def _delete_analysis_runs_for_book(session: Session, book_id: int) -> int:
     return int(result.rowcount or 0)
 
 
+def _delete_snapshots_for_book(session: Session, book_id: int) -> int:
+    """Delete immutable snapshot rows before their live chapter sources.
+
+    Completed snapshots reject every UPDATE.  Deleting a source Chapter first would
+    make SQLite apply the snapshot chapter's ``ON DELETE SET NULL`` action, which is
+    an UPDATE and is therefore (correctly) rejected by the immutability trigger.
+    A whole-book delete removes the snapshot itself, so delete that tree explicitly
+    before the live chapters instead of weakening the trigger.
+    """
+    result = session.execute(delete(BookSnapshot).where(BookSnapshot.book_id == book_id))
+    return int(result.rowcount or 0)
+
+
 def _delete_book_subtree(session: Session, book_id: int) -> None:
     book = session.get(Book, book_id)
     if book is None:
@@ -130,6 +143,7 @@ def _delete_book_subtree(session: Session, book_id: int) -> None:
     if active > 0:
         raise BookHasActiveTasksError(active_count=active)
 
+    _delete_snapshots_for_book(session, book_id)
     _delete_analysis_runs_for_book(session, book_id)
     # book_id CASCADE covers chapters, paragraphs, scenes, journeys, etc.
     # source_content BLOB is on the Book row — deleted with it. No OS original files.

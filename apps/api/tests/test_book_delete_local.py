@@ -6,13 +6,13 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, func, select
-from sqlalchemy.orm import Session, sessionmaker
-
 from app.db.models import (
     AnalysisRun,
     Base,
     Book,
+    BookSnapshot,
+    BookSnapshotChapter,
+    BookSnapshotParagraph,
     Chapter,
     Paragraph,
     ReaderJourneyRun,
@@ -23,6 +23,8 @@ from app.services.book_delete import (
     BookNotFoundError,
     delete_book,
 )
+from sqlalchemy import create_engine, func, select, text
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def _session() -> Session:
@@ -96,6 +98,85 @@ def test_delete_book_and_chapters_paragraphs():
         session.scalar(select(func.count()).select_from(Paragraph).where(Paragraph.book_id == book_id))
         == 0
     )
+
+
+def test_delete_book_with_completed_immutable_snapshot():
+    session = _session()
+    book = _make_book(session)
+    chapter = session.scalar(select(Chapter).where(Chapter.book_id == book.id))
+    paragraph = session.scalar(select(Paragraph).where(Paragraph.book_id == book.id))
+    assert chapter is not None
+    assert paragraph is not None
+
+    snapshot = BookSnapshot(
+        book_id=book.id,
+        content_hash="snapshot-hash",
+        snapshot_status="completed",
+        chapter_count=1,
+        paragraph_count=1,
+        character_count=2,
+    )
+    session.add(snapshot)
+    session.flush()
+    snapshot_chapter = BookSnapshotChapter(
+        snapshot_id=snapshot.id,
+        source_chapter_id=chapter.id,
+        chapter_order=1,
+        title=chapter.title,
+        content_hash="chapter-hash",
+        content_text="正文",
+    )
+    session.add(snapshot_chapter)
+    session.flush()
+    session.add(
+        BookSnapshotParagraph(
+            snapshot_id=snapshot.id,
+            snapshot_chapter_id=snapshot_chapter.id,
+            source_paragraph_id=paragraph.id,
+            stable_paragraph_id=paragraph.id,
+            paragraph_order=1,
+            start_offset=0,
+            end_offset=2,
+            content_hash="paragraph-hash",
+        )
+    )
+    for statement in (
+        """
+        CREATE TRIGGER trg_test_book_snapshots_no_update_completed
+        BEFORE UPDATE ON book_snapshots
+        FOR EACH ROW WHEN OLD.snapshot_status = 'completed'
+        BEGIN SELECT RAISE(ABORT, 'update_completed_forbidden'); END
+        """,
+        """
+        CREATE TRIGGER trg_test_snapshot_chapters_no_update_completed
+        BEFORE UPDATE ON book_snapshot_chapters
+        FOR EACH ROW WHEN EXISTS (
+            SELECT 1 FROM book_snapshots s
+            WHERE s.id = OLD.snapshot_id AND s.snapshot_status = 'completed'
+        )
+        BEGIN SELECT RAISE(ABORT, 'update_completed_forbidden'); END
+        """,
+        """
+        CREATE TRIGGER trg_test_snapshot_paragraphs_no_update_completed
+        BEFORE UPDATE ON book_snapshot_paragraphs
+        FOR EACH ROW WHEN EXISTS (
+            SELECT 1 FROM book_snapshots s
+            WHERE s.id = OLD.snapshot_id AND s.snapshot_status = 'completed'
+        )
+        BEGIN SELECT RAISE(ABORT, 'update_completed_forbidden'); END
+        """,
+    ):
+        session.execute(text(statement))
+    session.commit()
+
+    book_id = int(book.id)
+    snapshot_id = int(snapshot.id)
+    delete_book(session, book_id)
+
+    assert session.get(Book, book_id) is None
+    assert session.get(BookSnapshot, snapshot_id) is None
+    assert session.scalar(select(func.count()).select_from(BookSnapshotChapter)) == 0
+    assert session.scalar(select(func.count()).select_from(BookSnapshotParagraph)) == 0
 
 
 def test_delete_scenes_and_analysis_runs():
