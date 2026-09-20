@@ -130,6 +130,13 @@ def test_c16_short_book_is_not_toc_and_figure_is_not_chapter() -> None:
     assert all(item.normalized_text != "图1-1 结构示意" for item in result.candidates)
 
 
+def test_heading_only_structure_unit_is_not_projected_as_a_legacy_chapter() -> None:
+    result = detect_chapters("第一章 开始\n正文。\n第二章 空标题")
+    assert [unit.title for unit in result.structure.units] == ["第一章 开始", "第二章 空标题"]
+    assert result.structure.units[-1].paragraphs == []
+    assert [chapter.title for chapter in result.chapters] == ["第一章 开始"]
+
+
 def test_life_3_0_fixture_has_ten_analyzable_units_and_backmatter() -> None:
     fixture = Path(__file__).parent / "fixtures" / "life_3_0_structure_excerpt.txt"
     result = parse(fixture.read_text(encoding="utf-8"))

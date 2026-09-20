@@ -182,6 +182,11 @@ def _extract_epub(content: bytes) -> str:
     book = epub.read_epub(BytesIO(content))
     sections: list[str] = []
     for item in book.get_items_of_type(ITEM_DOCUMENT):
+        # EbookLib exposes the generated EPUB navigation page as ITEM_DOCUMENT too. Its
+        # link labels repeat chapter headings without body text. Navigation is metadata,
+        # not readable book content.
+        if isinstance(item, epub.EpubNav):
+            continue
         soup = BeautifulSoup(item.get_content(), "html.parser")
         sections.append(soup.get_text("\n"))
     return "\n".join(sections)

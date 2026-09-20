@@ -8,12 +8,10 @@ from __future__ import annotations
 from io import BytesIO
 from pathlib import Path
 
+from app.services.extractors import extract_document
 from docx import Document
 from ebooklib import epub
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
-
-from app.services.extractors import extract_document
 
 
 def _minimal_docx_bytes() -> bytes:
@@ -60,6 +58,8 @@ def test_extract_docx_and_epub_offline():
     assert "林澈" in d.text
     assert "灯塔" in d.text or "火种" in d.text
     assert "林澈" in e.text
+    assert e.text.count("第一章") == 1
+    assert e.text.count("第二章") == 1
     assert len(d.text.strip()) > 0
     assert len(e.text.strip()) > 0
 
@@ -112,11 +112,22 @@ def test_epub_import_api_and_original_file_kept(client: TestClient, tmp_path: Pa
     assert response.status_code == 201, response.text
     body = response.json()
     book_id = int(body["book_id"])
-    assert body["chapter_count"] >= 1
-    assert body["paragraph_count"] >= 1
+    assert body["chapter_count"] == 2
+    assert body["paragraph_count"] == 3
 
     deleted = client.delete(f"/api/v1/books/{book_id}")
     assert deleted.status_code in {200, 204}, deleted.text
     assert client.get(f"/api/v1/books/{book_id}").status_code == 404
     assert fixture.is_file()
     assert fixture.read_bytes() == payload
+
+
+def test_heading_only_tail_does_not_break_txt_import(client: TestClient):
+    payload = "第一章 有正文\n这一章可以正常导入。\n第二章 只有标题".encode()
+    response = client.post(
+        "/api/v1/books/import",
+        files={"file": ("heading-only-tail.txt", payload, "text/plain")},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["chapter_count"] == 1
+    assert response.json()["paragraph_count"] == 1

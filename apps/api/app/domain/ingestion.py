@@ -229,6 +229,9 @@ def detect_chapters(
             analyzable=unit.analyzable,
         )
         for unit in structure.units
+        # Keep heading-only units in the rich structure for diagnostics, but never project
+        # them into the legacy Chapter table: that contract requires real paragraph anchors.
+        if unit.paragraphs
     ]
     return ChapterDetection(
         chapters=chapters,

@@ -195,6 +195,11 @@ def preview_book(filename: str, content: bytes) -> tuple[ExtractedDocument, Chap
 def _write_chapters(session: Session, book: Book, detection: ChapterDetection) -> None:
     absolute_offset = 0
     for chapter_index, parsed in enumerate(detection.chapters, start=1):
+        if not parsed.paragraphs:
+            # All supported detection paths filter these before persistence.  Keep this
+            # invariant explicit so a future parser cannot turn malformed input into an
+            # opaque IndexError/500 response.
+            raise ValueError(f"章节“{parsed.title}”没有可导入的正文段落")
         metadata = chapter_title_metadata(parsed.title)
         if parsed.unit_type == UnitType.FRONTMATTER.value:
             metadata["section_type"] = "front_matter"
