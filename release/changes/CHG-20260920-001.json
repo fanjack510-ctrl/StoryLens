@@ -3,7 +3,7 @@
   "title": "Desktop 整书结构解析与章节识别修复",
   "type": "fix",
   "base_version": "1.3.6",
-  "status": "registered",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -67,7 +67,9 @@
     "Import regression suite (TXT/DOCX/EPUB, structure, formats, delete): 68 passed",
     "Comprehend snapshot/planner/format suite: 44 passed; real read-only book 61 plans 22/22 imported analyzable chapters"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "用户于 2026-09-20 明确授权将包含本修复的 StoryLens Desktop v1.3.8 作为正式 GitHub Release 发布；自动化回归和真实数据只读复现证据已记录。"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -83,5 +85,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-09-20T04:07:53Z",
-  "updated_at": "2026-09-20T07:26:53Z"
+  "updated_at": "2026-09-20T08:11:51Z"
 }
