@@ -5,12 +5,8 @@ from pathlib import Path
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.narrative_core.short_form.dispatch import (
-    SHORT_FORM_HARD_MAX_CHARS,
-    is_short_form,
-    short_form_allowed,
-)
 from app.db.models import AnalysisRun, Book, Chapter, Paragraph, ReparseAudit
+from app.domain.document_structure import UnitType
 from app.domain.ingestion import (
     DOMINANT_CHAPTER_SHARE,
     OVERSIZED_CHAPTER_CHARS,
@@ -19,6 +15,11 @@ from app.domain.ingestion import (
     ParsedChapter,
     chapter_title_metadata,
     detect_chapters,
+)
+from app.narrative_core.short_form.dispatch import (
+    SHORT_FORM_HARD_MAX_CHARS,
+    is_short_form,
+    short_form_allowed,
 )
 from app.services.extractors import ExtractedDocument, extract_document
 
@@ -67,7 +68,12 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
     jumps = sum(b > a + 1 for a, b in zip(numbers, numbers[1:]))
     reversed_count = sum(b < a for a, b in zip(numbers, numbers[1:]))
     formats = [item.format_key for item in adopted]
-    front_matter = chapters[:1] if chapters and chapters[0].title == "正文" else []
+    front_matter = [item for item in chapters if item.unit_type == UnitType.FRONTMATTER.value]
+    supplementary = [
+        item for item in chapters
+        if not item.analyzable and item.unit_type != UnitType.FRONTMATTER.value
+    ]
+    analyzable = [item for item in chapters if item.analyzable]
     reason_counts: dict[str, int] = {}
     for item in rejected:
         reason = item.rejection_reason or "low_score"
@@ -91,7 +97,27 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
         "suspicious_ad_title_count": sum("下载" in item.text or "网址" in item.text for item in rejected),
         "front_matter_count": len(front_matter),
         "front_matter_paragraph_count": sum(len(item.paragraphs) for item in front_matter),
+        "supplementary_unit_count": len(supplementary),
         "final_chapter_count": len(chapters),
+        "analyzable_unit_count": len(analyzable),
+        "structure_unit_count": len(chapters),
+        "structure_confidence": detection.structure.confidence if detection.structure else None,
+        "structure_warnings": list(detection.structure.warnings) if detection.structure else [],
+        "toc_regions": [
+            {
+                "start_index": item.start_index,
+                "end_index": item.end_index,
+                "explicit": item.explicit,
+                "reason": item.reason,
+            }
+            for item in (detection.structure.toc_regions if detection.structure else [])
+        ],
+        "unit_summary": {
+            kind: sum(item.unit_type == kind for item in chapters)
+            for kind in sorted({item.unit_type for item in chapters})
+        },
+        "analyzable_titles": [item.title for item in analyzable],
+        "supplementary_titles": [item.title for item in supplementary],
         "rules": detection.rules,
         "single_chapter_fallback": len(chapters) == 1 and chapters[0].title == "正文",
         "max_chapter_characters": maximum_chars,
@@ -106,7 +132,7 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
         ),
         "suggested_analysis_form": (
             "short"
-            if is_short_form(character_count=total_chars, chapter_count=len(chapters))
+            if is_short_form(character_count=total_chars, chapter_count=len(analyzable))
             else "long"
         ),
         # Whether 短篇 may be picked for this file at all, decided before it is imported so
@@ -158,7 +184,9 @@ def _monograph_detection(filename: str, document: ExtractedDocument) -> ChapterD
 
 def preview_book(filename: str, content: bytes) -> tuple[ExtractedDocument, ChapterDetection, dict[str, object]]:
     document = extract_document(filename, content)
-    detection = _monograph_detection(filename, document) or detect_chapters(document.text)
+    detection = _monograph_detection(filename, document) or detect_chapters(
+        document.text, records=document.paragraphs
+    )
     if not detection.chapters:
         raise ValueError("未找到可导入的段落")
     return document, detection, _diagnostics(document, detection)
@@ -168,6 +196,10 @@ def _write_chapters(session: Session, book: Book, detection: ChapterDetection) -
     absolute_offset = 0
     for chapter_index, parsed in enumerate(detection.chapters, start=1):
         metadata = chapter_title_metadata(parsed.title)
+        if parsed.unit_type == UnitType.FRONTMATTER.value:
+            metadata["section_type"] = "front_matter"
+        else:
+            metadata["section_type"] = parsed.unit_type.lower()
         chapter = Chapter(book_id=book.id, chapter_index=chapter_index, title=parsed.title,
                           word_count=sum(len(item) for item in parsed.paragraphs), **metadata)
         session.add(chapter)
@@ -246,7 +278,7 @@ def reparse_with_file_preview(session: Session, book: Book, filename: str, conte
     has_success = session.scalar(select(AnalysisRun.id).where(
         AnalysisRun.subject_id.in_([str(item) for item in chapter_ids]), AnalysisRun.status == "succeeded")) is not None
     titles = [chapter_title_metadata(item.title)["display_title"] for item in detection.chapters]
-    formal = [item for item in detection.chapters if chapter_title_metadata(item.title)["section_type"] == "chapter"]
+    formal = [item for item in detection.chapters if item.analyzable]
     result = dict(diagnostics)
     result.update({"book_id": book.id, "original_file_hash": book.source_file_hash,
                    "uploaded_file_hash": new_hash, "hash_match": new_hash == book.source_file_hash,
@@ -254,7 +286,18 @@ def reparse_with_file_preview(session: Session, book: Book, filename: str, conte
                    "old_paragraph_count": old_paragraphs,
                    "new_paragraph_count": sum(len(item.paragraphs) for item in detection.chapters),
                    "has_succeeded_runs": has_success,
-                   "formal_chapter_count": len(formal), "front_matter_count": int(bool(detection.chapters and detection.chapters[0].title == "正文")),
+                   "formal_chapter_count": len(formal),
+                   "analyzable_unit_count": len(formal),
+                   "front_matter_count": sum(item.unit_type == UnitType.FRONTMATTER.value for item in detection.chapters),
+                   "supplementary_unit_count": sum(
+                       not item.analyzable and item.unit_type != UnitType.FRONTMATTER.value
+                       for item in detection.chapters
+                   ),
+                   "analyzable_titles": [item.title for item in formal],
+                   "supplementary_titles": [
+                       item.title for item in detection.chapters
+                       if not item.analyzable and item.unit_type != UnitType.FRONTMATTER.value
+                   ],
                    "chapter_titles": titles[:20], "middle_sample_titles": titles[max(0, len(titles)//2-2):len(titles)//2+3],
                    "ending_sample_titles": titles[-10:],
                    "recommended_action": "replace_in_place" if new_hash == book.source_file_hash else "create_revision"})

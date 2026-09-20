@@ -53,7 +53,10 @@ def compute_book_revision_hash(session: Session, book_id: int) -> str:
 
 def _book_counts(session: Session, book_id: int) -> tuple[int, int, int]:
     chapters = session.scalars(
-        select(Chapter).where(Chapter.book_id == book_id).order_by(Chapter.chapter_index.asc())
+        select(Chapter).where(
+            Chapter.book_id == book_id,
+            Chapter.section_type.in_(("chapter", "introduction", "afterword")),
+        ).order_by(Chapter.chapter_index.asc())
     ).all()
     chapter_count = len(chapters)
     paragraph_count = 0

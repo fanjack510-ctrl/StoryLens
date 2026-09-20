@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260920-001",
+  "title": "Desktop 整书结构解析与章节识别修复",
+  "type": "fix",
+  "base_version": "1.3.6",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop",
+    "api"
+  ],
+  "files": [
+    "apps/api/app/domain/document_structure.py",
+    "apps/api/app/domain/ingestion.py",
+    "apps/api/app/services/extractors.py",
+    "apps/api/app/services/book_service.py",
+    "apps/api/app/services/library_listing.py",
+    "apps/api/app/narrative_core/services/snapshot_service.py",
+    "apps/api/app/narrative_core/services/whole_book_cost_estimate_service.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/api/app/narrative_core/short_form/dispatch.py",
+    "apps/api/tests/test_document_structure_parser.py",
+    "apps/api/tests/test_phase_2a1.py",
+    "apps/api/tests/fixtures/life_3_0_structure_excerpt.txt",
+    "apps/desktop/src/components/books/ReparseDialog.tsx",
+    "apps/desktop/src/components/books/ReparseDialog.test.tsx",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/types/index.ts"
+  ],
+  "user_summary": "修复目录条目误判正文、引言与后记等结构单元漏切，以及末章吞入附属材料导致异常膨胀的问题。",
+  "technical_summary": "Import now parses the whole document through normalized paragraph evidence, heading candidates, explicit and implicit TOC detection, global sequence resolution, typed unit boundaries, structure validation, and conservative oversized-unit repair. DOCX style metadata is retained. Analyzable routing counts introduction, chapters, and afterword while excluding front matter, notes, acknowledgements, and references.",
+  "acceptance_criteria": [
+    "Explicit and implicit table-of-contents entries never become body units when the real headings appear later.",
+    "Introduction, numbered chapters, afterword, notes, acknowledgements, appendices, and references retain distinct structure types and analyzability.",
+    "Oversized final units are rescanned for missing back-matter boundaries without book-title, chapter-number, or page-number special cases.",
+    "The Life 3.0 acceptance document resolves to introduction, chapters 1 through 8, and afterword as ten analyzable units, with notes and acknowledgements excluded from analysis routing."
+  ],
+  "tests": [
+    "Targeted API structure/import/routing suite: 103 passed",
+    "Desktop import/reparse UI suite: 30 passed",
+    "Desktop TypeScript typecheck passed",
+    "New parser Ruff checks passed",
+    "Version, Change Registry, and project scaffold checks passed",
+    "Real Life 3.0 DOCX: 10 analyzable units, 8 numbered chapters, 1 TOC region, 0 warnings"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema migration. Newly imported or explicitly reparsed books retain typed section_type values in the existing column. Existing imported books remain readable and require reparse to obtain corrected boundaries."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "PENDING",
+  "created_at": "2026-09-20T04:07:53Z",
+  "updated_at": "2026-09-20T04:07:53Z"
+}

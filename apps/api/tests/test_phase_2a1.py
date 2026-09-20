@@ -1,6 +1,5 @@
-from fastapi.testclient import TestClient
-
 from app.domain.ingestion import detect_chapters, split_chapters
+from fastapi.testclient import TestClient
 
 
 def test_no_separator_and_number_variants() -> None:
@@ -47,6 +46,21 @@ def test_gb18030_preview_and_import_diagnostics(client: TestClient) -> None:
     imported = client.post("/api/v1/books/import", files={"file": ("原创.txt", encoded, "text/plain")}).json()
     diagnostic = client.get(f"/api/v1/books/{imported['book_id']}/import-diagnostics").json()
     assert diagnostic["candidate_count"] == 2
+
+
+def test_import_preserves_analyzable_structure_types(client: TestClient) -> None:
+    source = (
+        "引言 为什么\n引言正文。\n\n第一章 开始\n章节正文。\n\n"
+        "后记 以后\n后记正文。\n\n注释\n注释正文。"
+    )
+    imported = client.post(
+        "/api/v1/books/import",
+        files={"file": ("结构.txt", source.encode("utf-8"), "text/plain")},
+    ).json()
+    chapters = client.get(f"/api/v1/books/{imported['book_id']}/chapters").json()
+    assert [item["section_type"] for item in chapters] == [
+        "introduction", "chapter", "afterword", "notes"
+    ]
 
 
 def test_utf8_sig_and_suspect_large_single_chapter(client: TestClient) -> None:

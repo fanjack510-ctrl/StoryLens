@@ -268,8 +268,12 @@ export function LibraryPage() {
   }, [library.data]);
 
   const chapterPreviewLimit = 8;
-  const previewTitles = preview.data?.chapter_titles || [];
-  const moreChapters = Math.max(0, (preview.data?.final_chapter_count || 0) - chapterPreviewLimit);
+  const previewTitles = preview.data?.analyzable_titles || preview.data?.chapter_titles || [];
+  const moreChapters = Math.max(
+    0,
+    (preview.data?.analyzable_unit_count ?? preview.data?.final_chapter_count ?? 0) -
+      chapterPreviewLimit,
+  );
 
   return (
     <section className="page library-page-compact" data-testid="library-page">
@@ -398,7 +402,9 @@ export function LibraryPage() {
           {preview.data.warning === "CHAPTER_DETECTION_SUSPECT" && kind === "fiction" ? (
             <div className="notice" role="status">
               <p>
-                <b>识别出 {preview.data.final_chapter_count} 个章节，但看起来不对：</b>
+                <b>
+                  识别出 {preview.data.analyzable_unit_count ?? preview.data.final_chapter_count} 个可分析正文单元，但看起来不对：
+                </b>
                 {describeSuspectReasons(preview.data)}
               </p>
               <p>
@@ -415,7 +421,19 @@ export function LibraryPage() {
               <p className="muted">本来就不分章的作品，可以直接继续导入。</p>
             </div>
           ) : (
-            <p role="status">已识别 {preview.data.final_chapter_count} 个章节</p>
+            <div role="status">
+              <p>
+                已识别 {preview.data.analyzable_unit_count ?? preview.data.final_chapter_count} 个可分析正文单元
+              </p>
+              {preview.data.unit_summary ? (
+                <p className="muted">
+                  主体章节 {preview.data.unit_summary.CHAPTER ?? 0} · 引言{" "}
+                  {preview.data.unit_summary.INTRODUCTION ?? 0} · 后记{" "}
+                  {preview.data.unit_summary.AFTERWORD ?? 0} · 附属材料{" "}
+                  {preview.data.supplementary_unit_count ?? 0}
+                </p>
+              ) : null}
+            </div>
           )}
           <ol className="import-chapter-list">
             {previewTitles.slice(0, chapterPreviewLimit).map((title, index) => (
@@ -425,7 +443,10 @@ export function LibraryPage() {
               </li>
             ))}
           </ol>
-          {moreChapters > 0 && <p className="muted">还有 {moreChapters} 个章节</p>}
+          {moreChapters > 0 && <p className="muted">还有 {moreChapters} 个正文单元</p>}
+          {preview.data.supplementary_titles?.length ? (
+            <p className="muted">附属材料：{preview.data.supplementary_titles.join(" · ")}</p>
+          ) : null}
           <fieldset className="import-choice" data-testid="import-material-kind">
             <legend>这是什么书？</legend>
             <p className="muted">它决定这本书能用哪几种读法。导入后随时可以改。</p>

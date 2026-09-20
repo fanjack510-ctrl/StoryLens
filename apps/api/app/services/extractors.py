@@ -1,10 +1,12 @@
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-from dataclasses import dataclass
 
 from bs4 import BeautifulSoup
 from docx import Document
 from ebooklib import ITEM_DOCUMENT, epub
+
+from app.domain.document_structure import ParagraphRecord, normalize_heading, records_from_text
 
 
 class InvalidFileTypeError(ValueError):
@@ -34,6 +36,9 @@ class ExtractedDocument:
     #: PDF 的逐页文本。专著的结构识别要靠页边界（页眉重复、章首目录），拼成一整个字符串
     #: 之后这些信息就没了。其他格式为 None。
     pages: tuple[str, ...] | None = None
+    #: Paragraph-level source evidence. DOCX keeps declared styles; plain formats keep line and
+    #: page positions. Structure parsing consumes this instead of flattening everything first.
+    paragraphs: tuple[ParagraphRecord, ...] | None = None
 
 
 def extract_text(filename: str, content: bytes) -> str:
@@ -45,7 +50,9 @@ def extract_document(filename: str, content: bytes) -> ExtractedDocument:
     if suffix == ".txt":
         text, encoding, bom = _decode_txt(content)
     elif suffix == ".docx":
-        text = "\n".join(paragraph.text for paragraph in Document(BytesIO(content)).paragraphs)
+        docx = Document(BytesIO(content))
+        raw_paragraphs = list(docx.paragraphs)
+        text = "\n".join(paragraph.text for paragraph in raw_paragraphs)
         encoding, bom = "docx/xml", "none"
     elif suffix == ".epub":
         text = _extract_epub(content)
@@ -58,13 +65,68 @@ def extract_document(filename: str, content: bytes) -> ExtractedDocument:
                 "这个 PDF 没有文字层（整本是扫描图片），需要先做 OCR 才能导入。"
             )
         newline = "CRLF" if "\r\n" in text else ("CR" if "\r" in text else "LF")
-        return ExtractedDocument(text, "pdf/text", "none", newline, len(content), tuple(pages))
+        records: list[ParagraphRecord] = []
+        index = 0
+        for page_number, page in enumerate(pages, start=1):
+            page_records = records_from_text(page, source_type="pdf")
+            for record in page_records:
+                records.append(ParagraphRecord(
+                    **{**record.__dict__, "index": index, "page_number": page_number}
+                ))
+                index += 1
+        return ExtractedDocument(
+            text, "pdf/text", "none", newline, len(content), tuple(pages), tuple(records)
+        )
     else:
         raise InvalidFileTypeError("仅支持 TXT、DOCX、EPUB、PDF")
     if not text.strip():
         raise EmptyDocumentError("文件中没有可导入的文本")
     newline = "CRLF" if "\r\n" in text else ("CR" if "\r" in text else "LF")
-    return ExtractedDocument(text, encoding, bom, newline, len(content))
+    if suffix == ".docx":
+        records = tuple(_docx_records(raw_paragraphs))
+    else:
+        records = tuple(records_from_text(text, source_type=suffix.lstrip(".") or "text"))
+    return ExtractedDocument(text, encoding, bom, newline, len(content), paragraphs=records)
+
+
+def _docx_records(paragraphs: list) -> list[ParagraphRecord]:
+    """Keep Word paragraph structure without guessing headings from font size alone."""
+    records: list[ParagraphRecord] = []
+    for index, paragraph in enumerate(paragraphs):
+        raw = paragraph.text or ""
+        normalized = normalize_heading(raw)
+        style_name = getattr(getattr(paragraph, "style", None), "name", "") or None
+        outline_level = None
+        ppr = getattr(getattr(paragraph, "_p", None), "pPr", None)
+        outline = getattr(ppr, "outlineLvl", None) if ppr is not None else None
+        if outline is not None:
+            try:
+                outline_level = int(outline.val)
+            except (TypeError, ValueError):
+                outline_level = None
+        sizes = [
+            float(run.font.size.pt)
+            for run in paragraph.runs
+            if getattr(run.font, "size", None) is not None
+        ]
+        bold_values = [run.bold for run in paragraph.runs if run.text and run.bold is not None]
+        alignment = str(paragraph.alignment) if paragraph.alignment is not None else None
+        records.append(ParagraphRecord(
+            index=index,
+            raw_text=raw,
+            normalized_text=normalized,
+            source_type="docx",
+            style_name=style_name,
+            outline_level=outline_level,
+            font_size=max(sizes) if sizes else None,
+            bold=all(bold_values) if bold_values else None,
+            alignment=alignment,
+            line_count=max(1, raw.count("\n") + 1),
+            char_count=len(normalized),
+            preceding_blank=index == 0 or not (paragraphs[index - 1].text or "").strip(),
+            following_blank=index == len(paragraphs) - 1 or not (paragraphs[index + 1].text or "").strip(),
+        ))
+    return records
 
 
 def _extract_pdf_pages(content: bytes) -> list[str]:

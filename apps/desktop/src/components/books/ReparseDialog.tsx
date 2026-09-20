@@ -68,14 +68,14 @@ export function ReparseDialog({
     <div className="modal-backdrop" data-testid="reparse-dialog">
       <div className="modal reparse-dialog-modal" role="dialog" aria-modal="true">
         <header>
-          <h2>重新识别章节</h2>
+          <h2>重新识别正文单元</h2>
           <button type="button" onClick={onClose} aria-label="关闭">
             ×
           </button>
         </header>
         <div className="reparse-dialog-body" data-testid="reparse-dialog-body">
           <p className="reparse-dialog-lead">
-            StoryLens 将根据当前原文重新识别章节标题和范围。
+            StoryLens 将解析整本书的目录、正文标题与附录，重新识别正文单元及其范围。
           </p>
           <input
             ref={input}
@@ -138,7 +138,7 @@ export function ReparseDialog({
                   </p>
                 </section>
                 <section>
-                  <h3>当前章节</h3>
+                  <h3>当前正文单元</h3>
                   <p>
                     原结构：{preview.old_chapter_count}项 / {preview.old_paragraph_count}段
                   </p>
@@ -146,9 +146,17 @@ export function ReparseDialog({
                 <section>
                   <h3>预计新结构</h3>
                   <p>
-                    新结构：{preview.formal_chapter_count}个正式章节 /{" "}
-                    {preview.front_matter_count}个前置内容 / {preview.new_paragraph_count}段
+                    新结构：{preview.analyzable_unit_count ?? preview.formal_chapter_count}个可分析正文单元 /{" "}
+                    {preview.front_matter_count}个前置单元 /{" "}
+                    {preview.supplementary_unit_count ?? 0}个补充单元 / {preview.new_paragraph_count}段
                   </p>
+                  {preview.unit_summary ? (
+                    <p className="muted">
+                      主体章节 {preview.unit_summary.CHAPTER ?? 0} · 引言{" "}
+                      {preview.unit_summary.INTRODUCTION ?? 0} · 后记{" "}
+                      {preview.unit_summary.AFTERWORD ?? 0}
+                    </p>
+                  ) : null}
                 </section>
                 {!preview.hash_match && (
                   <section>
@@ -158,9 +166,9 @@ export function ReparseDialog({
                 )}
               </div>
 
-              <h3>章节预览</h3>
+              <h3>正文单元预览</h3>
               <ol className="import-chapter-list">
-                {preview.chapter_titles.map((title: string, index: number) => (
+                {(preview.analyzable_titles ?? preview.chapter_titles).map((title: string, index: number) => (
                   <li key={`${index}-${title}`}>
                     <span className="import-chapter-index">
                       {String(index + 1).padStart(2, "0")}
@@ -169,6 +177,9 @@ export function ReparseDialog({
                   </li>
                 ))}
               </ol>
+              {preview.supplementary_titles?.length ? (
+                <p className="muted">附属材料：{preview.supplementary_titles.join(" · ")}</p>
+              ) : null}
               <h3>中部抽样</h3>
               <p>{preview.middle_sample_titles.join(" · ")}</p>
               <h3>末尾抽样</h3>
@@ -187,7 +198,7 @@ export function ReparseDialog({
               data-testid="reparse-apply"
               onClick={() => void apply()}
             >
-              重新识别章节
+              重新识别正文单元
             </Button>
           </footer>
         )}

@@ -89,7 +89,9 @@ def build_library_listing(
     """
     counts = dict(
         session.execute(
-            select(Chapter.book_id, func.count(Chapter.id)).group_by(Chapter.book_id)
+            select(Chapter.book_id, func.count(Chapter.id))
+            .where(Chapter.section_type.in_(("chapter", "introduction", "afterword")))
+            .group_by(Chapter.book_id)
         ).all()
     )
     if book_ids is None:

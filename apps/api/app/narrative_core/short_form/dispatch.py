@@ -133,7 +133,9 @@ def suggested_form(session: Session, book_id: int) -> str:
     """What the import panel should offer as the default, before anyone answers."""
     row = session.execute(
         text(
-            "SELECT COUNT(*), COALESCE(SUM(word_count), 0) FROM chapters WHERE book_id = :book_id"
+            "SELECT COUNT(*), COALESCE(SUM(word_count), 0) FROM chapters "
+            "WHERE book_id = :book_id "
+            "AND section_type IN ('chapter', 'introduction', 'afterword')"
         ),
         {"book_id": int(book_id)},
     ).first()

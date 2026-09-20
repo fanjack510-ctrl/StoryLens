@@ -160,7 +160,10 @@ class BookSnapshotServiceImpl:
             chapters = list(
                 self._session.scalars(
                     select(Chapter)
-                    .where(Chapter.book_id == book_id)
+                    .where(
+                        Chapter.book_id == book_id,
+                        Chapter.section_type.in_(("chapter", "introduction", "afterword")),
+                    )
                     .options(selectinload(Chapter.paragraphs))
                     .order_by(Chapter.chapter_index)
                 )

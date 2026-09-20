@@ -446,18 +446,16 @@ def book_uses_long_novel_engine(session: Session, book_id: int) -> bool:
     stored = BookProfileRepository(session).get(int(book_id))
     if not (stored and stored.get("confirmed_at")):
         return False
+    # The routing floor is about analyzable body units. Front matter, notes and acknowledgements
+    # may be valid structure units, but must not make a two-chapter text look like a long novel.
     chapters = session.execute(
         text(
-            "SELECT chapter_count FROM book_snapshots WHERE book_id = :book_id "
-            "AND snapshot_status = 'completed' ORDER BY id DESC LIMIT 1"
+            "SELECT COUNT(*) FROM chapters "
+            "WHERE book_id = :book_id "
+            "AND section_type IN ('chapter', 'introduction', 'afterword')"
         ),
         {"book_id": int(book_id)},
     ).scalar()
-    if chapters is None:
-        chapters = session.execute(
-            text("SELECT COUNT(*) FROM chapters WHERE book_id = :book_id"),
-            {"book_id": int(book_id)},
-        ).scalar()
     return int(chapters or 0) >= C.MIN_VIABLE_CHAPTERS_PER_BLOCK
 
 

@@ -36,6 +36,14 @@ export type ImportDiagnostics = {
   byte_count: number;
   candidate_count: number;
   final_chapter_count: number;
+  analyzable_unit_count?: number;
+  structure_unit_count?: number;
+  structure_confidence?: number;
+  structure_warnings?: string[];
+  supplementary_unit_count?: number;
+  unit_summary?: Record<string, number>;
+  analyzable_titles?: string[];
+  supplementary_titles?: string[];
   chapter_titles: string[];
   warning?: string;
   recommended_to_import: boolean;

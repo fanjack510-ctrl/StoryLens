@@ -90,7 +90,7 @@ describe("Phase 2A.2 reparse acceptance", () => {
   });
   test("前置内容显示", async () => {
     await open();
-    expect(screen.getByText(/1个前置内容/)).toBeVisible();
+    expect(screen.getByText(/1个前置单元/)).toBeVisible();
   });
   test("正式第一章标题显示", async () => {
     await open();
@@ -119,7 +119,7 @@ describe("Phase 2A.2 reparse acceptance", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(dialog.className).toContain("reparse-dialog-modal");
-    expect(screen.getByRole("heading", { name: "重新识别章节" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "重新识别正文单元" })).toBeVisible();
     expect(screen.getByTestId("reparse-dialog-footer")).toBeVisible();
     expect(screen.getByRole("button", { name: "取消" })).toBeVisible();
     expect(screen.getByTestId("reparse-apply")).toBeVisible();

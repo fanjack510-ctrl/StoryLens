@@ -1,7 +1,15 @@
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Final
 
+from app.domain.document_structure import (
+    DocumentStructure,
+    HeadingCandidate,
+    ParagraphRecord,
+    UnitType,
+    parse_document_structure,
+    records_from_text,
+)
 
 NUMBER = r"[0-9０-９零〇一二三四五六七八九十百千万两]+"
 CHAPTER_PATTERN = re.compile(
@@ -92,26 +100,11 @@ METADATA_PATTERN = re.compile(r"^[-—=_*·\s]{3,}章节内容开始[-—=_*·\s
 class ParsedChapter:
     title: str
     paragraphs: list[str]
+    unit_type: str = UnitType.CHAPTER.value
+    analyzable: bool = True
 
 
-@dataclass
-class ChapterCandidate:
-    line_number: int
-    text: str
-    number_text: str | None
-    number: int | None
-    unit: str
-    title: str
-    preceding_blank: bool
-    following_blank: bool
-    starts_at_line_start: bool
-    format_key: str
-    score: int = 0
-    adopted: bool = False
-    rejection_reason: str | None = None
-
-    def public(self) -> dict[str, object]:
-        return asdict(self)
+ChapterCandidate = HeadingCandidate
 
 
 @dataclass
@@ -119,6 +112,7 @@ class ChapterDetection:
     chapters: list[ParsedChapter]
     candidates: list[ChapterCandidate]
     rules: list[str] = field(default_factory=list)
+    structure: DocumentStructure | None = None
 
 
 def normalize_paragraph(text: str) -> str:
@@ -159,12 +153,27 @@ def chapter_title_metadata(source: str) -> dict[str, object]:
                 "chapter_title": title, "display_title": f"第{raw}{unit}｜{title}" if title else f"第{raw}{unit}",
                 "source_title_line": normalize_paragraph(source)}
     normalized = normalize_paragraph(source)
-    if VOLUME_PATTERN.fullmatch(normalized):
+    compact = normalized.replace("\u3000", " ")
+    if re.fullmatch(r"(?:引言|绪论)(?:\s+.*)?", compact):
+        # Introduction is a first-class structural type in the parser, but maps to the
+        # established analyzable chapter contract so all existing analysis pipelines include it.
+        kind = "chapter"
+    elif re.fullmatch(r"(?:前言|序言|中文版序|推荐序.*)", compact):
+        kind = "front_matter"
+    elif VOLUME_PATTERN.fullmatch(normalized):
         kind = "volume"
     elif normalized.startswith("番外"):
         kind = "extra"
-    elif normalized in {"后记", "尾声"}:
+    elif re.fullmatch(r"(?:后记|尾声)(?:\s+.*)?", compact):
         kind = "afterword"
+    elif re.fullmatch(r"附录.*", compact):
+        kind = "appendix"
+    elif re.fullmatch(r"(?:注释|注解|尾注)(?:\s+.*)?", compact):
+        kind = "notes"
+    elif re.fullmatch(r"致谢(?:\s+.*)?", compact):
+        kind = "acknowledgements"
+    elif re.fullmatch(r"参考文献(?:\s+.*)?", compact):
+        kind = "references"
     elif normalized == "正文":
         kind = "front_matter"
         normalized = "前置内容"
@@ -206,114 +215,26 @@ def _counts_like_chapters(candidates: list["ChapterCandidate"]) -> bool:
     return advances + restarts >= len(steps) - max(1, int(len(steps) * _BARE_RUN_TOLERANCE))
 
 
-def detect_chapters(text: str) -> ChapterDetection:
-    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-
-    def _collect(pattern: re.Pattern[str], kind: str) -> list[ChapterCandidate]:
-        found: list[ChapterCandidate] = []
-        for index, raw in enumerate(lines):
-            normalized = normalize_paragraph(raw)
-            if not normalized or len(normalized) > 120:
-                continue
-            match = pattern.fullmatch(raw)
-            if not match:
-                continue
-            groups = match.groupdict()
-            separator = groups.get("separator") or ""
-            title = groups.get("title") or ""
-            unit = groups.get("unit") or groups.get("unit_alt") or kind
-            found.append(
-                ChapterCandidate(
-                    line_number=index + 1,
-                    text=normalized,
-                    number_text=groups.get("number") or "",
-                    number=_number_value(groups.get("number") or ""),
-                    unit=unit,
-                    title=title,
-                    preceding_blank=index == 0 or not lines[index - 1].strip(),
-                    following_blank=index == len(lines) - 1 or not lines[index + 1].strip(),
-                    starts_at_line_start=not raw[:1].isspace(),
-                    format_key=f"{kind}:{unit}:{bool(separator)}",
-                )
-            )
-        return found
-
-    # 「第N章」 is the house format and is always preferred. Only when it fails to divide the
-    # book do the alternatives get a turn, in order, and the first believable one wins —
-    # so a book that has both forms is never re-cut by the weaker signal.
-    candidates = _collect(CHAPTER_PATTERN, "numbered")
-    if len(candidates) < MIN_BELIEVABLE_CHAPTERS:
-        for kind, pattern in ALT_CHAPTER_PATTERNS:
-            alternative = _collect(pattern, kind)
-            if kind == "bare" and not _counts_like_chapters(alternative):
-                continue
-            if len(alternative) >= MIN_BELIEVABLE_CHAPTERS and len(alternative) > len(candidates):
-                candidates = alternative
-                break
-
-    formats: dict[str, int] = {}
-    for item in candidates:
-        formats[item.format_key] = formats.get(item.format_key, 0) + 1
-    previous_number: int | None = None
-    for item in candidates:
-        score = 3
-        score += int(item.starts_at_line_start)
-        score += int(item.preceding_blank) + int(item.following_blank)
-        score += 2 if formats[item.format_key] >= 2 else 0
-        if previous_number is None or item.number in {previous_number, previous_number + 1}:
-            score += 2
-        if not item.title:
-            score += 1
-        item.score = score
-        item.adopted = score >= 6 and (len(candidates) >= 2 or item.preceding_blank or item.following_blank)
-        if item.adopted:
-            previous_number = item.number
-        else:
-            item.rejection_reason = "候选孤立且缺少章节结构上下文"
-
-    candidate_by_line = {item.line_number: item for item in candidates if item.adopted}
-    chapters: list[ParsedChapter] = []
-    title = "正文"
-    paragraphs: list[str] = []
-
-    def flush() -> bool:
-        """Close the open chapter. Returns whether it had any text — the caller needs to know,
-        because a heading that produced nothing is a heading the next marker sits *under*."""
-        nonlocal paragraphs
-        if not paragraphs:
-            return False
-        chapters.append(ParsedChapter(title=title, paragraphs=paragraphs))
-        paragraphs = []
-        return True
-
-    for index, raw in enumerate(lines, start=1):
-        normalized = normalize_paragraph(raw)
-        if not normalized:
-            continue
-        if METADATA_PATTERN.fullmatch(normalized):
-            continue
-        candidate = candidate_by_line.get(index)
-        is_special = bool(SPECIAL_PATTERN.fullmatch(normalized) or VOLUME_PATTERN.fullmatch(normalized))
-        if candidate or (is_special and len(normalized) <= 120):
-            had_text = flush()
-            if candidate and candidate.unit == "bare":
-                # A bare marker's own text is just "7", which reads as a stray line everywhere it
-                # is later shown; render it as the chapter it denotes, since the number is the
-                # marker's whole content. And when it lands directly under a heading that
-                # produced no text, it is numbering *within* that section rather than replacing
-                # it — 《一梦如初》 restarts at 1 under 番外一：慧娘, and letting the marker win
-                # dropped the 番外's name from the book entirely.
-                numbered = f"第{candidate.number_text}章"
-                title = numbered if had_text or title == "正文" else f"{title}·{numbered}"
-            else:
-                title = normalized
-        else:
-            paragraphs.append(normalized)
-    flush()
+def detect_chapters(
+    text: str, *, records: list[ParagraphRecord] | tuple[ParagraphRecord, ...] | None = None
+) -> ChapterDetection:
+    """Parse the complete document and project its units onto the legacy chapter contract."""
+    paragraph_records = list(records) if records is not None else records_from_text(text)
+    structure = parse_document_structure(paragraph_records)
+    chapters = [
+        ParsedChapter(
+            title=unit.title,
+            paragraphs=unit.paragraphs,
+            unit_type=unit.unit_type,
+            analyzable=unit.analyzable,
+        )
+        for unit in structure.units
+    ]
     return ChapterDetection(
         chapters=chapters,
-        candidates=candidates,
-        rules=["numbered-scored-v2", "special-section-v1", "metadata-boundary-filter-v1"],
+        candidates=structure.candidates,
+        rules=structure.parsing_rules,
+        structure=structure,
     )
 
 
