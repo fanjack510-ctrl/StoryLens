@@ -17,6 +17,12 @@
       "message": "fix(desktop): import books with empty structural headings",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "e6e128e21238823035a5317c23e77e07fdfa043b",
+      "message": "fix(desktop): read tool books from bound snapshots",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -42,13 +48,14 @@
     "apps/desktop/src/types/index.ts"
   ],
   "user_summary": "修复目录条目误判正文、引言与后记等结构单元漏切，以及末章吞入附属材料导致异常膨胀的问题。",
-  "technical_summary": "Import now parses the whole document through normalized paragraph evidence, heading candidates, explicit and implicit TOC detection, global sequence resolution, typed unit boundaries, structure validation, and conservative oversized-unit repair. DOCX style metadata is retained. Analyzable routing counts introduction, chapters, and afterword while excluding front matter, notes, acknowledgements, and references. EPUB navigation documents are excluded from readable content, and heading-only structural units remain diagnostic-only instead of entering the legacy Chapter table.",
+  "technical_summary": "Import now parses the whole document through normalized paragraph evidence, heading candidates, explicit and implicit TOC detection, global sequence resolution, typed unit boundaries, structure validation, and conservative oversized-unit repair. DOCX style metadata is retained. Analyzable routing counts introduction, chapters, and afterword while excluding front matter, notes, acknowledgements, and references. EPUB navigation documents are excluded from readable content, and heading-only structural units remain diagnostic-only instead of entering the legacy Chapter table. Comprehend now reads every analyzable chapter from the immutable snapshot bound to the run, so DOCX files without standard Heading styles cannot collapse into one front-matter section.",
   "acceptance_criteria": [
     "Explicit and implicit table-of-contents entries never become body units when the real headings appear later.",
     "Introduction, numbered chapters, afterword, notes, acknowledgements, appendices, and references retain distinct structure types and analyzability.",
     "Oversized final units are rescanned for missing back-matter boundaries without book-title, chapter-number, or page-number special cases.",
     "The Life 3.0 acceptance document resolves to introduction, chapters 1 through 8, and afterword as ten analyzable units, with notes and acknowledgements excluded from analysis routing.",
-    "EPUB navigation documents and heading-only structural units never create empty persisted chapters or fail an otherwise valid import."
+    "EPUB navigation documents and heading-only structural units never create empty persisted chapters or fail an otherwise valid import.",
+    "Tool-book comprehend uses the run-bound snapshot, excludes supplementary units, and covers every analyzable imported chapter."
   ],
   "tests": [
     "Targeted API structure/import/routing suite: 103 passed",
@@ -57,7 +64,8 @@
     "New parser Ruff checks passed",
     "Version, Change Registry, and project scaffold checks passed",
     "Real Life 3.0 DOCX: 10 analyzable units, 8 numbered chapters, 1 TOC region, 0 warnings",
-    "Import regression suite (TXT/DOCX/EPUB, structure, formats, delete): 68 passed"
+    "Import regression suite (TXT/DOCX/EPUB, structure, formats, delete): 68 passed",
+    "Comprehend snapshot/planner/format suite: 44 passed; real read-only book 61 plans 22/22 imported analyzable chapters"
   ],
   "verification_evidence": [],
   "data_compatibility": {
@@ -75,5 +83,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-09-20T04:07:53Z",
-  "updated_at": "2026-09-20T06:56:34Z"
+  "updated_at": "2026-09-20T07:26:53Z"
 }
