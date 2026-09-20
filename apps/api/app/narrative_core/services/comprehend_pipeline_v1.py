@@ -25,20 +25,28 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Book, WholeBookCheckpoint, WholeBookRun
+from app.db.models import (
+    Book,
+    BookSnapshot,
+    BookSnapshotChapter,
+    Chapter,
+    WholeBookCheckpoint,
+    WholeBookRun,
+)
+from app.domain.document_outline import BookOutline, OutlineNode
+from app.domain.document_structure import ANALYZABLE_UNIT_TYPES
 from app.narrative_core.comprehend.contracts import ComprehendResult
 from app.narrative_core.comprehend.coordinator import ComprehendCoordinator
 from app.narrative_core.comprehend.planner import plan_units
 from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStatus
 from app.narrative_core.whole_book_v2.contracts import ProgressV2
 from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
-from app.services.document_formats import outline_from_bytes
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "COMPREHEND_MODE",
     "COMPREHEND_ENGINE_VERSION",
+    "COMPREHEND_MODE",
     "COMPREHEND_RESULT_STAGE",
     "build_progress",
     "execute_comprehend_pipeline_v1",
@@ -48,6 +56,64 @@ __all__ = [
 COMPREHEND_MODE = "comprehend"
 COMPREHEND_ENGINE_VERSION = "comprehend-engine-1.0"
 COMPREHEND_RESULT_STAGE = "comprehend_result"
+
+
+def _outline_from_run_snapshot(session: Session, run: WholeBookRun) -> BookOutline:
+    """Build the comprehend input from the immutable snapshot bound to this run.
+
+    Import already resolved the book into chapters and typed supplementary material. Re-reading
+    the raw DOCX here used a second, narrower parser that only recognised Word Heading styles.
+    A perfectly valid book without those styles consequently became one giant ``前置内容`` node,
+    so the report claimed ``1/1`` coverage while the snapshot contained many chapters.
+    """
+    if run.snapshot_id is None:
+        raise ValueError("读懂任务没有绑定全书快照，不能继续分析")
+    snapshot = session.get(BookSnapshot, int(run.snapshot_id))
+    if snapshot is None or int(snapshot.book_id) != int(run.book_id):
+        raise ValueError("读懂任务绑定的全书快照不存在或不属于当前书籍")
+    if snapshot.snapshot_status != "completed":
+        raise ValueError(f"读懂任务绑定的全书快照尚未完成：{snapshot.snapshot_status}")
+
+    rows = session.execute(
+        select(BookSnapshotChapter, Chapter.section_type)
+        .outerjoin(Chapter, Chapter.id == BookSnapshotChapter.source_chapter_id)
+        .where(BookSnapshotChapter.snapshot_id == int(snapshot.id))
+        .order_by(BookSnapshotChapter.chapter_order)
+    ).all()
+    analyzable_types = {str(item.value).lower() for item in ANALYZABLE_UNIT_TYPES}
+    outline = BookOutline(source="snapshot")
+    outline.rules.extend((
+        f"任务固定快照 {snapshot.id}",
+        "沿用导入时确认的章节结构",
+        "排除前置内容、注释、致谢、附录和参考文献",
+    ))
+    for snapshot_chapter, section_type in rows:
+        # Legacy snapshots may no longer have a source Chapter row. Keep those readable; current
+        # snapshots carry section_type and must obey the same analyzability decision as import.
+        if section_type and str(section_type).lower() not in analyzable_types:
+            continue
+        paragraphs = [
+            line.strip()
+            for line in str(snapshot_chapter.content_text or "").splitlines()
+            if line.strip()
+        ]
+        if not paragraphs:
+            continue
+        ordinal = len(outline.nodes) + 1
+        title = str(snapshot_chapter.title or f"第{ordinal}节")
+        outline.nodes.append(
+            OutlineNode(
+                level=1,
+                number="",
+                title=title,
+                paragraphs=paragraphs,
+                chapter=str(ordinal),
+                chapter_title=title,
+            )
+        )
+    if not outline.nodes:
+        raise ValueError("任务快照中没有可供读懂分析的正文章节")
+    return outline
 
 
 def _as_dict(result: ComprehendResult) -> dict[str, Any]:
@@ -174,16 +240,13 @@ def execute_comprehend_pipeline_v1(
     book = session.get(Book, int(run.book_id))
     if book is None:
         raise ValueError(f"book {run.book_id} not found")
-    if not book.source_content:
-        raise ValueError("这本书没有保存原始文件，无法按专著读法分析")
-
     run.engine_id = "comprehend_engine"
     run.engine_version = COMPREHEND_ENGINE_VERSION
     run.status = WholeBookRunStatus.running.value
     run.current_stage_code = "parse_structure"
     session.flush()
 
-    outline = outline_from_bytes(book.source_file_name or "book.txt", book.source_content)
+    outline = _outline_from_run_snapshot(session, run)
     units = plan_units(outline)
     repo = WholeBookV2Repository(session)
     provider = str(run.provider_name or "")

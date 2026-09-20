@@ -8,17 +8,18 @@ from __future__ import annotations
 
 import json
 
-from app.narrative_core.services.comprehend_pipeline_v1 import (
-    COMPREHEND_MODE,
-    COMPREHEND_RESULT_STAGE,
-    load_comprehend_result,
-    _as_dict,
-)
 from app.narrative_core.comprehend.contracts import (
     BookDigest,
     ChapterDigest,
     ComprehendResult,
     SectionDigest,
+)
+from app.narrative_core.services.comprehend_pipeline_v1 import (
+    COMPREHEND_MODE,
+    COMPREHEND_RESULT_STAGE,
+    _as_dict,
+    _outline_from_run_snapshot,
+    load_comprehend_result,
 )
 
 
@@ -112,6 +113,84 @@ def test_the_progress_row_this_pipeline_writes_actually_validates() -> None:
     )
     assert zero.overall_percent == 0
     assert zero.estimated_remaining_seconds >= 0
+
+
+def test_comprehend_reads_every_analyzable_chapter_from_the_bound_snapshot(tmp_path) -> None:
+    """A DOCX without Heading styles must not collapse to one ``前置内容`` section.
+
+    Import has already resolved and typed the structure. Comprehend must consume the immutable
+    snapshot bound to its run, excluding supplementary units while retaining every real chapter.
+    """
+    from app.db.models import Book, BookSnapshot, BookSnapshotChapter, Chapter, WholeBookRun
+    from sqlalchemy.orm import sessionmaker
+
+    from tests.whole_book_minimal_test_helpers import make_engine
+
+    engine = make_engine(tmp_path, "comprehend-snapshot.db")
+    with sessionmaker(bind=engine)() as session:
+        session.add(Book(id=1, title="工具书", source_file_name="plain.docx", source_file_hash="h"))
+        chapters = [
+            Chapter(
+                id=1,
+                book_id=1,
+                chapter_index=1,
+                title="前置内容",
+                section_type="front_matter",
+            ),
+            Chapter(id=2, book_id=1, chapter_index=2, title="第一章", section_type="chapter"),
+            Chapter(id=3, book_id=1, chapter_index=3, title="第二章", section_type="chapter"),
+            Chapter(
+                id=4,
+                book_id=1,
+                chapter_index=4,
+                title="致谢",
+                section_type="acknowledgements",
+            ),
+        ]
+        session.add_all(chapters)
+        snapshot = BookSnapshot(
+            id=1,
+            book_id=1,
+            content_hash="snapshot-hash",
+            snapshot_status="building",
+            chapter_count=4,
+        )
+        session.add(snapshot)
+        session.flush()
+        session.add_all([
+            BookSnapshotChapter(snapshot_id=1, source_chapter_id=1, chapter_order=1,
+                                title="前置内容", content_hash="p", content_text="封面"),
+            BookSnapshotChapter(snapshot_id=1, source_chapter_id=2, chapter_order=2,
+                                title="第一章", content_hash="c1", content_text="第一段\n第二段"),
+            BookSnapshotChapter(snapshot_id=1, source_chapter_id=3, chapter_order=3,
+                                title="第二章", content_hash="c2", content_text="第三段\n第四段"),
+            BookSnapshotChapter(snapshot_id=1, source_chapter_id=4, chapter_order=4,
+                                title="致谢", content_hash="a", content_text="感谢"),
+        ])
+        session.flush()
+        snapshot.snapshot_status = "completed"
+        run = WholeBookRun(
+            id=1,
+            book_id=1,
+            snapshot_id=1,
+            mode="whole_book_native",
+            status="queued",
+            idempotency_key="snapshot-test",
+            engine_id="comprehend_engine",
+            engine_version="comprehend-engine-1.0",
+            contract_version="whole_book_contract_v1",
+            result_origin="formal",
+        )
+        session.add(run)
+        session.commit()
+
+        outline = _outline_from_run_snapshot(session, run)
+        assert [node.title for node in outline.nodes] == ["第一章", "第二章"]
+        assert [node.paragraphs for node in outline.nodes] == [
+            ["第一段", "第二段"],
+            ["第三段", "第四段"],
+        ]
+        assert outline.source == "snapshot"
 
 
 def _seed_run(session, run_id: int, book_id: int, engine_version: str):
